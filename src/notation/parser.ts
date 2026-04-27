@@ -134,6 +134,7 @@ function parseBar(
     repeatCount,
     repeatPrevious: false,
     ending: parseEnding(suffix) ?? undefined,
+    meter: undefined,
     source: body,
   };
 
@@ -142,7 +143,21 @@ function parseBar(
     return bar;
   }
 
-  const laneMatches = [...body.matchAll(/([a-zA-Z][\w-]*)\s*:/g)];
+  // Support inline per-bar meter override: "meter: 2/4 | hh: ..."
+  let effectiveBody = body;
+  const meterMatch = body.match(/^\s*meter\s*:\s*(\d+\s*\/\s*\d+)\s*\|?\s*(.*)$/i);
+  if (meterMatch) {
+    const m = parseMeter(meterMatch[1].replace(/\s/g, ""));
+    if (m) {
+      bar.meter = m;
+      expectedBeats = m.beats;
+    } else {
+      diagnostics.push(warn(lineNumber, `Invalid inline meter '${meterMatch[1]}'.`));
+    }
+    effectiveBody = meterMatch[2].trim();
+  }
+
+  const laneMatches = [...effectiveBody.matchAll(/([a-zA-Z][\w-]*)\s*:/g)];
   if (laneMatches.length === 0) {
     diagnostics.push(
       error(lineNumber, "Bar must contain at least one lane, like hh: x x x x."),
@@ -154,11 +169,12 @@ function parseBar(
 
   laneMatches.forEach((match, index) => {
     const alias = match[1].toLowerCase();
+    if (alias === "meter") return; // skip inline meter directives
     const instrument = instrumentAliases[alias];
     const start = match.index! + match[0].length;
     const end =
-      index + 1 < laneMatches.length ? laneMatches[index + 1].index! : body.length;
-    const raw = body.slice(start, end).trim();
+      index + 1 < laneMatches.length ? laneMatches[index + 1].index! : effectiveBody.length;
+    const raw = effectiveBody.slice(start, end).trim();
 
     if (!instrument) {
       diagnostics.push(error(lineNumber, `Unknown instrument '${alias}'.`));

@@ -1,0 +1,48 @@
+/**
+ * Page 10 — Blues 节奏变奏练习 (d=130, d=85)
+ *
+ * Two main exercises:
+ * 1. d=130, triplet-based fills with sticking RLR LRL
+ * 2. 单手 (single hand), d=85, 32nd-note groupings
+ *
+ * Features:
+ * - Triplet groupings with (3) markers
+ * - Quintuplet groupings with (5) markers
+ * - Sticking annotations R/L above beams
+ * - Dotted notes
+ */
+export const bluesVariations = `title: Blues 节奏变奏练习
+tempo: 130
+meter: 4/4
+
+# Exercise 1: triplet fills
+# basic 8th note groove, then fills with triplets
+
+[Intro]
+| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| hh: x / x / x / xx  bd: - / - / - / -  sn: rlr / lrl / - / - |
+
+[Fills]
+| hh: - / - / - / -   bd: o / - / o / -  sn: . . . / - x x / - / - |
+| hh: - / - / - / -   bd: - / - / - / -  sn: x 2 . / 2 x x / - / - |
+| hh: - / - / - / -   bd: - / - / - / -  sn: rlr / lrl / - / - |
+| hh: - / - / - / -   bd: - / - / - / -  sn: rlr / lrl / - / - |
+| hh: - / - / - / -   bd: - / - / - / -  sn: rlrlr / lrl / - / - |
+
+# Exercise 2: 单手 (single hand) d=85
+# 32nd groupings, very dense
+
+[Single1]
+| hh: - / - / - / -   bd: - / - / - / -  sn: . . . / . . . / . . . / . . . |
+| hh: - / - / - / -   bd: o / - / - / -  sn: x / - / - / - |
+| hh: - / - / - / -   bd: - / - / - / -  sn: . . . / . . . / . . . / . . . |
+| hh: - / - / - / -   bd: o / - / - / -  sn: - / - / oxx / - |
+
+[Single2]
+| hh: - / - / - / -   bd: - / - / - / -  sn: rlr / rl / - / - |
+| hh: - / - / - / -   bd: - / - / - / -  sn: - / rlr / rl / - |
+| hh: - / - / - / -   bd: o / - / - / -  sn: rlr / l / - / - |
+| hh: - / - / - / -   bd: - / - / - / -  sn: rlrlr / lrl / - / - |
+`;

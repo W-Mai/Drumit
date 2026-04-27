@@ -1,0 +1,61 @@
+/**
+ * Page 3 — 那天晚上 (d=87, 4/4)
+ * Handwritten two-row chart. Bars shown as slash repeats + short fill fragments.
+ *
+ * This sample encodes the key patterns that the PDF uses:
+ * - slash-repeat bars (%)
+ * - dotted eighths and ties (.)
+ * - sixteenth fills with sticking
+ *
+ * We transcribe only the *written-out* bars (not the many repeat slashes).
+ */
+export const naTianWanShang = `title: 那天晚上
+tempo: 87
+meter: 4/4
+
+# Page 3 handwritten style
+# bd=● sn=x hh=∂ (rendered from instrument)
+# dots (.) represent dotted notes / ties
+# / separates beats
+
+[Intro]
+| hh: x / x / x / x   sn: x / - / x / - |
+| % |
+| % |
+| hh: x / x / x / xx  bd: o / - / o . o  sn: - / o / o / - |
+
+[A]
+| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| % |
+| % |
+| % |
+| % |
+| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
+| % |
+| % |
+| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / xox |
+
+[B]
+| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| % |
+| % |
+| % |
+| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / o / o |
+| % |
+| % |
+| % |
+
+[Solo]
+| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| % |
+| % |
+| % |
+| % |
+| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / o / - |
+| % |
+| % |
+| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / xox |
+
+[End]
+| bd: o / - / - / - |
+`;
