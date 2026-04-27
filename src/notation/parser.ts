@@ -200,13 +200,12 @@ function parseBar(
 
   const beats: Beat[] = [];
   for (let beatIndex = 0; beatIndex < beatCount; beatIndex += 1) {
-    const beatSlots: Slot[] = buildBeatSlots(
-      lanes,
-      beatIndex,
-      lineNumber,
-      diagnostics,
-    );
-    beats.push({ division: beatSlots.length, slots: beatSlots });
+    const parsed = buildBeat(lanes, beatIndex, lineNumber, diagnostics);
+    beats.push({
+      division: parsed.slots.length,
+      slots: parsed.slots,
+      tuplet: parsed.tuplet,
+    });
   }
 
   bar.beats = beats;
@@ -221,15 +220,23 @@ function splitBeats(raw: string): string[] {
     .filter(Boolean);
 }
 
-function buildBeatSlots(
+interface ParsedBeat {
+  slots: Slot[];
+  tuplet?: number;
+}
+
+function buildBeat(
   lanes: Array<{ instrument: Instrument; beats: string[] }>,
   beatIndex: number,
   lineNumber: number,
   diagnostics: Diagnostic[],
-): Slot[] {
+): ParsedBeat {
+  const tuplets = new Set<number>();
   const beatTokenLists = lanes.map((lane) => {
     const beatBody = lane.beats[beatIndex] ?? "";
-    return { instrument: lane.instrument, tokens: tokenizeBeat(beatBody) };
+    const { tuplet, body } = extractTuplet(beatBody);
+    if (tuplet) tuplets.add(tuplet);
+    return { instrument: lane.instrument, tokens: tokenizeBeat(body) };
   });
 
   const division = Math.max(1, ...beatTokenLists.map((lane) => lane.tokens.length));
@@ -256,7 +263,26 @@ function buildBeatSlots(
     });
   });
 
-  return slots;
+  if (tuplets.size > 1) {
+    diagnostics.push(
+      warn(
+        lineNumber,
+        `Beat ${beatIndex + 1} has inconsistent tuplet markers across lanes; using the first.`,
+      ),
+    );
+  }
+  const tuplet = tuplets.size === 1 ? [...tuplets][0] : undefined;
+
+  return { slots, tuplet };
+}
+
+/** Extract a leading `(3)` / `(5)` etc. tuplet marker, returning the remaining body. */
+function extractTuplet(raw: string): { tuplet?: number; body: string } {
+  const match = raw.match(/^\s*\((\d+)\)\s*(.*)$/);
+  if (!match) return { body: raw };
+  const n = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(n) || n < 2 || n > 15) return { body: raw };
+  return { tuplet: n, body: match[2] };
 }
 
 function tokenizeBeat(raw: string): string[] {
@@ -286,7 +312,7 @@ function tokenizeBeat(raw: string): string[] {
       continue;
     }
     let j = i;
-    if ("> ~f".includes(c)) j += 1;
+    if (">~f".includes(c)) j += 1;
     j += 1;
     tokens.push(raw.slice(i, j));
     i = j;
@@ -332,6 +358,16 @@ function parseToken(
       warn(lineNumber, `Token '${token}' has modifiers but no note head.`),
     );
     return null;
+  }
+
+  // Standalone sticking markers: `R` / `L` act as the note head itself.
+  if (/^[rl]$/i.test(value)) {
+    return {
+      instrument,
+      head: defaultHeadFor(instrument),
+      articulations,
+      sticking: value.toUpperCase() as "R" | "L",
+    };
   }
 
   return {

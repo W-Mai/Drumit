@@ -37,6 +37,8 @@ export interface Beat {
   /** Subdivision per beat: 1, 2, 3, 4, 6, 8 */
   division: number;
   slots: Slot[];
+  /** When set, this beat is a tuplet (e.g. 3 = triplet, 5 = quintuplet). */
+  tuplet?: number;
 }
 
 export interface Meter {

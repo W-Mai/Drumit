@@ -29,6 +29,7 @@ export interface LaidOutBeat {
   beamY: number;
   beamSegments: { x1: number; x2: number; depth: number }[];
   tickXs: number[];
+  tuplet?: number;
 }
 
 export interface LaidOutLayout {
@@ -146,6 +147,7 @@ function layoutBar(
       beamY,
       beamSegments,
       tickXs,
+      tuplet: beat.tuplet,
     });
 
     beat.slots.forEach((slot, slotIndex) => {

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { parseDrumtab } from "../src/notation/parser";
+import { layoutScore } from "../src/notation/layout";
+import { DrumChart } from "../src/notation/renderer";
 
 import { naTianWanShang } from "../src/notation/samples/page03-na-tian-wan-shang";
 import { lanLianHua } from "../src/notation/samples/page04-lan-lian-hua";
@@ -31,6 +35,20 @@ describe("all drumtab samples", () => {
 
       expect(errors, `${name} should have no errors`).toHaveLength(0);
       expect(bars, `${name} should have at least one bar`).toBeGreaterThan(0);
+    });
+
+    it(`${name} renders to SVG without throwing`, () => {
+      const { score } = parseDrumtab(src);
+      const layout = layoutScore(score, {
+        showLabels: false,
+        expanded: false,
+        width: 980,
+      });
+      const svg = renderToStaticMarkup(
+        createElement(DrumChart, { layout, showLabels: false }),
+      );
+      expect(svg.startsWith("<svg")).toBe(true);
+      expect(svg.length).toBeGreaterThan(500);
     });
   }
 });

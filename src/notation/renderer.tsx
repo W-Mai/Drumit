@@ -149,6 +149,16 @@ function BarView({
                   strokeWidth={0.6}
                 />
               ))}
+              {beat.tuplet ? (
+                <text
+                  x={(beat.tickXs[0] + beat.tickXs[beat.tickXs.length - 1]) / 2}
+                  y={beat.beamY + beat.beamSegments.length * 4 + 14}
+                  textAnchor="middle"
+                  className="fill-stone-700 text-[10px] font-extrabold"
+                >
+                  {beat.tuplet}
+                </text>
+              ) : null}
             </Fragment>
           ))}
 

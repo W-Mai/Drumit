@@ -28,4 +28,33 @@ describe("parseDrumtab", () => {
     );
     expect(score.sections[0].bars[1].repeatPrevious).toBe(true);
   });
+
+  it("parses inline meter overrides", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| meter: 2/4 | hh: x / x |`,
+    );
+    const bar = score.sections[0].bars[0];
+    expect(bar.meter).toEqual({ beats: 2, beatUnit: 4 });
+    expect(bar.beats).toHaveLength(2);
+  });
+
+  it("parses triplet marker (3) on a beat", () => {
+    const { score, diagnostics } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / xxxx / xxxx / xxxx |`,
+    );
+    expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
+    const bar = score.sections[0].bars[0];
+    expect(bar.beats[0].tuplet).toBe(3);
+    expect(bar.beats[0].slots).toHaveLength(3);
+    expect(bar.beats[1].tuplet).toBeUndefined();
+  });
+
+  it("parses standalone R/L sticking tokens", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: R / L / R / L |`,
+    );
+    const bar = score.sections[0].bars[0];
+    expect(bar.beats[0].slots[0].hits[0].sticking).toBe("R");
+    expect(bar.beats[1].slots[0].hits[0].sticking).toBe("L");
+  });
 });
