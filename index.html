@@ -3,49 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Drumit Notation Visualizer</title>
-    <link rel="stylesheet" href="src/styles.css" />
+    <title>Drumit</title>
   </head>
-  <body>
-    <main class="app-shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">Drumit Prototype</p>
-          <h1>Drumtab visualizer</h1>
-        </div>
-        <p class="hero-copy">
-          输入紧凑的 `.drumtab` 文本，实时生成 PDF 风格练习谱或标准鼓谱预览。首版聚焦格式、解析诊断和 SVG 可视化。
-        </p>
-      </section>
-
-      <section class="workspace">
-        <article class="panel editor-panel">
-          <header class="panel-header">
-            <h2 class="panel-title">Format Editor</h2>
-            <button id="load-example" type="button">Load Example</button>
-          </header>
-          <textarea id="editor" spellcheck="false" aria-label="Drumtab editor"></textarea>
-          <div id="diagnostics" class="diagnostics" aria-live="polite"></div>
-          <details class="ast">
-            <summary>Parsed AST</summary>
-            <pre id="ast-output"></pre>
-          </details>
-        </article>
-
-        <article class="panel preview-panel">
-          <header class="panel-header">
-            <h2 class="panel-title">Preview</h2>
-            <div class="toolbar" aria-label="Preview mode">
-              <button class="is-active" type="button" data-view="grid">Grid</button>
-              <button type="button" data-view="staff">Staff</button>
-              <button class="is-active" type="button" id="compact-toggle">Compact</button>
-              <button class="is-active" type="button" id="labels-toggle">Labels</button>
-            </div>
-          </header>
-          <div id="preview" class="preview"></div>
-        </article>
-      </section>
-    </main>
-    <script type="module" src="src/main.js"></script>
+  <body class="bg-stone-50 text-stone-900">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
