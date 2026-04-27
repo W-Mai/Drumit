@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
 import { dongCiDaCi } from "./notation/examples";
+import { naTianWanShang } from "./notation/samples/page03-na-tian-wan-shang";
+import { lanLianHua } from "./notation/samples/page04-lan-lian-hua";
+import { popRock } from "./notation/samples/page07-pop-rock";
+import { rockFusion } from "./notation/samples/page08-rock-fusion";
+import { funkRock } from "./notation/samples/page09-funk-rock";
+import { bluesVariations } from "./notation/samples/page10-blues";
 import { parseDrumtab } from "./notation/parser";
 import { layoutScore } from "./notation/layout";
 import { DrumChart } from "./notation/renderer";
@@ -7,6 +13,16 @@ import { validateScore } from "./notation/validate";
 import { cn } from "./lib/utils";
 
 type ViewMode = "grid" | "staff";
+
+const samples = [
+  { label: "动次打次", src: dongCiDaCi },
+  { label: "那天晚上 (Page 3)", src: naTianWanShang },
+  { label: "蓝莲花 (Page 4)", src: lanLianHua },
+  { label: "Pop Rock 综合练习 (Page 7)", src: popRock },
+  { label: "Rock Fusion 综合练习 (Page 8)", src: rockFusion },
+  { label: "Funk Rock 综合练习 (Page 9)", src: funkRock },
+  { label: "Blues 节奏变奏 (Page 10)", src: bluesVariations },
+];
 
 export default function App() {
   const [source, setSource] = useState(dongCiDaCi);
@@ -50,13 +66,23 @@ export default function App() {
         <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
           <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
             <h2 className="text-sm font-extrabold">Editor</h2>
-            <button
-              type="button"
-              onClick={() => setSource(dongCiDaCi)}
-              className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-700 transition hover:bg-stone-900 hover:text-white"
+            <select
+              className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-700 outline-none transition hover:bg-stone-900 hover:text-white"
+              value=""
+              onChange={(e) => {
+                const found = samples.find((s) => s.label === e.target.value);
+                if (found) setSource(found.src);
+              }}
             >
-              Load example
-            </button>
+              <option value="" disabled>
+                Load example…
+              </option>
+              {samples.map((s) => (
+                <option key={s.label} value={s.label}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
           </div>
           <textarea
             value={source}
