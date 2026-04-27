@@ -9,9 +9,13 @@ const preview = document.querySelector("#preview");
 const diagnostics = document.querySelector("#diagnostics");
 const astOutput = document.querySelector("#ast-output");
 const viewButtons = [...document.querySelectorAll("[data-view]")];
+const compactToggle = document.querySelector("#compact-toggle");
+const labelsToggle = document.querySelector("#labels-toggle");
 const loadExample = document.querySelector("#load-example");
 
 let currentView = "grid";
+let compactGrid = true;
+let showGridLabels = true;
 
 editor.value = defaultDrumtab;
 editor.addEventListener("input", render);
@@ -24,8 +28,22 @@ viewButtons.forEach((button) => {
   button.addEventListener("click", () => {
     currentView = button.dataset.view;
     viewButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+    updateGridControlState();
     render();
   });
+});
+
+compactToggle.addEventListener("click", () => {
+  compactGrid = !compactGrid;
+  compactToggle.classList.toggle("is-active", compactGrid);
+  compactToggle.textContent = compactGrid ? "Compact" : "Expanded";
+  render();
+});
+
+labelsToggle.addEventListener("click", () => {
+  showGridLabels = !showGridLabels;
+  labelsToggle.classList.toggle("is-active", showGridLabels);
+  render();
 });
 
 render();
@@ -44,7 +62,13 @@ function render() {
     return;
   }
 
-  preview.innerHTML = currentView === "staff" ? renderStaff(parsed.score) : renderGrid(parsed.score);
+  preview.innerHTML = currentView === "staff" ? renderStaff(parsed.score) : renderGrid(parsed.score, { expanded: !compactGrid, showLabels: showGridLabels });
+}
+
+function updateGridControlState() {
+  const isGrid = currentView === "grid";
+  compactToggle.disabled = !isGrid;
+  labelsToggle.disabled = !isGrid;
 }
 
 function renderDiagnostics(messages) {
