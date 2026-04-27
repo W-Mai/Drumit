@@ -199,11 +199,19 @@ function parseToken(token, instrument, lineNumber, diagnostics) {
     value = value.slice(0, -1);
   }
 
-  if (!/[xo]/i.test(value)) {
+  const head = parseHead(value);
+
+  if (!head) {
     diagnostics.push(warn(lineNumber, `Token '${token}' is treated as a hit but uses an uncommon head.`));
   }
 
-  return [{ instrument, head: /x/i.test(value) ? "x" : "o", articulations, sticking }];
+  return [{ instrument, head: head ?? "auto", articulations, sticking }];
+}
+
+function parseHead(value) {
+  if (/x/i.test(value)) return "x";
+  if (/o/i.test(value)) return "auto";
+  return null;
 }
 
 function parseRepeatCount(suffix) {

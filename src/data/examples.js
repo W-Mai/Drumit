@@ -1,15 +1,15 @@
-export const defaultDrumtab = `title: Pop Rock Practice
-artist: PDF sketch subset
+export const defaultDrumtab = `title: Dong Ci Da Ci
+artist: PDF symbol subset
 tempo: 100
 meter: 4/4
 
 [A]
-| hh:x x x x sn:- o - o bd:o - o - |
+| bd:o - - - hh:- o - o sn:- - o - |
 | repeat previous |
-| crash:x hh:- x x x sn:- (o) - >o bd:o - - o | x2
+| bd:o - o - hh:- o - o sn:- - o - | x2
 
 [B]
-| ride:x x x x sn:- o - o bd:o - o - |
-| hh:x x ~x x sn:- >o - (o) bd:o - o - |
+| bd:o - - o hh:- o - o sn:- o - o |
+| bd:o - o - hh:- o - o sn:- - o - |
 | repeat previous | x2
 `;

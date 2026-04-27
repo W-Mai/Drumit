@@ -204,6 +204,7 @@ pre {
 .meta,
 .lane-label,
 .repeat-mark,
+.hit-partial,
 .sticking,
 .choke,
 .ghost-paren {
@@ -266,6 +267,13 @@ pre {
 .hit-o,
 .grace {
   fill: var(--ink);
+}
+
+.hit-partial {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 800;
+  text-anchor: middle;
 }
 
 .ghost-paren,

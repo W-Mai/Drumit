@@ -47,7 +47,11 @@ export function hitGlyph(hit, x, y, options = {}) {
     parts.push(`<text x="${x + size * 1.1}" y="${y + size * 0.75}" class="ghost-paren">)</text>`);
   }
 
-  if (hit.head === "x" || hit.instrument.includes("hihat") || hit.instrument === "crash" || hit.instrument === "ride") {
+  const visualHead = resolveVisualHead(hit);
+
+  if (visualHead === "partial") {
+    parts.push(`<text x="${x}" y="${y + size}" class="hit-partial">∂</text>`);
+  } else if (visualHead === "x") {
     parts.push(`<path d="M ${x - size} ${y - size} L ${x + size} ${y + size} M ${x + size} ${y - size} L ${x - size} ${y + size}" class="hit-x"/>`);
   } else {
     parts.push(`<circle cx="${x}" cy="${y}" r="${size}" class="hit-o"/>`);
@@ -70,6 +74,15 @@ export function hitGlyph(hit, x, y, options = {}) {
   }
 
   return parts.join("");
+}
+
+function resolveVisualHead(hit) {
+  if (hit.head === "x") return "x";
+  if (hit.head === "partial") return "partial";
+  if (hit.instrument.includes("hihat")) return "partial";
+  if (hit.instrument === "snare") return "x";
+  if (hit.instrument === "crash" || hit.instrument === "ride") return "x";
+  return "solid";
 }
 
 export function escapeHtml(value) {
