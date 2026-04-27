@@ -1,0 +1,9 @@
+{
+  "name": "drumit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/main.js && node --check src/data/examples.js && node --check src/format/parser.js && node --check src/format/validate.js && node --check src/renderer/symbols.js && node --check src/renderer/gridRenderer.js && node --check src/renderer/staffRenderer.js",
+    "serve": "python3 -m http.server 5173"
+  }
+}
