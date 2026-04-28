@@ -6,9 +6,16 @@ import { instrumentSizeScale } from "./instruments";
 interface Props {
   layout: LaidOutLayout;
   showLabels: boolean;
+  selectedBarIndex?: number | null;
+  onSelectBar?: (index: number) => void;
 }
 
-export function DrumChart({ layout, showLabels }: Props) {
+export function DrumChart({
+  layout,
+  showLabels,
+  selectedBarIndex,
+  onSelectBar,
+}: Props) {
   return (
     <svg
       viewBox={`0 0 ${layout.width} ${layout.height}`}
@@ -50,7 +57,13 @@ export function DrumChart({ layout, showLabels }: Props) {
 
       {layout.rows.flatMap((row) =>
         row.map((bar) => (
-          <BarView key={`bar-${bar.index}`} bar={bar} showLabels={showLabels} />
+          <BarView
+            key={`bar-${bar.index}`}
+            bar={bar}
+            showLabels={showLabels}
+            selected={selectedBarIndex === bar.index - 1}
+            onSelect={onSelectBar ? () => onSelectBar(bar.index - 1) : undefined}
+          />
         )),
       )}
     </svg>
@@ -60,14 +73,36 @@ export function DrumChart({ layout, showLabels }: Props) {
 function BarView({
   bar,
   showLabels,
+  selected,
+  onSelect,
 }: {
   bar: LaidOutBar;
   showLabels: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const { x, y, width, cymbalY, drumY, beats } = bar;
 
   return (
-    <g>
+    <g
+      onClick={onSelect}
+      style={onSelect ? { cursor: "pointer" } : undefined}
+    >
+      {/* Click target + selection highlight */}
+      <rect
+        x={x - 8}
+        y={y + 2}
+        width={width + 16}
+        height={drumY - y + 28}
+        rx={8}
+        className={
+          selected
+            ? "fill-amber-200/60 stroke-amber-500"
+            : "fill-transparent stroke-transparent hover:fill-stone-200/40"
+        }
+        strokeWidth={selected ? 1.5 : 0}
+      />
+
       <text
         x={x}
         y={y + 10}
