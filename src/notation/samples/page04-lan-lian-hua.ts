@@ -1,93 +1,95 @@
 /**
- * Page 4 — 乐队练习曲《蓝莲花》(d=90, 4/4)
- * Song form: A / B / C / Solo / B' / C' / Solo'
+ * Page 4 — 乐队练习曲《蓝莲花》(4/4, ♩=90)
  *
- * Bars are mostly repeat-slash placeholders; key written-out fills:
- * - B→C transition fill with 16th snare run
- * - Solo fill with 2x repeat bracket
- * - 2/4 inserted bar (handled by meter override)
+ * This transcription keeps the *structure* of the handwritten page rather
+ * than inventing note-for-note content. Each section typically starts with
+ * a repeat-open bar `[:`, shows one or two pattern bars, and fills the rest
+ * of the phrase with slash-repeat variants `%`, `%.`, `%-`, `%,` before a
+ * final fill bar ends the phrase.
+ *
+ * Key symbols present on the page:
+ *   - ↓o / ↓2  at section starts: hanging crash (stickX) + open note
+ *   - ∂∂ ∂∂ ∂∂ ∂∂ above the line: hi-hat / ride 8ths and 16ths
+ *   - o x o x  on the drum row: kick + snare interlock
+ *   - 2/4 insert measure at the end of [C] / [C']
+ *   - 2x: annotation for second-ending variant fills
  */
 export const lanLianHua = `title: 乐队练习曲《蓝莲花》
 tempo: 90
 meter: 4/4
 
-[Intro]
-| hh: x / x / x / x   sn: x / o / o / o |
-| % |
-| % |
-| % |
-
+# -------- [A] ----------
+# Row 1: crash hits marking each beat
 [A]
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
-| % |
-| % |
-| % |
-| % |
-| % |
-| % |
-| % |
+| cr: o / o / o / o |
 
+# Row 2: main pattern, hi-hat on top, kick+snare below
+| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
+| % |
+| %. |
+| %, |
+| %- |
+| %, |
+| %. |
+| %- |
+
+# -------- [B] ----------
 [B]
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
 | % |
-| % |
-| % |
-| % |
-| % |
-| % |
-| % |
+| %. |
+| %, |
+| %- |
+| %, |
+| %. |
+| %- |
 
+# -------- [C] ----------
 [C]
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
 | % |
-| % |
-| % |
-| % |
-| % |
-| % |
-| meter: 2/4 | hh: x / x   bd: - / -  sn: - / - |
-| meter: 4/4 | hh: - / - / - / - |
+| %. |
+| %, |
+| %- |
+| %. |
+| %, |
+| meter: 2/4 | cr: o / -  bd: o / -  sn: - / - |
 
+# -------- [Solo] ----------
 [Solo]
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
-| % |
-| % |
-| % |
-| % |
-| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / xox | x2
-| % |
-| % |
-| % |
+| cr: o / o / o / o |
+| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
+| %- |
+| %- |
+| %, |
+| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / xxx |  x2
+| cr: o / - / - / -  bd: o / - / - / - |
 
+# -------- [B'] ----------
 [B']
-| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / o / - |
+| hh: xxxx / xxxx / xx / xxx  bd: o / - / o / -  sn: - / o / xox / - |
 | % |
-| % |
-| % |
-| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / oxx |
-| % |
-| % |
-| % |
+| %. |
+| %- |
+| hh: xx / xx / xx / xxxx  bd: o / - / o / -  sn: - / xox / xox / xxx |
 
+# -------- [C'] ----------
 [C']
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| hh: xxxx / xxxx / xx / xxx  bd: o / - / o / -  sn: - / o / - / o |
 | % |
-| % |
-| % |
-| % |
-| % |
-| meter: 2/4 | hh: x / x   bd: - / -  sn: - / - |
-| meter: 4/4 | hh: - / - / - / - |
+| %. |
+| %, |
+| %- |
+| %, |
+| meter: 2/4 | cr: o / -  bd: o / -  sn: - / - |
 
+# -------- [Solo'] ----------
 [Solo']
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
-| hh: x / xxx / xx / xx  bd: - / o / - / -  sn: - / o / oxx | x2
-| % |
-| % |
-| % |
-| % |
-| % |
-| % |
-| % |
-| % |
+| cr: o / o / o.xx / xx. |
+| hh: xx / xx / xx / xxxx  bd: o / - / o / -  sn: - / xox / xox / xxx |  x2
+| %- |
+| %- |
+| %, |
+| %, |
+| cr: o / - / - / - |
 `;
