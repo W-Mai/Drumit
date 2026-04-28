@@ -300,7 +300,7 @@ function HitHead({
   if (hit.head === "partial") {
     // ∂ glyph sized roughly 2.2× the base `size` so the shape matches a ×
     // head of the same size in optical weight.
-    const fontSize = Math.max(7, size * 2.4);
+    const fontSize = Math.max(9, size * 2.6);
     return (
       <text
         x={x}
