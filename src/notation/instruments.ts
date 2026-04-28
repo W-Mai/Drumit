@@ -46,6 +46,26 @@ export const instrumentCategory: Record<Instrument, InstrumentCategory> = {
   floorTom: "drum",
 };
 
+/**
+ * Canonical short alias used when serializing `Score` back to `.drumtab`.
+ * Pick the shortest / most idiomatic form per instrument.
+ */
+export const canonicalAlias: Record<Instrument, string> = {
+  kick: "bd",
+  snare: "sn",
+  hihatClosed: "hh",
+  hihatOpen: "hho",
+  hihatHalfOpen: "hhh",
+  hihatFoot: "hhf",
+  ride: "ride",
+  rideBell: "rb",
+  crashLeft: "cr",
+  crashRight: "cr2",
+  tomHigh: "t1",
+  tomMid: "t2",
+  floorTom: "ft",
+};
+
 export const instrumentLabels: Record<Instrument, string> = {
   kick: "Kick",
   snare: "Snare",
