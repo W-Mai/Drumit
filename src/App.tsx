@@ -25,7 +25,14 @@ import {
 import { PadEditor } from "./components/PadEditor";
 import { PlaybackBar } from "./components/PlaybackBar";
 import { useHotkeys } from "./lib/useHotkeys";
-import { clearStoredSource, loadStoredSource, saveStoredSource } from "./lib/storage";
+import {
+  clearWorkspace,
+  loadWorkspace,
+  newId,
+  saveWorkspace,
+  type DocumentRecord,
+} from "./lib/storage";
+import { DocumentList } from "./components/DocumentList";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
 
@@ -41,24 +48,63 @@ const samples = [
   { label: "Blues 节奏变奏 (Page 10)", src: bluesVariations },
 ];
 
-function loadInitialScore() {
-  // Try to restore the user's last edit from localStorage. Falls back to
-  // the built-in example when nothing's saved (or saved data is corrupt).
-  const stored = loadStoredSource();
-  if (stored) {
-    const result = parseDrumtab(stored);
-    if (result.score.sections.length > 0) return result;
+function nameToFilename(doc: { name: string; source: string }): string {
+  const titleMatch = doc.source.match(/^\s*title:\s*(.+)$/m);
+  const base = (doc.name || titleMatch?.[1] || "chart").trim();
+  const slug = base
+    .replace(/[\\/:*?"<>|]/g, "")
+    .replace(/\s+/g, "_")
+    .slice(0, 48);
+  return `${slug || "chart"}.drumtab`;
+}
+
+function loadInitialWorkspace(): {
+  documents: DocumentRecord[];
+  activeId: string;
+} {
+  const ws = loadWorkspace();
+  if (ws && ws.documents.length) {
+    return {
+      documents: ws.documents,
+      activeId: ws.activeId ?? ws.documents[0].id,
+    };
   }
-  return parseDrumtab(dongCiDaCi);
+  const id = newId();
+  return {
+    documents: [
+      {
+        id,
+        name: "",
+        source: dongCiDaCi,
+        savedAt: Date.now(),
+      },
+    ],
+    activeId: id,
+  };
 }
 
 export default function App() {
-  // Canonical state: the Score AST is the source of truth.
-  const [score, setScore] = useState<Score>(() => loadInitialScore().score);
-  const [textDraft, setTextDraft] = useState<string | null>(null);
-  const [textDiagnostics, setTextDiagnostics] = useState(
-    () => loadInitialScore().diagnostics,
+  const [documents, setDocuments] = useState<DocumentRecord[]>(
+    () => loadInitialWorkspace().documents,
   );
+  const [activeId, setActiveId] = useState<string>(
+    () => loadInitialWorkspace().activeId,
+  );
+
+  const activeDoc =
+    documents.find((d) => d.id === activeId) ?? documents[0];
+
+  // Parse the active document's source into a Score.
+  const parsed = useMemo(() => parseDrumtab(activeDoc.source), [activeDoc.source]);
+  const score = parsed.score;
+  const [textDraft, setTextDraft] = useState<string | null>(null);
+  // Diagnostics only meaningfully differ from `parsed.diagnostics` while the
+  // user has a textDraft (mid-edit in source view). When textDraft is null
+  // they equal parsed.diagnostics.
+  const [textDraftDiagnostics, setTextDraftDiagnostics] = useState<
+    typeof parsed.diagnostics | null
+  >(null);
+  const textDiagnostics = textDraftDiagnostics ?? parsed.diagnostics;
 
   const [mode, setMode] = useState<Mode>("visual");
   const [selectedBar, setSelectedBar] = useState<number | null>(0);
@@ -67,13 +113,16 @@ export default function App() {
   const serializedSource = useMemo(() => serializeScore(score), [score]);
   const currentSource = textDraft ?? serializedSource;
 
-  // Debounced persistence to localStorage. Save the canonical serialized
-  // form (never the text draft, which can be mid-edit broken state).
+  // Debounced workspace persistence.
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (saveTimer.current !== null) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveStoredSource(serializedSource);
+      saveWorkspace({
+        version: 2,
+        documents,
+        activeId,
+      });
     }, 400);
     return () => {
       if (saveTimer.current !== null) {
@@ -81,7 +130,7 @@ export default function App() {
         saveTimer.current = null;
       }
     };
-  }, [serializedSource]);
+  }, [documents, activeId]);
 
   const validation = useMemo(() => validateScore(score), [score]);
   const diagnostics = [...textDiagnostics, ...validation];
@@ -139,36 +188,155 @@ export default function App() {
     return null;
   }, [score, clampedSelectedBar]);
 
+  // Write back a new source string into the active document.
+  function writeActiveDocSource(source: string) {
+    setDocuments((docs) =>
+      docs.map((d) =>
+        d.id === activeId
+          ? { ...d, source, savedAt: Date.now() }
+          : d,
+      ),
+    );
+  }
+
   function loadSample(src: string) {
     const result = parseDrumtab(src);
-    setScore(result.score);
-    setTextDiagnostics(result.diagnostics);
+    writeActiveDocSource(serializeScore(result.score));
     setTextDraft(null);
+    setTextDraftDiagnostics(null);
     setSelectedBar(result.score.sections[0]?.bars.length ? 0 : null);
   }
 
   function handleSourceChange(next: string) {
     setTextDraft(next);
     const result = parseDrumtab(next);
-    setTextDiagnostics(result.diagnostics);
+    setTextDraftDiagnostics(result.diagnostics);
     if (
       !result.diagnostics.some((d) => d.level === "error") &&
       result.score.sections.length > 0
     ) {
-      setScore(result.score);
+      writeActiveDocSource(serializeScore(result.score));
     }
   }
 
   function switchMode(next: Mode) {
     setMode(next);
-    // Leaving Source view: drop the draft, revert text to canonical
-    // serialization of the current Score.
-    if (next !== "source") setTextDraft(null);
+    if (next !== "source") {
+      setTextDraft(null);
+      setTextDraftDiagnostics(null);
+    }
   }
 
   function applyScoreUpdate(update: (s: Score) => Score) {
-    setScore((prev) => update(prev));
+    const next = update(score);
+    writeActiveDocSource(serializeScore(next));
     setTextDraft(null);
+  }
+
+  // Document manager actions.
+  function handleCreateDoc() {
+    const id = newId();
+    const newDoc: DocumentRecord = {
+      id,
+      name: "",
+      source: "title: New Chart\ntempo: 100\nmeter: 4/4\n\n[A]\n| bd: o / o / o / o |",
+      savedAt: Date.now(),
+    };
+    setDocuments((docs) => [...docs, newDoc]);
+    setActiveId(id);
+    setTextDraft(null);
+    setSelectedBar(0);
+  }
+
+  function handleDuplicateDoc(id: string) {
+    const src = documents.find((d) => d.id === id);
+    if (!src) return;
+    const newDoc: DocumentRecord = {
+      id: newId(),
+      name: src.name ? `${src.name} copy` : "",
+      source: src.source,
+      savedAt: Date.now(),
+    };
+    const srcIdx = documents.findIndex((d) => d.id === id);
+    setDocuments((docs) => [
+      ...docs.slice(0, srcIdx + 1),
+      newDoc,
+      ...docs.slice(srcIdx + 1),
+    ]);
+    setActiveId(newDoc.id);
+  }
+
+  function handleRenameDoc(id: string, name: string) {
+    setDocuments((docs) =>
+      docs.map((d) => (d.id === id ? { ...d, name } : d)),
+    );
+  }
+
+  function handleDeleteDoc(id: string) {
+    setDocuments((docs) => {
+      const idx = docs.findIndex((d) => d.id === id);
+      if (idx === -1) return docs;
+      const next = docs.slice(0, idx).concat(docs.slice(idx + 1));
+      if (next.length === 0) {
+        // Never leave zero documents — reset to default.
+        return [
+          {
+            id: newId(),
+            name: "",
+            source: dongCiDaCi,
+            savedAt: Date.now(),
+          },
+        ];
+      }
+      return next;
+    });
+    // If we deleted the active one, select the previous (or first).
+    if (id === activeId) {
+      const idx = documents.findIndex((d) => d.id === id);
+      const fallback = documents[Math.max(0, idx - 1)];
+      if (fallback && fallback.id !== id) setActiveId(fallback.id);
+    }
+  }
+
+  function handleSelectDoc(id: string) {
+    if (id === activeId) return;
+    setActiveId(id);
+    setTextDraft(null);
+    setSelectedBar(0);
+  }
+
+  function handleExportDoc(id: string) {
+    const doc = documents.find((d) => d.id === id);
+    if (!doc) return;
+    const filename = nameToFilename(doc);
+    const blob = new Blob([doc.source], {
+      type: "text/plain;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportDoc(source: string) {
+    const parsedImport = parseDrumtab(source);
+    if (parsedImport.score.sections.length === 0) {
+      alert("Couldn't parse the file as a .drumtab document.");
+      return;
+    }
+    const id = newId();
+    const doc: DocumentRecord = {
+      id,
+      name: "",
+      source,
+      savedAt: Date.now(),
+    };
+    setDocuments((docs) => [...docs, doc]);
+    setActiveId(id);
+    setTextDraft(null);
+    setSelectedBar(0);
   }
 
   return (
@@ -214,11 +382,22 @@ export default function App() {
             onClick={() => {
               if (
                 window.confirm(
-                  "Reset to the default example? Your saved edits will be cleared.",
+                  "Reset all documents to the default example? Your saved edits will be cleared.",
                 )
               ) {
-                clearStoredSource();
-                loadSample(dongCiDaCi);
+                clearWorkspace();
+                const id = newId();
+                setDocuments([
+                  {
+                    id,
+                    name: "",
+                    source: dongCiDaCi,
+                    savedAt: Date.now(),
+                  },
+                ]);
+                setActiveId(id);
+                setTextDraft(null);
+                setSelectedBar(0);
               }
             }}
             className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-500 hover:border-red-400 hover:text-red-600"
@@ -228,6 +407,25 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <div className="hidden lg:block">
+          <DocumentList
+            documents={documents.map((d) => ({
+              id: d.id,
+              name: d.name,
+              source: d.source,
+            }))}
+            activeId={activeId}
+            onSelect={handleSelectDoc}
+            onCreate={handleCreateDoc}
+            onDuplicate={handleDuplicateDoc}
+            onRename={handleRenameDoc}
+            onDelete={handleDeleteDoc}
+            onExport={handleExportDoc}
+            onImport={handleImportDoc}
+          />
+        </div>
 
       <section className="flex flex-col gap-5">
         <PlaybackBar
@@ -372,6 +570,7 @@ export default function App() {
           </div>
         </article>
       </section>
+      </div>
     </div>
   );
 }

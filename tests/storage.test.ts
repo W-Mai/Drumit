@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   clearStoredSource,
+  clearWorkspace,
   loadStoredSource,
+  loadWorkspace,
   saveStoredSource,
+  saveWorkspace,
 } from "../src/lib/storage";
 
 // Minimal in-memory localStorage polyfill for the test environment.
@@ -61,9 +64,64 @@ describe("storage", () => {
 
   it("ignores entries with a different version", () => {
     localStorage.setItem(
-      "drumit:score",
-      JSON.stringify({ version: 999, source: "x", savedAt: 0 }),
+      "drumit:workspace",
+      JSON.stringify({ version: 999, documents: [], activeId: null }),
     );
-    expect(loadStoredSource()).toBeNull();
+    expect(loadWorkspace()).toBeNull();
+  });
+});
+
+describe("workspace", () => {
+  beforeEach(() => {
+    (globalThis as unknown as { localStorage: Storage }).localStorage =
+      new MemStorage();
+  });
+  afterEach(() => {
+    (globalThis as unknown as { localStorage: Storage | undefined })
+      .localStorage = undefined;
+  });
+
+  it("migrates a v1 single-doc blob into a workspace", () => {
+    localStorage.setItem(
+      "drumit:score",
+      JSON.stringify({ version: 1, source: "title: Old", savedAt: 123 }),
+    );
+    const ws = loadWorkspace();
+    expect(ws).not.toBeNull();
+    expect(ws!.documents).toHaveLength(1);
+    expect(ws!.documents[0].source).toBe("title: Old");
+    // Legacy key should be removed after migration.
+    expect(localStorage.getItem("drumit:score")).toBeNull();
+    // Next call reads the migrated workspace.
+    expect(loadWorkspace()).not.toBeNull();
+  });
+
+  it("saveWorkspace + loadWorkspace round trip", () => {
+    saveWorkspace({
+      version: 2,
+      documents: [
+        { id: "a", name: "First", source: "x", savedAt: 1 },
+        { id: "b", name: "Second", source: "y", savedAt: 2 },
+      ],
+      activeId: "b",
+    });
+    const ws = loadWorkspace();
+    expect(ws?.documents).toHaveLength(2);
+    expect(ws?.activeId).toBe("b");
+  });
+
+  it("clearWorkspace wipes both keys", () => {
+    saveWorkspace({
+      version: 2,
+      documents: [{ id: "a", name: "", source: "x", savedAt: 1 }],
+      activeId: "a",
+    });
+    localStorage.setItem(
+      "drumit:score",
+      JSON.stringify({ version: 1, source: "legacy", savedAt: 1 }),
+    );
+    clearWorkspace();
+    expect(loadWorkspace()).toBeNull();
+    expect(localStorage.getItem("drumit:score")).toBeNull();
   });
 });
