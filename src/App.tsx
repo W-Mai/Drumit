@@ -151,14 +151,30 @@ export default function App() {
   useHotkeys([
     {
       key: "ArrowLeft",
+      meta: true,
       description: "Previous bar",
       handler: () =>
-        setSelectedBar((i) =>
-          i === null ? 0 : Math.max(0, i - 1),
-        ),
+        setSelectedBar((i) => (i === null ? 0 : Math.max(0, i - 1))),
     },
     {
       key: "ArrowRight",
+      meta: true,
+      description: "Next bar",
+      handler: () =>
+        setSelectedBar((i) =>
+          i === null ? 0 : Math.min(totalBars - 1, i + 1),
+        ),
+    },
+    {
+      key: "ArrowLeft",
+      ctrl: true,
+      description: "Previous bar",
+      handler: () =>
+        setSelectedBar((i) => (i === null ? 0 : Math.max(0, i - 1))),
+    },
+    {
+      key: "ArrowRight",
+      ctrl: true,
       description: "Next bar",
       handler: () =>
         setSelectedBar((i) =>
@@ -553,6 +569,16 @@ export default function App() {
                       st,
                       gi,
                     ),
+                  )
+                }
+                onPrevBar={() =>
+                  setSelectedBar((i) =>
+                    i === null ? 0 : Math.max(0, i - 1),
+                  )
+                }
+                onNextBar={() =>
+                  setSelectedBar((i) =>
+                    i === null ? 0 : Math.min(totalBars - 1, i + 1),
                   )
                 }
               />

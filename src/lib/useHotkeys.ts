@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 
 export interface Hotkey {
-  /** `e.key` value — e.g. " " for Space, "ArrowLeft", "l". */
-  key: string;
+  /** `e.key` value — e.g. " " for Space, "ArrowLeft", "l". Omit to match by `code` only. */
+  key?: string;
+  /** `e.code` value — e.g. "Digit2" (useful with shift: true). */
+  code?: string;
   /** Modifier flags (optional). */
   meta?: boolean;
   shift?: boolean;
@@ -25,7 +27,9 @@ export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
       const target = e.target as HTMLElement | null;
       if (target && isEditable(target)) return;
       for (const hk of hotkeys) {
-        if (e.key !== hk.key) continue;
+        if (hk.key !== undefined && e.key !== hk.key) continue;
+        if (hk.code !== undefined && e.code !== hk.code) continue;
+        if (hk.key === undefined && hk.code === undefined) continue;
         if (!!hk.meta !== e.metaKey) continue;
         if (!!hk.shift !== e.shiftKey) continue;
         if (!!hk.alt !== e.altKey) continue;

@@ -16,6 +16,7 @@ import type {
 import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
 import { Button, Chip, ChipGroup } from "./ui";
+import { useHotkeys } from "../lib/useHotkeys";
 
 /* ------------------------------------------------------------------ */
 /* Props                                                               */
@@ -58,6 +59,10 @@ interface Props {
     articulation: Articulation,
     groupIndex?: number,
   ) => void;
+  /** Called when cursor crosses past the end of this bar. */
+  onNextBar?: () => void;
+  /** Called when cursor crosses before the start of this bar. */
+  onPrevBar?: () => void;
   onSetSticking: (
     beatIndex: number,
     instrument: Instrument,
@@ -223,6 +228,8 @@ export function PadEditor({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
+  onNextBar,
+  onPrevBar,
 }: Props) {
   const [barResolution, setBarResolution] = useState<Resolution>(
     () => inferBarResolution(bar) ?? DEFAULT_RESOLUTION,
@@ -240,6 +247,307 @@ export function PadEditor({
     extraInstruments.forEach((i) => seen.add(i));
     return ALL_INSTRUMENTS.filter((i) => seen.has(i));
   }, [bar, extraInstruments]);
+
+  // Edit cursor state.
+  const [cursor, setCursor] = useState<{
+    beatIndex: number;
+    slotIndex: number;
+    laneIdx: number;
+  }>({ beatIndex: 0, slotIndex: 0, laneIdx: 0 });
+  const [autoAdvance, setAutoAdvance] = useState(true);
+
+  // Keep cursor in valid range when bar/beat/presentInstruments change.
+  const clampedCursor = useMemo(() => {
+    const beatIndex = Math.min(cursor.beatIndex, Math.max(0, beatsPerBar - 1));
+    const plan = planLaneBeat(
+      bar.beats[beatIndex]?.lanes.find(
+        (l) => l.instrument === presentInstruments[cursor.laneIdx],
+      ),
+      beatIndex,
+      barResolution,
+    );
+    const slotCount = Math.max(1, plan.columns.length);
+    const slotIndex = Math.min(cursor.slotIndex, slotCount - 1);
+    const laneIdx = Math.min(
+      cursor.laneIdx,
+      Math.max(0, presentInstruments.length - 1),
+    );
+    return { beatIndex, slotIndex, laneIdx };
+  }, [cursor, beatsPerBar, bar, presentInstruments, barResolution]);
+
+  const currentInstrument = presentInstruments[clampedCursor.laneIdx];
+
+  // --- Keyboard navigation helpers ---
+  function moveCursor(dx: number, dy: number) {
+    setCursor((c) => {
+      let { beatIndex, slotIndex, laneIdx } = c;
+      if (dy !== 0) {
+        laneIdx = Math.max(
+          0,
+          Math.min(presentInstruments.length - 1, laneIdx + dy),
+        );
+      }
+      if (dx !== 0) {
+        const lane = bar.beats[beatIndex]?.lanes.find(
+          (l) => l.instrument === presentInstruments[laneIdx],
+        );
+        const plan = planLaneBeat(lane, beatIndex, barResolution);
+        const slotCount = plan.columns.length;
+        slotIndex += dx;
+        while (slotIndex >= slotCount && beatIndex < beatsPerBar - 1) {
+          slotIndex -= slotCount;
+          beatIndex += 1;
+        }
+        while (slotIndex < 0 && beatIndex > 0) {
+          beatIndex -= 1;
+          const prevLane = bar.beats[beatIndex]?.lanes.find(
+            (l) => l.instrument === presentInstruments[laneIdx],
+          );
+          const prevPlan = planLaneBeat(prevLane, beatIndex, barResolution);
+          slotIndex += prevPlan.columns.length;
+        }
+        // Cross-bar: past last slot of last beat → next bar; before 0 of beat 0 → prev bar.
+        if (slotIndex >= slotCount && beatIndex === beatsPerBar - 1) {
+          if (onNextBar) {
+            onNextBar();
+            return { beatIndex: 0, slotIndex: 0, laneIdx };
+          }
+        }
+        if (slotIndex < 0 && beatIndex === 0) {
+          if (onPrevBar) {
+            onPrevBar();
+            return { beatIndex: 0, slotIndex: 0, laneIdx };
+          }
+        }
+        slotIndex = Math.max(0, Math.min(slotCount - 1, slotIndex));
+      }
+      return { beatIndex, slotIndex, laneIdx };
+    });
+  }
+
+  function advanceCursor() {
+    if (!autoAdvance) return;
+    moveCursor(1, 0);
+  }
+
+  // Toggle hit at cursor + advance.
+  function toggleAtCursor(instrument?: Instrument) {
+    const inst = instrument ?? currentInstrument;
+    if (!inst) return;
+    // Make sure the instrument is in presentInstruments so its row is shown.
+    if (!presentInstruments.includes(inst)) {
+      setExtraInstruments((prev) => (prev.includes(inst) ? prev : [...prev, inst]));
+    }
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    if (col.kind === "beat-slot") {
+      // Ensure lane.division matches display resolution.
+      if (
+        !laneBeat ||
+        laneBeat.groups ||
+        laneBeat.division !== col.slotsPerBeat
+      ) {
+        onSetDivision(clampedCursor.beatIndex, inst, col.slotsPerBeat);
+      }
+      onToggleSlot(clampedCursor.beatIndex, inst, col.slotIndex);
+    } else {
+      onToggleSlot(
+        clampedCursor.beatIndex,
+        inst,
+        col.slotIndex,
+        col.groupIndex,
+      );
+    }
+    advanceCursor();
+  }
+
+  function clearCursorSlot() {
+    // Clear every lane at this slot (by setting the slot empty).
+    for (const inst of presentInstruments) {
+      const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+        (l) => l.instrument === inst,
+      );
+      if (!laneBeat) continue;
+      const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+      const col = plan.columns[clampedCursor.slotIndex];
+      if (!col) continue;
+      if (col.kind === "beat-slot") {
+        const hit = laneBeat.slots[col.slotIndex];
+        if (hit) onToggleSlot(clampedCursor.beatIndex, inst, col.slotIndex);
+      } else {
+        const hit = laneBeat.groups?.[col.groupIndex]?.slots[col.slotIndex];
+        if (hit)
+          onToggleSlot(
+            clampedCursor.beatIndex,
+            inst,
+            col.slotIndex,
+            col.groupIndex,
+          );
+      }
+    }
+  }
+
+  function applyModifierAtCursor(
+    instrument: Instrument,
+    articulation: Articulation,
+  ) {
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === instrument,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    const slotAddress =
+      col.kind === "beat-slot"
+        ? { slotIndex: col.slotIndex, groupIndex: undefined }
+        : { slotIndex: col.slotIndex, groupIndex: col.groupIndex };
+    onToggleArticulation(
+      clampedCursor.beatIndex,
+      instrument,
+      slotAddress.slotIndex,
+      articulation,
+      slotAddress.groupIndex,
+    );
+  }
+
+  function setStickingAtCursor(instrument: Instrument, s: "R" | "L" | null) {
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === instrument,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    const slotAddress =
+      col.kind === "beat-slot"
+        ? { slotIndex: col.slotIndex, groupIndex: undefined }
+        : { slotIndex: col.slotIndex, groupIndex: col.groupIndex };
+    onSetSticking(
+      clampedCursor.beatIndex,
+      instrument,
+      slotAddress.slotIndex,
+      s,
+      slotAddress.groupIndex,
+    );
+  }
+
+  // Number keys → instrument shortcut map.
+  const INST_BY_DIGIT: Record<string, Instrument> = {
+    "1": "kick",
+    "2": "snare",
+    "3": "hihatClosed",
+    "4": "hihatOpen",
+    "5": "ride",
+    "6": "crashLeft",
+    "7": "crashRight",
+    "8": "tomHigh",
+    "9": "tomMid",
+    "0": "floorTom",
+  };
+
+  useHotkeys(
+    [
+      // Navigation
+      { key: "ArrowLeft", handler: () => moveCursor(-1, 0) },
+      { key: "ArrowRight", handler: () => moveCursor(1, 0) },
+      { key: "ArrowUp", handler: () => moveCursor(0, -1) },
+      { key: "ArrowDown", handler: () => moveCursor(0, 1) },
+      {
+        key: "Home",
+        handler: () =>
+          setCursor((c) => ({ ...c, beatIndex: 0, slotIndex: 0 })),
+      },
+      {
+        key: "End",
+        handler: () => {
+          const beatIndex = beatsPerBar - 1;
+          const lane = bar.beats[beatIndex]?.lanes.find(
+            (l) => l.instrument === currentInstrument,
+          );
+          const plan = planLaneBeat(lane, beatIndex, barResolution);
+          setCursor((c) => ({
+            ...c,
+            beatIndex,
+            slotIndex: Math.max(0, plan.columns.length - 1),
+          }));
+        },
+      },
+      // Toggles
+      { key: "Tab", handler: () => setAutoAdvance((v) => !v) },
+      { key: "Delete", handler: () => clearCursorSlot() },
+      { key: "Backspace", handler: () => clearCursorSlot() },
+      // Instrument digits
+      ...Object.entries(INST_BY_DIGIT).map(([digit, instrument]) => ({
+        key: digit,
+        handler: () => toggleAtCursor(instrument),
+      })),
+      // Articulation modifiers — apply to each present instrument's hit at
+      // this slot if any. In practice the common case is the current lane.
+      {
+        key: ">",
+        shift: true,
+        handler: () => applyModifierAtCursor(currentInstrument, "accent"),
+      },
+      {
+        key: "g",
+        handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
+      },
+      {
+        key: "(",
+        shift: true,
+        handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
+      },
+      {
+        key: "f",
+        handler: () => applyModifierAtCursor(currentInstrument, "flam"),
+      },
+      {
+        key: "r",
+        handler: () => applyModifierAtCursor(currentInstrument, "roll"),
+      },
+      {
+        key: "~",
+        shift: true,
+        handler: () => applyModifierAtCursor(currentInstrument, "roll"),
+      },
+      {
+        key: "!",
+        shift: true,
+        handler: () => applyModifierAtCursor(currentInstrument, "choke"),
+      },
+      {
+        key: "R",
+        shift: true,
+        handler: () => setStickingAtCursor(currentInstrument, "R"),
+      },
+      {
+        key: "L",
+        shift: true,
+        handler: () => setStickingAtCursor(currentInstrument, "L"),
+      },
+      // Division: Shift+digit sets the current beat's lane division.
+      // Matched by physical key `code` so it works across keyboard layouts.
+      ...([
+        ["Digit1", 1], // 1/4 (whole beat)
+        ["Digit2", 2], // 1/8
+        ["Digit3", 3], // triplet
+        ["Digit4", 4], // 1/16
+        ["Digit6", 6], // sextuplet
+        ["Digit8", 8], // 1/32
+      ] as Array<[string, number]>).map(([code, d]) => ({
+        code,
+        shift: true,
+        handler: () =>
+          onSetDivision(clampedCursor.beatIndex, currentInstrument, d),
+      })),
+    ],
+    currentInstrument !== undefined,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -260,6 +568,14 @@ export function PadEditor({
           content.
         </div>
       ) : (
+        <>
+          <CursorStatusBar
+            cursor={clampedCursor}
+            beatsPerBar={beatsPerBar}
+            currentInstrument={currentInstrument}
+            autoAdvance={autoAdvance}
+            onToggleAutoAdvance={() => setAutoAdvance((v) => !v)}
+          />
         <StepGrid
           bar={bar}
           beatsPerBar={beatsPerBar}
@@ -268,6 +584,7 @@ export function PadEditor({
           availableInstruments={ALL_INSTRUMENTS.filter(
             (i) => !presentInstruments.includes(i),
           )}
+          cursor={clampedCursor}
           onAddInstrument={(i) =>
             setExtraInstruments((prev) =>
               prev.includes(i) ? prev : [...prev, i],
@@ -280,6 +597,7 @@ export function PadEditor({
           onToggleArticulation={onToggleArticulation}
           onSetSticking={onSetSticking}
         />
+        </>
       )}
 
       <details className="text-xs text-stone-500">
@@ -399,6 +717,7 @@ function StepGrid({
   barResolution,
   presentInstruments,
   availableInstruments,
+  cursor,
   onAddInstrument,
   onSetDivision,
   onSetGroupDivision,
@@ -412,6 +731,7 @@ function StepGrid({
   barResolution: Resolution;
   presentInstruments: Instrument[];
   availableInstruments: Instrument[];
+  cursor: { beatIndex: number; slotIndex: number; laneIdx: number };
   onAddInstrument: (i: Instrument) => void;
   onSetDivision: Props["onSetDivision"];
   onSetGroupDivision: Props["onSetGroupDivision"];
@@ -446,13 +766,16 @@ function StepGrid({
         ))}
 
         {/* Instrument rows */}
-        {presentInstruments.map((instrument) => (
+        {presentInstruments.map((instrument, laneIdx) => (
           <InstrumentRow
             key={instrument}
             bar={bar}
             beatsPerBar={beatsPerBar}
             barResolution={barResolution}
             instrument={instrument}
+            cursorLaneMatch={cursor.laneIdx === laneIdx}
+            cursorBeatIndex={cursor.beatIndex}
+            cursorSlotIndex={cursor.slotIndex}
             onSetDivision={onSetDivision}
             onSetGroupDivision={onSetGroupDivision}
             onSplitBeat={onSplitBeat}
@@ -487,6 +810,9 @@ function InstrumentRow({
   beatsPerBar,
   barResolution,
   instrument,
+  cursorLaneMatch,
+  cursorBeatIndex,
+  cursorSlotIndex,
   onSetDivision,
   onSetGroupDivision,
   onSplitBeat,
@@ -498,6 +824,9 @@ function InstrumentRow({
   beatsPerBar: number;
   barResolution: Resolution;
   instrument: Instrument;
+  cursorLaneMatch?: boolean;
+  cursorBeatIndex?: number;
+  cursorSlotIndex?: number;
   onSetDivision: Props["onSetDivision"];
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
@@ -507,7 +836,12 @@ function InstrumentRow({
 }) {
   return (
     <>
-      <div className="flex h-11 items-center gap-2 border-r border-b border-stone-200 bg-white px-2">
+      <div
+        className={cn(
+          "flex h-11 items-center gap-2 border-r border-b border-stone-200 px-2",
+          cursorLaneMatch ? "bg-sky-50" : "bg-white",
+        )}
+      >
         <InstrumentIcon
           instrument={instrument}
           className="size-5 shrink-0 text-stone-700"
@@ -527,6 +861,7 @@ function InstrumentRow({
         );
         const plan = planLaneBeat(lane, beatIndex, barResolution);
 
+        const cursorBeatMatch = cursorBeatIndex === beatIndex;
         return (
           <LaneBeatCell
             key={`${instrument}-${beatIndex}`}
@@ -534,6 +869,11 @@ function InstrumentRow({
             bar={bar}
             instrument={instrument}
             isFirstBeat={beatIndex === 0}
+            cursorBeatMatch={cursorBeatMatch}
+            cursorLaneMatch={cursorLaneMatch}
+            cursorSlotIndex={
+              cursorBeatMatch && cursorLaneMatch ? cursorSlotIndex : undefined
+            }
             onSetDivision={onSetDivision}
             onSetGroupDivision={onSetGroupDivision}
             onSplitBeat={onSplitBeat}
@@ -556,6 +896,9 @@ function LaneBeatCell({
   bar,
   instrument,
   isFirstBeat,
+  cursorBeatMatch,
+  cursorLaneMatch,
+  cursorSlotIndex,
   onSetDivision,
   onSetGroupDivision,
   onSplitBeat,
@@ -567,6 +910,12 @@ function LaneBeatCell({
   bar: Bar;
   instrument: Instrument;
   isFirstBeat: boolean;
+  /** True if the edit cursor is in this beat. */
+  cursorBeatMatch?: boolean;
+  /** True if the edit cursor is on this lane. */
+  cursorLaneMatch?: boolean;
+  /** Slot index the cursor is on, only when both cursorBeatMatch and cursorLaneMatch are true. */
+  cursorSlotIndex?: number;
   onSetDivision: Props["onSetDivision"];
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
@@ -589,20 +938,32 @@ function LaneBeatCell({
             .join(" "),
         }}
       >
-        {plan.columns.map((col, i) => (
-          <StepCell
-            key={i}
-            bar={bar}
-            instrument={instrument}
-            plan={plan}
-            column={col}
-            columnIndex={i}
-            onSetDivision={onSetDivision}
-            onToggleSlot={onToggleSlot}
-            onToggleArticulation={onToggleArticulation}
-            onSetSticking={onSetSticking}
-          />
-        ))}
+        {plan.columns.map((col, i) => {
+          const isCursorCell =
+            cursorBeatMatch && cursorLaneMatch && cursorSlotIndex === i;
+          const cursorState: "cell" | "beat" | "lane" | null = isCursorCell
+            ? "cell"
+            : cursorLaneMatch && cursorBeatMatch
+              ? "beat"
+              : cursorLaneMatch
+                ? "lane"
+                : null;
+          return (
+            <StepCell
+              key={i}
+              bar={bar}
+              instrument={instrument}
+              plan={plan}
+              column={col}
+              columnIndex={i}
+              cursorState={cursorState}
+              onSetDivision={onSetDivision}
+              onToggleSlot={onToggleSlot}
+              onToggleArticulation={onToggleArticulation}
+              onSetSticking={onSetSticking}
+            />
+          );
+        })}
       </div>
 
       {/* Per-lane settings button, top-right overlay */}
@@ -627,6 +988,7 @@ function StepCell({
   plan,
   column,
   columnIndex,
+  cursorState,
   onSetDivision,
   onToggleSlot,
   onToggleArticulation,
@@ -641,6 +1003,7 @@ function StepCell({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
+  cursorState?: "cell" | "beat" | "lane" | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cellAnchor, setCellAnchor] = useState<HTMLButtonElement | null>(null);
@@ -702,6 +1065,10 @@ function StepCell({
           hit
             ? hitBgClass(hit)
             : "bg-white text-stone-200 hover:bg-stone-100",
+          cursorState === "lane" && !hit && "bg-sky-50",
+          cursorState === "beat" && !hit && "bg-sky-50/60",
+          cursorState === "cell" &&
+            "outline outline-2 outline-sky-500 outline-offset-[-2px] z-10",
         )}
       >
         {hit ? renderHitBadge(hit) : null}
@@ -1227,4 +1594,45 @@ function describeHit(hit: Hit): string {
   if (hit.articulations.length) parts.push(hit.articulations.join("+"));
   if (hit.sticking) parts.push(hit.sticking);
   return parts.join(" · ");
+}
+
+function CursorStatusBar({
+  cursor,
+  beatsPerBar,
+  currentInstrument,
+  autoAdvance,
+  onToggleAutoAdvance,
+}: {
+  cursor: { beatIndex: number; slotIndex: number; laneIdx: number };
+  beatsPerBar: number;
+  currentInstrument: Instrument | undefined;
+  autoAdvance: boolean;
+  onToggleAutoAdvance: () => void;
+}) {
+  const instLabel = currentInstrument
+    ? instrumentLabels[currentInstrument]
+    : "—";
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-stone-200 bg-stone-50 px-2.5 py-1 text-[10px] text-stone-600">
+      <span className="font-bold text-stone-700">
+        Beat {cursor.beatIndex + 1}/{beatsPerBar} · Slot {cursor.slotIndex + 1} · {instLabel}
+      </span>
+      <button
+        type="button"
+        onClick={onToggleAutoAdvance}
+        className={cn(
+          "rounded-full border px-2 py-0.5 font-bold",
+          autoAdvance
+            ? "border-sky-500 bg-sky-100 text-sky-900"
+            : "border-stone-200 bg-white text-stone-500",
+        )}
+        title="Tab to toggle auto-advance after entering a hit"
+      >
+        Tab: Auto-advance {autoAdvance ? "ON" : "OFF"}
+      </button>
+      <span className="text-stone-400">
+        {"← → slot · ↑ ↓ lane · Home/End · ⌘←/→ bar · 1-9 inst · Del clear · ⇧+>/g/f/r/! mods · ⇧R/⇧L stick · ⇧+digit div"}
+      </span>
+    </div>
+  );
 }
