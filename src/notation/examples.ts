@@ -7,7 +7,7 @@ meter: 4/4
 
 [A]
 | hh: x / x / x / x  bd: o / - / o / -  sn: - / o / - / o |
-| % |
+| cr: -- / - / - / -  hh: oo / o , o- / o- , o / oo  bd: o- / - , -o / -o , o / - , --  sn: - / x- / -- / x-  ft: - / - , -- / - / - |
 | hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
 | % |
 
