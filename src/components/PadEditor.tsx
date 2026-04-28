@@ -93,6 +93,7 @@ type Resolution = {
 };
 
 const RESOLUTIONS: Resolution[] = [
+  { kind: "binary", slotsPerBeat: 1, label: "1/4" },
   { kind: "binary", slotsPerBeat: 2, label: "1/8" },
   { kind: "binary", slotsPerBeat: 4, label: "1/16" },
   { kind: "binary", slotsPerBeat: 8, label: "1/32" },
@@ -100,7 +101,7 @@ const RESOLUTIONS: Resolution[] = [
   { kind: "triplet", slotsPerBeat: 6, label: "Sextuplet" },
 ];
 
-const DEFAULT_RESOLUTION: Resolution = RESOLUTIONS[1]; // 1/16
+const DEFAULT_RESOLUTION: Resolution = RESOLUTIONS[2]; // 1/16
 
 /* ------------------------------------------------------------------ */
 /* Column model                                                        */
@@ -595,6 +596,7 @@ function LaneBeatCell({
             plan={plan}
             column={col}
             columnIndex={i}
+            onSetDivision={onSetDivision}
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
@@ -624,6 +626,7 @@ function StepCell({
   plan,
   column,
   columnIndex,
+  onSetDivision,
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
@@ -633,6 +636,7 @@ function StepCell({
   plan: LaneBeatPlan;
   column: CellPlan;
   columnIndex: number;
+  onSetDivision: Props["onSetDivision"];
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
@@ -643,7 +647,21 @@ function StepCell({
   const hit = resolveHit(bar, instrument, plan, column);
 
   const handleClick = () => {
-    // Plain set/unset — modifiers are handled via right-click menu.
+    // Before writing, ensure the lane's division matches this beat's display
+    // resolution so `slot[slotIndex]` points to the column the user clicked.
+    // This is the bridge between "user sees N equal columns in this beat"
+    // and the lane's data model.
+    if (column.kind === "beat-slot") {
+      const lane = bar.beats[plan.beatIndex]?.lanes.find(
+        (l) => l.instrument === instrument,
+      );
+      const needsResize =
+        !lane ||
+        (!lane.groups && lane.division !== column.slotsPerBeat);
+      if (needsResize) {
+        onSetDivision(plan.beatIndex, instrument, column.slotsPerBeat);
+      }
+    }
     const address = slotAddressFromColumn(column);
     onToggleSlot(
       plan.beatIndex,
