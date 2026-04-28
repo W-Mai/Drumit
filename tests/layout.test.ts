@@ -215,6 +215,30 @@ describe("beam merging across groups", () => {
   });
 });
 
+describe("hit positioning integrity", () => {
+  it("every hit has a finite numeric x/y", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / o / o / o  bd: o / - / o / -  sn: - / x / - / x |`,
+    );
+    bar.hits.forEach((h) => {
+      expect(Number.isFinite(h.x)).toBe(true);
+      expect(Number.isFinite(h.y)).toBe(true);
+    });
+  });
+
+  it("tickXs cover every non-null slot in a group", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / xxxx / xxxx / xxxx |`,
+    );
+    bar.beats.forEach((beat) => {
+      beat.lanes.forEach((lane) => {
+        expect(lane.tickXs.length).toBe(lane.division);
+        lane.tickXs.forEach((x) => expect(Number.isFinite(x)).toBe(true));
+      });
+    });
+  });
+});
+
 describe("hit row-group assignment", () => {
   it("every hit has a rowGroup that matches its instrument", () => {
     const bar = layoutBarOf(

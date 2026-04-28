@@ -196,14 +196,47 @@ export function toggleSlot(
     const beat = bar.beats[beatIndex] ?? emptyBeat();
     if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
     const lane = findOrCreateLane(beat, instrument);
-    const slots = laneGroupSlots(lane, groupIndex);
-    if (!slots) return;
-    if (!slots[slotIndex]) {
-      slots[slotIndex] = createHit(instrument);
-    } else {
-      slots[slotIndex] = null;
+
+    // Writing into a slot beyond the current division must grow division
+    // so the renderer can place the new hit. Pad intermediate slots with
+    // null to keep the array dense.
+    if (lane.groups && lane.groups[groupIndex]) {
+      const g = lane.groups[groupIndex];
+      if (slotIndex >= g.division) {
+        growGroup(g, slotIndex + 1);
+      }
+      if (!g.slots[slotIndex]) g.slots[slotIndex] = createHit(instrument);
+      else g.slots[slotIndex] = null;
+      return;
+    }
+    if (!lane.groups && groupIndex === 0) {
+      if (slotIndex >= lane.division) {
+        growLane(lane, slotIndex + 1);
+      }
+      if (!lane.slots[slotIndex]) lane.slots[slotIndex] = createHit(instrument);
+      else lane.slots[slotIndex] = null;
     }
   });
+}
+
+function growLane(lane: LaneBeat, newDivision: number) {
+  const next: Array<Hit | null> = Array.from(
+    { length: newDivision },
+    (_, i) => lane.slots[i] ?? null,
+  );
+  lane.slots = next;
+  lane.division = newDivision;
+  lane.tuplet = deriveAutoTuplet(newDivision);
+}
+
+function growGroup(group: LaneGroup, newDivision: number) {
+  const next: Array<Hit | null> = Array.from(
+    { length: newDivision },
+    (_, i) => group.slots[i] ?? null,
+  );
+  group.slots = next;
+  group.division = newDivision;
+  group.tuplet = deriveAutoTuplet(newDivision);
 }
 
 export function toggleArticulation(

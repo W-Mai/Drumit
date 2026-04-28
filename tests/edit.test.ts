@@ -91,6 +91,24 @@ describe("edit operations — per-lane independence", () => {
     expect(bd.slots[0]).not.toBeNull();
   });
 
+  it("toggleSlot growing past current division updates lane.division", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o / o / o / o |`,
+    );
+    // Start with lane.division=1 on beat 1. User clicks a slot implying
+    // 1/16 grid (slotIndex=2 of 4 visual slots). Must not leave a sparse
+    // slots array — division must grow so renderer has ticks for every slot.
+    const next = toggleSlot(score, 0, 0, "hihatClosed", 2);
+    const hh = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "hihatClosed",
+    )!;
+    expect(hh.division).toBeGreaterThanOrEqual(3);
+    // Original slot 0 preserved, slot 2 is new hit, slot 1 is rest.
+    expect(hh.slots[0]).not.toBeNull();
+    expect(hh.slots[1]).toBeNull();
+    expect(hh.slots[2]).not.toBeNull();
+  });
+
   it("splitting with count=1 merges a split lane back to a single group", () => {
     const { score } = loadBar(
       `title: T\nmeter: 4/4\n[A]\n| hh: o , xx / x / x / x |`,
