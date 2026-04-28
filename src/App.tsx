@@ -15,8 +15,10 @@ import {
   deleteBar,
   insertBarAfter,
   setBarRepeatPrevious,
+  setGroupDivision,
   setLaneDivision,
   setSticking,
+  splitBeatIntoGroups,
   toggleArticulation,
   toggleSlot,
 } from "./notation/edit";
@@ -207,12 +209,35 @@ export default function App() {
                     setLaneDivision(s, clampedSelectedBar, bi, inst, d),
                   )
                 }
-                onToggleSlot={(bi, inst, si) =>
+                onSetGroupDivision={(bi, inst, gi, d) =>
                   applyScoreUpdate((s) =>
-                    toggleSlot(s, clampedSelectedBar, bi, inst, si),
+                    setGroupDivision(
+                      s,
+                      clampedSelectedBar,
+                      bi,
+                      inst,
+                      gi,
+                      d,
+                    ),
                   )
                 }
-                onToggleArticulation={(bi, inst, si, art) =>
+                onSplitBeat={(bi, inst, count) =>
+                  applyScoreUpdate((s) =>
+                    splitBeatIntoGroups(
+                      s,
+                      clampedSelectedBar,
+                      bi,
+                      inst,
+                      count,
+                    ),
+                  )
+                }
+                onToggleSlot={(bi, inst, si, gi) =>
+                  applyScoreUpdate((s) =>
+                    toggleSlot(s, clampedSelectedBar, bi, inst, si, gi),
+                  )
+                }
+                onToggleArticulation={(bi, inst, si, art, gi) =>
                   applyScoreUpdate((s) =>
                     toggleArticulation(
                       s,
@@ -221,12 +246,21 @@ export default function App() {
                       inst,
                       si,
                       art,
+                      gi,
                     ),
                   )
                 }
-                onSetSticking={(bi, inst, si, st) =>
+                onSetSticking={(bi, inst, si, st, gi) =>
                   applyScoreUpdate((s) =>
-                    setSticking(s, clampedSelectedBar, bi, inst, si, st),
+                    setSticking(
+                      s,
+                      clampedSelectedBar,
+                      bi,
+                      inst,
+                      si,
+                      st,
+                      gi,
+                    ),
                   )
                 }
               />
