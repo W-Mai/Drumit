@@ -112,6 +112,58 @@ describe("PlaybackController — transport", () => {
     ctrl.stop();
   });
 
+  it("setEngine while playing keeps playing state and uses new engine", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine: e1, scheduled: s1 } = makeFakeEngine();
+    const { engine: e2, scheduled: s2 } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine: e1, score });
+    await ctrl.play();
+    expect(ctrl.getState()).toBe("playing");
+    expect(s1.length).toBeGreaterThan(0);
+    ctrl.setEngine(e2);
+    // allow ensureReady micro-tasks to flush
+    await new Promise((r) => setTimeout(r, 10));
+    expect(ctrl.getState()).toBe("playing");
+    // Previous engine no longer receives new events.
+    const s1CountBefore = s1.length;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(s1.length).toBe(s1CountBefore);
+    // New engine got the remaining events.
+    expect(s2.length).toBeGreaterThan(0);
+    ctrl.stop();
+  });
+
+  it("setEngine while idle keeps idle state", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine: e1 } = makeFakeEngine();
+    const { engine: e2 } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine: e1, score });
+    ctrl.setEngine(e2);
+    expect(ctrl.getState()).toBe("idle");
+  });
+
+  it("setEngine while paused keeps paused and resumes on new engine", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    const { engine: e1 } = makeFakeEngine();
+    const { engine: e2, scheduled: s2 } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine: e1, score });
+    await ctrl.play();
+    ctrl.pause();
+    expect(ctrl.getState()).toBe("paused");
+    ctrl.setEngine(e2);
+    expect(ctrl.getState()).toBe("paused");
+    await ctrl.play();
+    expect(ctrl.getState()).toBe("playing");
+    expect(s2.length).toBeGreaterThan(0);
+    ctrl.stop();
+  });
+
   it("loop cycles past the end and starts over", async () => {
     const { score } = parseDrumtab(
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / - / - / - |`,

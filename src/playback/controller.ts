@@ -99,14 +99,30 @@ export class PlaybackController {
   getState(): PlaybackState {
     return this.state;
   }
+  getEngine(): PlaybackEngine {
+    return this.engine;
+  }
 
   /* ------------ option setters (safe to call while playing) ------------ */
 
   setEngine(engine: PlaybackEngine): void {
     const wasPlaying = this.state === "playing";
+    const elapsed = wasPlaying ? this.currentTime() : this.pauseTime;
+
     this.teardownScheduling();
+    const previous = this.engine;
     this.engine = engine;
-    if (wasPlaying) void this.play();
+    previous.dispose?.();
+
+    if (wasPlaying) {
+      // Restart on the new engine. We flip to "paused" first so play()
+      // takes the paused-resume path using pauseTime as the position.
+      this.pauseTime = elapsed;
+      this.setState("paused");
+      void this.play();
+    } else if (this.state === "paused") {
+      this.pauseTime = elapsed;
+    }
   }
 
   setScore(score: Score): void {

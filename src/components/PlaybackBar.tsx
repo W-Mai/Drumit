@@ -8,6 +8,7 @@ import type { PlaybackEngine } from "../playback/engine";
 import { SynthEngine } from "../playback/synthEngine";
 import { MidiEngine } from "../playback/midiEngine";
 import { cn } from "../lib/utils";
+import { useHotkeys } from "../lib/useHotkeys";
 
 type EngineKind = "synth" | "midi";
 
@@ -46,15 +47,13 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
     })();
   }, [engineKind, midiAvailable, selectedOutput]);
 
-  // Engine re-created only when kind changes.
-  const engine = useMemo<PlaybackEngine>(() => {
-    return engineKind === "midi" ? new MidiEngine() : new SynthEngine();
-  }, [engineKind]);
-
-  // Controller re-created only when engine changes (cheap engine swap).
+  // One long-lived controller for the whole component lifetime.
+  // Engine swaps happen via controller.setEngine() — controller identity
+  // stays stable so subscriptions and state never get torn down mid-play.
   const controller = useMemo(() => {
+    const initialEngine: PlaybackEngine = new SynthEngine();
     return new PlaybackController({
-      engine,
+      engine: initialEngine,
       score,
       metronome,
       tempoOverride,
@@ -64,10 +63,26 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
           ? { startBar, endBar: startBar }
           : null,
     });
-    // score / metronome / loop / tempo changes handled via setters below,
-    // we only want controller identity tied to engine to avoid re-setup.
+    // Intentionally empty deps: build once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine]);
+  }, []);
+
+  // Swap engine whenever engineKind changes.
+  useEffect(() => {
+    const next: PlaybackEngine =
+      engineKind === "midi" ? new MidiEngine() : new SynthEngine();
+    controller.setEngine(next);
+  }, [engineKind, controller]);
+
+  // Apply MIDI port selection whenever it changes (on the current engine).
+  useEffect(() => {
+    const engine = controller.getEngine();
+    if (engine instanceof MidiEngine && selectedOutput) {
+      void engine.ensureReady().then(() => {
+        engine.selectOutputById(selectedOutput);
+      });
+    }
+  }, [controller, selectedOutput, engineKind]);
 
   // Subscribe to controller events.
   useEffect(() => {
@@ -100,7 +115,7 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
     }
   }, [controller, loopEnabled, startBar]);
 
-  // Cleanup on unmount / engine swap.
+  // Final cleanup on unmount.
   useEffect(() => {
     return () => {
       controller.dispose();
@@ -113,11 +128,6 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
   const handlePlay = async () => {
     setError(null);
     try {
-      if (engineKind === "midi") {
-        const m = engine as MidiEngine;
-        await m.ensureReady();
-        if (selectedOutput) m.selectOutputById(selectedOutput);
-      }
       await controller.play();
     } catch (err) {
       setError((err as Error).message);
@@ -129,6 +139,34 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
     controller.stop();
     onStop?.();
   };
+
+  useHotkeys([
+    {
+      key: " ",
+      description: "Play / Pause",
+      handler: () => {
+        if (playing) handlePause();
+        else handlePlay();
+      },
+    },
+    {
+      key: "Escape",
+      description: "Stop",
+      handler: () => {
+        if (playState !== "idle") handleStop();
+      },
+    },
+    {
+      key: "l",
+      description: "Toggle loop",
+      handler: () => setLoopEnabled((v) => !v),
+    },
+    {
+      key: "m",
+      description: "Toggle metronome",
+      handler: () => setMetronome((v) => !v),
+    },
+  ]);
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs">
@@ -145,7 +183,13 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
                 : "bg-emerald-500 text-white hover:bg-emerald-600",
           )}
         >
-          {playing ? "❚❚ Pause" : paused ? "▶ Resume" : "▶ Play"}
+          {playing
+            ? "❚❚ Pause"
+            : paused
+              ? "▶ Resume"
+              : typeof startBar === "number" && startBar > 0
+                ? `▶ Play @${startBar + 1}`
+                : "▶ Play"}
         </button>
         <button
           type="button"
