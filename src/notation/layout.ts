@@ -11,6 +11,9 @@ import type {
 export interface LaidOutHit {
   x: number;
   y: number;
+  /** Allocated horizontal slot width (px) for this hit — used by the
+   *  renderer to size the glyph so it stays centered inside the slot. */
+  slotWidth: number;
   hit: Hit;
   category: InstrumentCategory;
   rowGroup: RowGroup;
@@ -281,11 +284,13 @@ function layoutBar(
           beamSegments,
         });
 
+        const slotWidth = groupWidth / Math.max(1, groupData.division);
         groupData.slots.forEach((hit, slotIndex) => {
           if (!hit) return;
           hits.push({
             x: tickXs[slotIndex],
             y: laneY,
+            slotWidth,
             hit,
             category,
             rowGroup: group,

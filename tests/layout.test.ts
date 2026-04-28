@@ -248,6 +248,49 @@ describe("beam merging across groups", () => {
   });
 });
 
+describe("hit slot width", () => {
+  it("16th-note hits have roughly half the slotWidth of 8th-note hits", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / xxxx / x / x |`,
+    );
+    const hh8 = bar.hits.filter((h) =>
+      h.hit.instrument === "hihatClosed" && h.x < bar.x + bar.width / 4,
+    );
+    const hh16 = bar.hits.filter((h) =>
+      h.hit.instrument === "hihatClosed" &&
+      h.x > bar.x + bar.width / 4 &&
+      h.x < bar.x + bar.width / 2,
+    );
+    expect(hh8.length).toBeGreaterThan(0);
+    expect(hh16.length).toBeGreaterThan(0);
+    // 8th slot should be ~2x the 16th slot width.
+    const w8 = hh8[0].slotWidth;
+    const w16 = hh16[0].slotWidth;
+    expect(w8 / w16).toBeCloseTo(2, 0);
+  });
+
+  it("slot widths within one group are identical", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx |`,
+    );
+    const widths = new Set(bar.hits.map((h) => h.slotWidth));
+    expect(widths.size).toBe(1);
+  });
+
+  it("split beat produces different slot widths per group", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o , xx / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    const hitsB0 = bar.hits.filter(
+      (h) => h.x >= b0.x && h.x <= b0.x + b0.width,
+    );
+    const widths = hitsB0.map((h) => h.slotWidth);
+    // One 8th (wider) + two 16ths (narrower)
+    expect(new Set(widths).size).toBe(2);
+  });
+});
+
 describe("hit positioning integrity", () => {
   it("every hit has a finite numeric x/y", () => {
     const bar = layoutBarOf(

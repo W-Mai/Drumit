@@ -207,9 +207,23 @@ function BarView({
   );
 }
 
+const MAX_BASE_SIZE = 7; // px — used for a kick hit at comfortable spacing
+const MIN_BASE_SIZE = 2.5;
+
+function computeHitSize(slotWidth: number, instrumentScale: number): number {
+  // Base is limited by the slot's width (so two adjacent hits don't touch)
+  // and by the row's vertical budget (ROW_HEIGHT ~ 26 → ~10 half-height max).
+  const horizontalBudget = slotWidth * 0.4;
+  const verticalBudget = 9;
+  const base = Math.min(horizontalBudget, verticalBudget, MAX_BASE_SIZE);
+  const scaled = base * instrumentScale;
+  return Math.max(MIN_BASE_SIZE, scaled);
+}
+
 function HitGlyph({ laid }: { laid: LaidOutHit }) {
-  const { hit, x, y } = laid;
-  const size = 5.5 * (instrumentSizeScale[hit.instrument] ?? 1);
+  const { hit, x, y, slotWidth } = laid;
+  const scale = instrumentSizeScale[hit.instrument] ?? 1;
+  const size = computeHitSize(slotWidth, scale);
   return (
     <g>
       {hit.articulations.includes("ghost") ? (
@@ -280,23 +294,31 @@ function HitHead({
   size: number;
 }) {
   if (hit.head === "x") {
+    const sw = Math.max(1, Math.min(1.8, size * 0.3));
     return (
       <path
         d={`M ${x - size} ${y - size} L ${x + size} ${y + size} M ${x + size} ${y - size} L ${x - size} ${y + size}`}
         className="fill-none stroke-stone-900"
-        strokeWidth={1.8}
+        strokeWidth={sw}
         strokeLinecap="round"
       />
     );
   }
   if (hit.head === "partial") {
+    // ∂ glyph sized roughly 2.2× the base `size` so the shape matches a ×
+    // head of the same size in optical weight.
+    const fontSize = Math.max(7, size * 2.4);
     return (
       <text
         x={x}
-        y={y + size}
+        y={y + size * 0.9}
         textAnchor="middle"
         className="fill-stone-900 font-bold"
-        style={{ fontSize: "15px", fontFamily: "Georgia, serif" }}
+        style={{
+          fontSize: `${fontSize}px`,
+          fontFamily: "Georgia, serif",
+          dominantBaseline: "alphabetic",
+        }}
       >
         ∂
       </text>
@@ -314,7 +336,7 @@ function HitHead({
     );
   }
   if (hit.head === "slash") {
-    // "\" stroke: from upper-right to lower-left.
+    const sw = Math.max(1.2, Math.min(2, size * 0.35));
     return (
       <line
         x1={x + size}
@@ -322,7 +344,7 @@ function HitHead({
         x2={x - size}
         y2={y + size}
         className="stroke-stone-900"
-        strokeWidth={2}
+        strokeWidth={sw}
         strokeLinecap="round"
       />
     );
@@ -332,6 +354,7 @@ function HitHead({
     //   |
     //   ×
     const stemH = size * 1.8;
+    const sw = Math.max(1, Math.min(1.8, size * 0.28));
     return (
       <g>
         <line
@@ -340,13 +363,13 @@ function HitHead({
           x2={x}
           y2={y - size + 1}
           className="stroke-stone-900"
-          strokeWidth={1.6}
+          strokeWidth={sw}
           strokeLinecap="round"
         />
         <path
           d={`M ${x - size} ${y - size} L ${x + size} ${y + size} M ${x + size} ${y - size} L ${x - size} ${y + size}`}
           className="fill-none stroke-stone-900"
-          strokeWidth={1.8}
+          strokeWidth={sw}
           strokeLinecap="round"
         />
       </g>
