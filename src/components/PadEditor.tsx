@@ -10,7 +10,7 @@ import type {
   Bar,
   Hit,
   Instrument,
-  LaneGroup,
+  LaneBeat,
   RepeatHint,
 } from "../notation/types";
 import { FloatingMenu } from "./FloatingMenu";
@@ -103,6 +103,99 @@ const RESOLUTIONS: Resolution[] = [
 const DEFAULT_RESOLUTION: Resolution = RESOLUTIONS[1]; // 1/16
 
 /* ------------------------------------------------------------------ */
+/* Column model                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Every instrument row in a bar gets its own column plan: one array per
+ * beat. The plan says how to translate a click on a visual cell back into
+ * `(slotIndex, groupIndex?)` on the lane.
+ *
+ * When the lane has no `groups` for this beat we use the bar-level
+ * resolution (unless the user has manually set a larger `lane.division` —
+ * we respect whichever is finer).
+ *
+ * When the lane has `groups` for this beat we show those groups as-is and
+ * ignore the bar-level resolution.
+ */
+type CellPlan =
+  | {
+      kind: "beat-slot";
+      slotIndex: number;
+      slotsPerBeat: number;
+      /** True if the displayed grid is driven by the lane's division rather
+       *  than the bar-level resolution (i.e. the user customized this lane). */
+      custom: boolean;
+    }
+  | {
+      kind: "group-slot";
+      groupIndex: number;
+      slotIndex: number;
+      slotsInGroup: number;
+    };
+
+interface LaneBeatPlan {
+  beatIndex: number;
+  /** Whether this lane's column layout follows the bar-level resolution. */
+  usesBarResolution: boolean;
+  /** Whether this lane is split into multiple groups for this beat. */
+  split: boolean;
+  columns: CellPlan[];
+}
+
+function planLaneBeat(
+  lane: LaneBeat | undefined,
+  beatIndex: number,
+  barResolution: Resolution,
+): LaneBeatPlan {
+  if (lane?.groups && lane.groups.length > 1) {
+    const columns: CellPlan[] = [];
+    lane.groups.forEach((g, groupIndex) => {
+      for (let slotIndex = 0; slotIndex < g.division; slotIndex += 1) {
+        columns.push({
+          kind: "group-slot",
+          groupIndex,
+          slotIndex,
+          slotsInGroup: g.division,
+        });
+      }
+    });
+    return {
+      beatIndex,
+      usesBarResolution: false,
+      split: true,
+      columns,
+    };
+  }
+
+  // Un-split lane: follow bar-level resolution unless the lane's own
+  // division is finer. If the lane was triplet and bar is binary (or vice
+  // versa), the lane's setting takes precedence since it's musically
+  // different.
+  const laneDiv = lane?.division ?? 1;
+  const laneIsTriplet = !!lane?.tuplet;
+  const barIsTriplet = barResolution.kind === "triplet";
+  const mismatch = lane ? laneIsTriplet !== barIsTriplet : false;
+  const custom = mismatch || laneDiv > barResolution.slotsPerBeat;
+  const slotsPerBeat = custom
+    ? Math.max(1, laneDiv)
+    : barResolution.slotsPerBeat;
+
+  const columns: CellPlan[] = Array.from({ length: slotsPerBeat }, (_, i) => ({
+    kind: "beat-slot",
+    slotIndex: i,
+    slotsPerBeat,
+    custom,
+  }));
+  return {
+    beatIndex,
+    usesBarResolution: !custom,
+    split: false,
+    columns,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Public component                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -125,7 +218,6 @@ export function PadEditor({
     () => inferBarResolution(bar) ?? DEFAULT_RESOLUTION,
   );
 
-  // Instruments the user has explicitly added beyond what the bar already has.
   const [extraInstruments, setExtraInstruments] = useState<Instrument[]>([]);
 
   const serialized = useMemo(() => serializeBar(bar), [bar]);
@@ -301,85 +393,6 @@ function BarHeader({
 /* Step grid                                                           */
 /* ------------------------------------------------------------------ */
 
-/**
- * Per-beat column plan. If any lane in this beat uses groups, we render the
- * beat as its groups (each group is a sub-cell column). Otherwise the beat
- * expands into `barResolution.slotsPerBeat` equally-spaced step cells.
- */
-interface BeatPlan {
-  beatIndex: number;
-  columns: BeatColumn[];
-  /** True if *any* lane in this beat has been split into groups. */
-  split: boolean;
-}
-
-type BeatColumn =
-  | {
-      kind: "slot";
-      beatIndex: number;
-      slotIndex: number;
-      slotsPerBeat: number;
-      tuplet?: number; // when this beat uses a triplet resolution
-    }
-  | {
-      kind: "group-slot";
-      beatIndex: number;
-      groupIndex: number;
-      slotIndex: number;
-      slotsInGroup: number;
-      tuplet?: number;
-    };
-
-function buildBeatPlans(
-  bar: Bar,
-  beatsPerBar: number,
-  barResolution: Resolution,
-): BeatPlan[] {
-  return Array.from({ length: beatsPerBar }, (_, beatIndex) => {
-    const beat = bar.beats[beatIndex];
-    // Does any lane in this beat have groups? If yes, render as groups.
-    const lanesWithGroups = beat?.lanes.filter(
-      (l) => l.groups && l.groups.length > 1,
-    );
-    if (lanesWithGroups && lanesWithGroups.length > 0) {
-      // Pick the first lane's group structure as the beat's column template.
-      // (All lanes that are split in this beat share the same split count via
-      //  the current UI, which only splits a single lane at a time.)
-      const template = lanesWithGroups[0]!.groups!;
-      const columns: BeatColumn[] = [];
-      template.forEach((group, groupIndex) => {
-        for (let slotIndex = 0; slotIndex < group.division; slotIndex += 1) {
-          columns.push({
-            kind: "group-slot",
-            beatIndex,
-            groupIndex,
-            slotIndex,
-            slotsInGroup: group.division,
-            tuplet: group.tuplet,
-          });
-        }
-      });
-      return { beatIndex, columns, split: true };
-    }
-
-    // Single-group beat → use the bar-wide resolution.
-    const slotsPerBeat = barResolution.slotsPerBeat;
-    const tuplet =
-      barResolution.kind === "triplet" ? slotsPerBeat : undefined;
-    const columns: BeatColumn[] = Array.from(
-      { length: slotsPerBeat },
-      (_, slotIndex) => ({
-        kind: "slot",
-        beatIndex,
-        slotIndex,
-        slotsPerBeat,
-        tuplet,
-      }),
-    );
-    return { beatIndex, columns, split: false };
-  });
-}
-
 function StepGrid({
   bar,
   beatsPerBar,
@@ -407,57 +420,42 @@ function StepGrid({
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
 }) {
-  const plans = useMemo(
-    () => buildBeatPlans(bar, beatsPerBar, barResolution),
-    [bar, beatsPerBar, barResolution],
-  );
-
-  // Total columns across all beats (for stable layout width).
-  const totalColumns = plans.reduce((a, p) => a + p.columns.length, 0);
-
   return (
     <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
       <div
         className="grid min-w-max"
         style={{
-          gridTemplateColumns: `minmax(100px, 112px) repeat(${totalColumns}, minmax(28px, 44px))`,
+          gridTemplateColumns: `160px repeat(${beatsPerBar}, minmax(180px, 1fr))`,
         }}
       >
-        {/* Beat header rows (2 rows: wide beat title + sub-column pips). */}
-        <div className="sticky left-0 z-10 border-r border-b border-stone-200 bg-stone-50 px-2 py-2 text-[10px] font-bold tracking-wide text-stone-500 uppercase">
-          Beat
+        {/* Top-left corner */}
+        <div className="border-r border-b border-stone-200 bg-stone-50 px-2 py-2 text-[10px] font-bold tracking-wide text-stone-500 uppercase">
+          Instrument · Customize
         </div>
-        {plans.map((plan) => (
-          <BeatTitleCell
-            key={`bt-${plan.beatIndex}`}
-            plan={plan}
-            presentInstruments={presentInstruments}
-            onSplitBeat={onSplitBeat}
-            onSetGroupDivision={onSetGroupDivision}
-          />
+        {/* Beat header labels (no split menus here anymore — each lane has its own) */}
+        {Array.from({ length: beatsPerBar }, (_, i) => (
+          <div
+            key={`bh-${i}`}
+            className={cn(
+              "flex items-center justify-center border-r border-b border-stone-200 bg-stone-50 py-1.5 text-[11px] font-extrabold tracking-wide text-stone-500",
+              i === 0 && "border-l-2 border-l-stone-400",
+            )}
+          >
+            Beat {i + 1}
+          </div>
         ))}
-
-        {/* Sub-header row: sub-group labels only needed when a beat is split */}
-        <div className="sticky left-0 z-10 border-r border-b border-stone-200 bg-white" />
-        {plans.flatMap((plan) =>
-          plan.columns.map((col, i) => (
-            <SubHeaderCell
-              key={`sh-${plan.beatIndex}-${i}`}
-              plan={plan}
-              column={col}
-              localIndex={i}
-            />
-          )),
-        )}
 
         {/* Instrument rows */}
         {presentInstruments.map((instrument) => (
           <InstrumentRow
             key={instrument}
             bar={bar}
+            beatsPerBar={beatsPerBar}
+            barResolution={barResolution}
             instrument={instrument}
-            plans={plans}
             onSetDivision={onSetDivision}
+            onSetGroupDivision={onSetGroupDivision}
+            onSplitBeat={onSplitBeat}
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
@@ -465,7 +463,7 @@ function StepGrid({
         ))}
 
         {/* Add instrument row */}
-        <div className="sticky left-0 z-10 border-r border-t border-stone-200 bg-white px-2 py-2">
+        <div className="border-t border-r border-stone-200 bg-white px-2 py-2">
           <AddInstrumentMenu
             options={availableInstruments}
             onPick={onAddInstrument}
@@ -473,209 +471,9 @@ function StepGrid({
         </div>
         <div
           className="border-t border-stone-200"
-          style={{ gridColumn: `span ${totalColumns}` }}
+          style={{ gridColumn: `span ${beatsPerBar}` }}
         />
       </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Beat header cells                                                   */
-/* ------------------------------------------------------------------ */
-
-function BeatTitleCell({
-  plan,
-  presentInstruments,
-  onSplitBeat,
-  onSetGroupDivision,
-}: {
-  plan: BeatPlan;
-  presentInstruments: Instrument[];
-  onSplitBeat: Props["onSplitBeat"];
-  onSetGroupDivision: Props["onSetGroupDivision"];
-}) {
-  const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
-
-  const span = plan.columns.length;
-  const groupCount = plan.split
-    ? new Set(
-        plan.columns
-          .filter(
-            (c): c is Extract<BeatColumn, { kind: "group-slot" }> =>
-              c.kind === "group-slot",
-          )
-          .map((c) => c.groupIndex),
-      ).size
-    : 1;
-
-  return (
-    <>
-      <button
-        ref={setAnchor}
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex items-center justify-center border-r border-b border-stone-200 bg-stone-50 px-2 py-2 text-[11px] font-bold tracking-wide transition select-none",
-          "hover:bg-stone-200",
-          plan.split && "bg-amber-50 text-stone-900",
-          "border-l-2 border-l-stone-400",
-        )}
-        style={{ gridColumn: `span ${span}` }}
-        title="Click to split / merge this beat"
-      >
-        Beat {plan.beatIndex + 1}
-        {plan.split ? ` · ${groupCount} groups` : ""}
-        <svg
-          viewBox="0 0 12 12"
-          className="ml-1 size-3 opacity-60"
-          fill="currentColor"
-          aria-hidden
-        >
-          <path d="M2 4 L6 8 L10 4 Z" />
-        </svg>
-      </button>
-
-      <FloatingMenu
-        anchor={anchor}
-        open={open}
-        onClose={() => setOpen(false)}
-      >
-        <BeatPopoverContent
-          plan={plan}
-          groupCount={groupCount}
-          onPickSplit={(n) => {
-            presentInstruments.forEach((inst) =>
-              onSplitBeat(plan.beatIndex, inst, n),
-            );
-            setOpen(false);
-          }}
-          onPickGroupDivision={(gi, d) => {
-            presentInstruments.forEach((inst) =>
-              onSetGroupDivision(plan.beatIndex, inst, gi, d),
-            );
-          }}
-        />
-      </FloatingMenu>
-    </>
-  );
-}
-
-function BeatPopoverContent({
-  plan,
-  groupCount,
-  onPickSplit,
-  onPickGroupDivision,
-}: {
-  plan: BeatPlan;
-  groupCount: number;
-  onPickSplit: (n: number) => void;
-  onPickGroupDivision: (groupIndex: number, d: number) => void;
-}) {
-  // For each group, surface a mini division picker so the user can set
-  // (for example) group 1 = 1 slot and group 2 = 3 slots (tripled).
-  const groupDivisions: number[] = plan.split
-    ? Array.from({ length: groupCount }, (_, gi) => {
-        const col = plan.columns.find(
-          (c): c is Extract<BeatColumn, { kind: "group-slot" }> =>
-            c.kind === "group-slot" && c.groupIndex === gi,
-        );
-        return col ? col.slotsInGroup : 1;
-      })
-    : [];
-
-  return (
-    <div className="min-w-[220px] text-left">
-      <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-        Beat {plan.beatIndex + 1} · {plan.split ? `${groupCount} groups` : "single"}
-      </div>
-      <div className="mb-3 flex gap-1">
-        {[1, 2, 3, 4].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onPickSplit(n)}
-            className={cn(
-              "flex-1 rounded-md border px-2 py-1 text-[11px] font-bold transition",
-              groupCount === n
-                ? "border-stone-900 bg-stone-900 text-white"
-                : "border-stone-200 bg-white text-stone-700 hover:border-stone-500",
-            )}
-          >
-            {n === 1 ? "Merge" : `Split ${n}`}
-          </button>
-        ))}
-      </div>
-      {plan.split && (
-        <>
-          <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-            Division per group
-          </div>
-          <div className="flex flex-col gap-1">
-            {groupDivisions.map((current, gi) => (
-              <div
-                key={gi}
-                className="flex items-center gap-2 rounded-md bg-stone-50 px-2 py-1"
-              >
-                <span className="min-w-[48px] text-[10px] font-bold text-stone-500">
-                  Grp {gi + 1}
-                </span>
-                <div className="flex flex-1 gap-1">
-                  {[1, 2, 3, 4].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => onPickGroupDivision(gi, d)}
-                      className={cn(
-                        "flex-1 rounded border px-1.5 py-0.5 text-[11px] font-bold transition",
-                        current === d
-                          ? "border-amber-500 bg-amber-100 text-stone-900"
-                          : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
-                      )}
-                    >
-                      /{d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function SubHeaderCell({
-  plan,
-  column,
-  localIndex,
-}: {
-  plan: BeatPlan;
-  column: BeatColumn;
-  localIndex: number;
-}) {
-  const isBeatStart =
-    column.kind === "slot" ? column.slotIndex === 0 : localIndex === 0;
-  const isGroupStart =
-    column.kind === "group-slot" && column.slotIndex === 0;
-
-  const label =
-    plan.split && isGroupStart && column.kind === "group-slot"
-      ? `${plan.beatIndex + 1}.${column.groupIndex + 1}`
-      : "";
-
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-center border-b border-stone-200 bg-white py-1 text-[9px] font-bold text-stone-400",
-        localIndex === 0 && "border-l-2 border-l-stone-400",
-        isBeatStart && !isGroupStart && "border-l-2 border-l-stone-400",
-        isGroupStart && "border-l border-dashed border-amber-400",
-      )}
-    >
-      {label || <span className="text-stone-200">·</span>}
     </div>
   );
 }
@@ -686,24 +484,30 @@ function SubHeaderCell({
 
 function InstrumentRow({
   bar,
+  beatsPerBar,
+  barResolution,
   instrument,
-  plans,
   onSetDivision,
+  onSetGroupDivision,
+  onSplitBeat,
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
 }: {
   bar: Bar;
+  beatsPerBar: number;
+  barResolution: Resolution;
   instrument: Instrument;
-  plans: BeatPlan[];
   onSetDivision: Props["onSetDivision"];
+  onSetGroupDivision: Props["onSetGroupDivision"];
+  onSplitBeat: Props["onSplitBeat"];
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
 }) {
   return (
     <>
-      <div className="sticky left-0 z-10 flex items-center gap-2 border-r border-b border-stone-200 bg-white px-2 py-2">
+      <div className="flex items-center gap-2 border-r border-b border-stone-200 bg-white px-2 py-2">
         <InstrumentIcon
           instrument={instrument}
           className="size-5 shrink-0 text-stone-700"
@@ -717,22 +521,96 @@ function InstrumentRow({
           </span>
         </div>
       </div>
-      {plans.flatMap((plan) =>
-        plan.columns.map((col, i) => (
-          <StepCell
-            key={`${instrument}-${plan.beatIndex}-${i}`}
+      {Array.from({ length: beatsPerBar }, (_, beatIndex) => {
+        const lane = bar.beats[beatIndex]?.lanes.find(
+          (l) => l.instrument === instrument,
+        );
+        const plan = planLaneBeat(lane, beatIndex, barResolution);
+
+        return (
+          <LaneBeatCell
+            key={`${instrument}-${beatIndex}`}
+            plan={plan}
             bar={bar}
             instrument={instrument}
-            column={col}
-            localIndex={i}
+            isFirstBeat={beatIndex === 0}
             onSetDivision={onSetDivision}
+            onSetGroupDivision={onSetGroupDivision}
+            onSplitBeat={onSplitBeat}
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
           />
-        )),
-      )}
+        );
+      })}
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Per-lane per-beat cell: includes the slot grid + a small settings btn */
+/* ------------------------------------------------------------------ */
+
+function LaneBeatCell({
+  plan,
+  bar,
+  instrument,
+  isFirstBeat,
+  onSetDivision,
+  onSetGroupDivision,
+  onSplitBeat,
+  onToggleSlot,
+  onToggleArticulation,
+  onSetSticking,
+}: {
+  plan: LaneBeatPlan;
+  bar: Bar;
+  instrument: Instrument;
+  isFirstBeat: boolean;
+  onSetDivision: Props["onSetDivision"];
+  onSetGroupDivision: Props["onSetGroupDivision"];
+  onSplitBeat: Props["onSplitBeat"];
+  onToggleSlot: Props["onToggleSlot"];
+  onToggleArticulation: Props["onToggleArticulation"];
+  onSetSticking: Props["onSetSticking"];
+}) {
+  return (
+    <div
+      className={cn(
+        "relative border-r border-b border-stone-200",
+        isFirstBeat && "border-l-2 border-l-stone-400",
+      )}
+    >
+      <div
+        className="grid h-full w-full"
+        style={{
+          gridTemplateColumns: `repeat(${plan.columns.length}, minmax(28px, 1fr))`,
+        }}
+      >
+        {plan.columns.map((col, i) => (
+          <StepCell
+            key={i}
+            bar={bar}
+            instrument={instrument}
+            plan={plan}
+            column={col}
+            columnIndex={i}
+            onToggleSlot={onToggleSlot}
+            onToggleArticulation={onToggleArticulation}
+            onSetSticking={onSetSticking}
+          />
+        ))}
+      </div>
+
+      {/* Per-lane settings button, top-right overlay */}
+      <LaneSettingsButton
+        plan={plan}
+        instrument={instrument}
+        onSetDivision={onSetDivision}
+        onSetGroupDivision={onSetGroupDivision}
+        onSplitBeat={onSplitBeat}
+      />
+    </div>
   );
 }
 
@@ -743,46 +621,36 @@ function InstrumentRow({
 function StepCell({
   bar,
   instrument,
+  plan,
   column,
-  localIndex,
-  onSetDivision,
+  columnIndex,
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
 }: {
   bar: Bar;
   instrument: Instrument;
-  column: BeatColumn;
-  localIndex: number;
-  onSetDivision: Props["onSetDivision"];
+  plan: LaneBeatPlan;
+  column: CellPlan;
+  columnIndex: number;
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cellAnchor, setCellAnchor] = useState<HTMLButtonElement | null>(null);
 
-  const hit = resolveHitForCell(bar, instrument, column);
+  const hit = resolveHit(bar, instrument, plan, column);
 
   const handleClick = () => {
-    if (column.kind === "slot") {
-      handleWholeBeatCellClick({
-        bar,
-        instrument,
-        column,
-        hit,
-        onSetDivision,
-        onToggleSlot,
-        onToggleArticulation,
-      });
-    } else {
-      handleGroupSlotCellClick({
-        instrument,
-        column,
-        hit,
-        onToggleSlot,
-        onToggleArticulation,
-      });
-    }
+    // Plain set/unset — modifiers are handled via right-click menu.
+    const address = slotAddressFromColumn(column);
+    onToggleSlot(
+      plan.beatIndex,
+      instrument,
+      address.slotIndex,
+      address.groupIndex,
+    );
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -790,15 +658,12 @@ function StepCell({
     setMenuOpen(true);
   };
 
-  // Visual cues
-  const isBeatStart =
-    column.kind === "slot"
-      ? column.slotIndex === 0
-      : column.slotIndex === 0 && column.groupIndex === 0;
   const isGroupStart =
     column.kind === "group-slot" && column.slotIndex === 0;
-
-  const [cellAnchor, setCellAnchor] = useState<HTMLButtonElement | null>(null);
+  const isBeatStart =
+    column.kind === "beat-slot"
+      ? column.slotIndex === 0
+      : column.groupIndex === 0 && column.slotIndex === 0;
 
   return (
     <>
@@ -807,12 +672,14 @@ function StepCell({
         type="button"
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        title={hit ? describeHit(hit) : "Click to fill · Right-click for more"}
+        title={hit ? describeHit(hit) : "Click to toggle · Right-click for more"}
         className={cn(
-          "relative flex aspect-square items-center justify-center border-b border-stone-200 text-sm transition select-none",
-          localIndex === 0 && "border-l-2 border-l-stone-400",
-          isBeatStart && !isGroupStart && "border-l-2 border-l-stone-400",
-          isGroupStart && "border-l border-dashed border-amber-500",
+          "relative flex aspect-square items-center justify-center text-sm transition select-none",
+          columnIndex > 0 && "border-l border-stone-100",
+          isBeatStart && !isGroupStart && "border-l border-stone-300",
+          isGroupStart &&
+            !isBeatStart &&
+            "border-l border-dashed border-amber-400",
           hit
             ? hitBgClass(hit)
             : "bg-white text-stone-200 hover:bg-stone-100",
@@ -833,27 +700,25 @@ function StepCell({
             setMenuOpen(false);
           }}
           onToggleArticulation={(art) => {
-            const { slotIndex, groupIndex } = slotAddressFromColumn(column);
-            if (!hit) {
-              handleClick();
-            }
+            if (!hit) handleClick();
+            const address = slotAddressFromColumn(column);
             onToggleArticulation(
-              column.beatIndex,
+              plan.beatIndex,
               instrument,
-              slotIndex,
+              address.slotIndex,
               art,
-              groupIndex,
+              address.groupIndex,
             );
           }}
           onSetSticking={(s) => {
-            const { slotIndex, groupIndex } = slotAddressFromColumn(column);
             if (!hit) handleClick();
+            const address = slotAddressFromColumn(column);
             onSetSticking(
-              column.beatIndex,
+              plan.beatIndex,
               instrument,
-              slotIndex,
+              address.slotIndex,
               s,
-              groupIndex,
+              address.groupIndex,
             );
           }}
         />
@@ -934,6 +799,193 @@ function StepContextMenuContent({
 }
 
 /* ------------------------------------------------------------------ */
+/* Per-lane settings popover: Split / Merge / Division                 */
+/* ------------------------------------------------------------------ */
+
+function LaneSettingsButton({
+  plan,
+  instrument,
+  onSetDivision,
+  onSetGroupDivision,
+  onSplitBeat,
+}: {
+  plan: LaneBeatPlan;
+  instrument: Instrument;
+  onSetDivision: Props["onSetDivision"];
+  onSetGroupDivision: Props["onSetGroupDivision"];
+  onSplitBeat: Props["onSplitBeat"];
+}) {
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+
+  const indicator = plan.split
+    ? `${countGroups(plan)}g`
+    : plan.usesBarResolution
+      ? ""
+      : `/${plan.columns.length}`;
+
+  return (
+    <>
+      <button
+        ref={setAnchor}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "absolute top-0.5 right-0.5 rounded px-1 text-[8px] font-bold leading-tight transition",
+          plan.split || !plan.usesBarResolution
+            ? "bg-amber-500 text-white"
+            : "bg-stone-200/80 text-stone-500 opacity-0 group-hover:opacity-100 hover:bg-stone-300",
+        )}
+        title="Customize this beat's grid for this instrument"
+      >
+        ⚙{indicator}
+      </button>
+      <FloatingMenu
+        anchor={anchor}
+        open={open}
+        onClose={() => setOpen(false)}
+      >
+        <LaneSettingsPopover
+          plan={plan}
+          instrument={instrument}
+          onSetDivision={onSetDivision}
+          onSetGroupDivision={onSetGroupDivision}
+          onSplitBeat={onSplitBeat}
+          onClose={() => setOpen(false)}
+        />
+      </FloatingMenu>
+    </>
+  );
+}
+
+function LaneSettingsPopover({
+  plan,
+  instrument,
+  onSetDivision,
+  onSetGroupDivision,
+  onSplitBeat,
+  onClose,
+}: {
+  plan: LaneBeatPlan;
+  instrument: Instrument;
+  onSetDivision: Props["onSetDivision"];
+  onSetGroupDivision: Props["onSetGroupDivision"];
+  onSplitBeat: Props["onSplitBeat"];
+  onClose: () => void;
+}) {
+  const groupCount = countGroups(plan);
+
+  return (
+    <div className="min-w-[240px] text-left">
+      <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+        {instrumentLabels[instrument]} · Beat {plan.beatIndex + 1}
+      </div>
+      <div className="mb-3 text-[10px] text-stone-500">
+        Tip: Leave untouched to follow the bar-level grid. Customize only this
+        lane / beat if you need a different subdivision.
+      </div>
+
+      <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+        Split
+      </div>
+      <div className="mb-3 flex gap-1">
+        {[1, 2, 3, 4].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => {
+              onSplitBeat(plan.beatIndex, instrument, n);
+              if (n === 1) onClose();
+            }}
+            className={cn(
+              "flex-1 rounded-md border px-2 py-1 text-[11px] font-bold transition",
+              groupCount === n
+                ? "border-stone-900 bg-stone-900 text-white"
+                : "border-stone-200 bg-white text-stone-700 hover:border-stone-500",
+            )}
+          >
+            {n === 1 ? "Merge" : `Split ${n}`}
+          </button>
+        ))}
+      </div>
+
+      {plan.split ? (
+        <>
+          <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+            Division per group
+          </div>
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: groupCount }, (_, gi) => {
+              const current = divisionForGroup(plan, gi);
+              return (
+                <div
+                  key={gi}
+                  className="flex items-center gap-2 rounded-md bg-stone-50 px-2 py-1"
+                >
+                  <span className="min-w-[48px] text-[10px] font-bold text-stone-500">
+                    Grp {gi + 1}
+                  </span>
+                  <div className="flex flex-1 gap-1">
+                    {[1, 2, 3, 4].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() =>
+                          onSetGroupDivision(
+                            plan.beatIndex,
+                            instrument,
+                            gi,
+                            d,
+                          )
+                        }
+                        className={cn(
+                          "flex-1 rounded border px-1.5 py-0.5 text-[11px] font-bold transition",
+                          current === d
+                            ? "border-amber-500 bg-amber-100 text-stone-900"
+                            : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+                        )}
+                      >
+                        /{d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+            Override grid ({plan.usesBarResolution ? "using bar grid" : "custom"})
+          </div>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 6, 8].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => onSetDivision(plan.beatIndex, instrument, d)}
+                className={cn(
+                  "flex-1 rounded border px-1.5 py-0.5 text-[11px] font-bold transition",
+                  plan.columns.length === d && !plan.usesBarResolution
+                    ? "border-amber-500 bg-amber-100 text-stone-900"
+                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+                )}
+              >
+                /{d}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Add instrument menu                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -970,11 +1022,7 @@ function AddInstrumentMenu({
           <path d="M2 4 L6 8 L10 4 Z" />
         </svg>
       </button>
-      <FloatingMenu
-        anchor={anchor}
-        open={open}
-        onClose={() => setOpen(false)}
-      >
+      <FloatingMenu anchor={anchor} open={open} onClose={() => setOpen(false)}>
         <div className="w-[260px]">
           <div className="mb-2 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
             Add instrument
@@ -1042,7 +1090,7 @@ function Chip({
 }
 
 /* ------------------------------------------------------------------ */
-/* Logic helpers                                                       */
+/* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
 function inferBarResolution(bar: Bar): Resolution | null {
@@ -1050,24 +1098,10 @@ function inferBarResolution(bar: Bar): Resolution | null {
   let maxTriplet = 0;
   bar.beats.forEach((beat) =>
     beat.lanes.forEach((lane) => {
-      const groups: Array<LaneGroup | Omit<LaneGroup, "ratio">> =
-        lane.groups ?? [
-          {
-            ratio: 1,
-            division: lane.division,
-            tuplet: lane.tuplet,
-            slots: lane.slots,
-          },
-        ];
-      groups.forEach((g) => {
-        const isTriplet =
-          g.division === 3 || g.division === 6 || !!g.tuplet;
-        if (isTriplet) {
-          maxTriplet = Math.max(maxTriplet, g.division);
-        } else {
-          maxBinary = Math.max(maxBinary, g.division);
-        }
-      });
+      if (lane.groups && lane.groups.length > 1) return; // skip split lanes
+      const isTriplet = !!lane.tuplet;
+      if (isTriplet) maxTriplet = Math.max(maxTriplet, lane.division);
+      else maxBinary = Math.max(maxBinary, lane.division);
     }),
   );
   if (maxTriplet && !maxBinary) {
@@ -1084,12 +1118,13 @@ function inferBarResolution(bar: Bar): Resolution | null {
   return null;
 }
 
-function resolveHitForCell(
+function resolveHit(
   bar: Bar,
   instrument: Instrument,
-  column: BeatColumn,
+  plan: LaneBeatPlan,
+  column: CellPlan,
 ): Hit | null {
-  const beat = bar.beats[column.beatIndex];
+  const beat = bar.beats[plan.beatIndex];
   if (!beat) return null;
   const lane = beat.lanes.find((l) => l.instrument === instrument);
   if (!lane) return null;
@@ -1098,109 +1133,51 @@ function resolveHitForCell(
     if (!lane.groups) return null;
     const g = lane.groups[column.groupIndex];
     if (!g) return null;
-    // Map lane's group division → displayed group slot count.
-    // When display division > lane division, show hit only on cells that
-    // coincide with lane slots.
-    const laneSlot = Math.floor(
-      (column.slotIndex * g.division) / column.slotsInGroup,
-    );
-    if (laneSlot >= g.slots.length) return null;
-    return g.slots[laneSlot] ?? null;
+    return g.slots[column.slotIndex] ?? null;
   }
 
-  // Whole-beat slot.
-  if (lane.groups) return null; // mismatch — lane is split but col isn't
+  // beat-slot: map display slots → lane.slots
+  if (lane.groups) return null; // lane is split but column is not — do not render
   const laneSlot = Math.floor(
     (column.slotIndex * lane.division) / column.slotsPerBeat,
   );
   if (laneSlot >= lane.slots.length) return null;
+  // Require an exact alignment: the display slot must map to the same lane
+  // slot only if the display resolution is a multiple/divisor of lane div.
+  // Otherwise we show empty for off-grid cells.
+  if (
+    (column.slotIndex * lane.division) % column.slotsPerBeat !== 0 &&
+    lane.division !== column.slotsPerBeat
+  ) {
+    return null;
+  }
   return lane.slots[laneSlot] ?? null;
 }
 
-function handleWholeBeatCellClick(args: {
-  bar: Bar;
-  instrument: Instrument;
-  column: Extract<BeatColumn, { kind: "slot" }>;
-  hit: Hit | null;
-  onSetDivision: Props["onSetDivision"];
-  onToggleSlot: Props["onToggleSlot"];
-  onToggleArticulation: Props["onToggleArticulation"];
-}) {
-  const { bar, instrument, column, hit, onSetDivision, onToggleSlot, onToggleArticulation } = args;
-  const { beatIndex, slotIndex, slotsPerBeat, tuplet } = column;
-  const beat = bar.beats[beatIndex];
-  const lane = beat?.lanes.find((l) => l.instrument === instrument);
-
-  // If lane is currently on a different kind (binary vs triplet), reset it.
-  const needsReset =
-    !lane ||
-    lane.groups ||
-    lane.division !== slotsPerBeat ||
-    (tuplet ? !lane.tuplet : !!lane.tuplet);
-
-  if (needsReset) {
-    onSetDivision(beatIndex, instrument, slotsPerBeat);
-    onToggleSlot(beatIndex, instrument, slotIndex);
-    return;
-  }
-
-  // Cycle: off → on → accent → ghost → off
-  if (!hit) {
-    onToggleSlot(beatIndex, instrument, slotIndex);
-    return;
-  }
-  const isAccent = hit.articulations.includes("accent");
-  const isGhost = hit.articulations.includes("ghost");
-
-  if (!isAccent && !isGhost) {
-    onToggleArticulation(beatIndex, instrument, slotIndex, "accent");
-    return;
-  }
-  if (isAccent && !isGhost) {
-    // Remove accent, add ghost.
-    onToggleArticulation(beatIndex, instrument, slotIndex, "accent");
-    onToggleArticulation(beatIndex, instrument, slotIndex, "ghost");
-    return;
-  }
-  // Off.
-  if (isGhost) onToggleArticulation(beatIndex, instrument, slotIndex, "ghost");
-  onToggleSlot(beatIndex, instrument, slotIndex);
-}
-
-function handleGroupSlotCellClick(args: {
-  instrument: Instrument;
-  column: Extract<BeatColumn, { kind: "group-slot" }>;
-  hit: Hit | null;
-  onToggleSlot: Props["onToggleSlot"];
-  onToggleArticulation: Props["onToggleArticulation"];
-}) {
-  const { instrument, column, hit, onToggleSlot, onToggleArticulation } = args;
-  const { beatIndex, groupIndex, slotIndex } = column;
-  if (!hit) {
-    onToggleSlot(beatIndex, instrument, slotIndex, groupIndex);
-    return;
-  }
-  const isAccent = hit.articulations.includes("accent");
-  const isGhost = hit.articulations.includes("ghost");
-  if (!isAccent && !isGhost) {
-    onToggleArticulation(beatIndex, instrument, slotIndex, "accent", groupIndex);
-    return;
-  }
-  if (isAccent && !isGhost) {
-    onToggleArticulation(beatIndex, instrument, slotIndex, "accent", groupIndex);
-    onToggleArticulation(beatIndex, instrument, slotIndex, "ghost", groupIndex);
-    return;
-  }
-  if (isGhost) onToggleArticulation(beatIndex, instrument, slotIndex, "ghost", groupIndex);
-  onToggleSlot(beatIndex, instrument, slotIndex, groupIndex);
-}
-
-function slotAddressFromColumn(column: BeatColumn): {
+function slotAddressFromColumn(column: CellPlan): {
   slotIndex: number;
   groupIndex?: number;
 } {
-  if (column.kind === "slot") return { slotIndex: column.slotIndex };
+  if (column.kind === "beat-slot")
+    return { slotIndex: column.slotIndex };
   return { slotIndex: column.slotIndex, groupIndex: column.groupIndex };
+}
+
+function countGroups(plan: LaneBeatPlan): number {
+  if (!plan.split) return 1;
+  const ids = new Set<number>();
+  plan.columns.forEach((c) => {
+    if (c.kind === "group-slot") ids.add(c.groupIndex);
+  });
+  return ids.size;
+}
+
+function divisionForGroup(plan: LaneBeatPlan, groupIndex: number): number {
+  for (const c of plan.columns) {
+    if (c.kind === "group-slot" && c.groupIndex === groupIndex)
+      return c.slotsInGroup;
+  }
+  return 1;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1210,8 +1187,7 @@ function slotAddressFromColumn(column: BeatColumn): {
 function hitBgClass(hit: Hit): string {
   if (hit.articulations.includes("accent"))
     return "bg-amber-500 text-white shadow-sm";
-  if (hit.articulations.includes("ghost"))
-    return "bg-stone-400 text-white";
+  if (hit.articulations.includes("ghost")) return "bg-stone-400 text-white";
   return "bg-stone-900 text-amber-100";
 }
 
