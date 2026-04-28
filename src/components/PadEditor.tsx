@@ -76,6 +76,36 @@ const ARTICULATION_PRESETS: { label: string; value: Articulation }[] = [
   { label: "~", value: "roll" },
 ];
 
+const DEFAULT_RESOLUTION: Resolution = { kind: "binary", slotsPerBeat: 4 };
+
+/**
+ * Pick a resolution that comfortably represents whatever is already in the
+ * given beat. This is what the UI uses as the default so opening a bar with
+ * a triplet shows a triplet grid, etc.
+ */
+function inferBeatResolution(bar: Bar, beatIndex: number): Resolution | null {
+  const beat = bar.beats[beatIndex];
+  if (!beat) return null;
+  let maxBinary = 0;
+  let maxTriplet = 0;
+  beat.lanes.forEach((lane) => {
+    const isTriplet =
+      lane.division === 3 || lane.division === 6 || !!lane.tuplet;
+    if (isTriplet) {
+      maxTriplet = Math.max(maxTriplet, lane.division);
+    } else {
+      maxBinary = Math.max(maxBinary, lane.division);
+    }
+  });
+  if (maxTriplet && !maxBinary) {
+    return { kind: "triplet", slotsPerBeat: maxTriplet === 6 ? 6 : 3 };
+  }
+  if (maxBinary >= 8) return { kind: "binary", slotsPerBeat: 8 };
+  if (maxBinary >= 4) return { kind: "binary", slotsPerBeat: 4 };
+  if (maxBinary >= 2) return { kind: "binary", slotsPerBeat: 2 };
+  return null;
+}
+
 export function PadEditor({
   bar,
   barIndex,
@@ -91,12 +121,26 @@ export function PadEditor({
 }: Props) {
   const [selectedInstrument, setSelectedInstrument] =
     useState<Instrument>("snare");
-  const [resolution, setResolution] = useState<Resolution>(RESOLUTIONS[1].value);
+  // Per-beat resolution override. When missing, default by inspecting the
+  // bar's beat content (so the grid matches whatever is already written).
+  const [beatResolutions, setBeatResolutions] = useState<
+    Record<number, Resolution>
+  >({});
   const [pendingArticulations, setPendingArticulations] = useState<
     Set<Articulation>
   >(new Set());
   const [pendingSticking, setPendingSticking] = useState<"R" | "L" | null>(
     null,
+  );
+
+  const resolvedBeatResolutions: Resolution[] = useMemo(
+    () =>
+      Array.from({ length: beatsPerBar }, (_, beatIndex) => {
+        const explicit = beatResolutions[beatIndex];
+        if (explicit) return explicit;
+        return inferBeatResolution(bar, beatIndex) ?? DEFAULT_RESOLUTION;
+      }),
+    [beatResolutions, bar, beatsPerBar],
   );
 
   const serialized = useMemo(() => serializeBar(bar), [bar]);
@@ -167,28 +211,6 @@ export function PadEditor({
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold tracking-wide text-stone-500 uppercase">
-              Grid
-            </span>
-            {RESOLUTIONS.map((r) => (
-              <button
-                key={r.label}
-                type="button"
-                onClick={() => setResolution(r.value)}
-                className={cn(
-                  "rounded-full border px-3 py-0.5 text-xs font-bold",
-                  resolution.kind === r.value.kind &&
-                    resolution.slotsPerBeat === r.value.slotsPerBeat
-                    ? "border-stone-900 bg-stone-900 text-white"
-                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-
           <InstrumentPalette
             selected={selectedInstrument}
             onSelect={setSelectedInstrument}
@@ -215,7 +237,10 @@ export function PadEditor({
           <Grid
             bar={bar}
             beatsPerBar={beatsPerBar}
-            resolution={resolution}
+            beatResolutions={resolvedBeatResolutions}
+            onSetBeatResolution={(beatIndex, r) =>
+              setBeatResolutions((prev) => ({ ...prev, [beatIndex]: r }))
+            }
             selectedInstrument={selectedInstrument}
             pendingArticulations={pendingArticulations}
             pendingSticking={pendingSticking}
@@ -344,7 +369,8 @@ function ArticulationPalette({
 interface GridProps {
   bar: Bar;
   beatsPerBar: number;
-  resolution: Resolution;
+  beatResolutions: Resolution[];
+  onSetBeatResolution: (beatIndex: number, r: Resolution) => void;
   selectedInstrument: Instrument;
   pendingArticulations: Set<Articulation>;
   pendingSticking: "R" | "L" | null;
@@ -375,7 +401,8 @@ interface GridProps {
 function Grid({
   bar,
   beatsPerBar,
-  resolution,
+  beatResolutions,
+  onSetBeatResolution,
   selectedInstrument,
   pendingArticulations,
   pendingSticking,
@@ -384,8 +411,6 @@ function Grid({
   onToggleArticulation,
   onSetSticking,
 }: GridProps) {
-  const slotsPerBeat = resolution.slotsPerBeat;
-
   // Instruments shown as rows: at least the selected one; plus all already
   // used in this bar so the user always sees existing content.
   const lanesInBar = new Set<Instrument>();
@@ -397,60 +422,82 @@ function Grid({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
-      <div className="grid" style={{ gridTemplateColumns: `90px 1fr` }}>
-        <div className="border-b border-r border-stone-200 bg-stone-50 px-2 py-1.5 text-[10px] font-bold tracking-wide text-stone-400 uppercase">
-          Lane
+      <div className="flex min-w-max border-b border-stone-200 bg-stone-50">
+        <div className="w-[90px] shrink-0 border-r border-stone-200 px-2 py-1.5 text-[10px] font-bold tracking-wide text-stone-400 uppercase">
+          Beat / Grid
         </div>
-        <BeatHeader beatsPerBar={beatsPerBar} slotsPerBeat={slotsPerBeat} />
-
-        {rowInstruments.map((instrument) => (
-          <LaneRow
-            key={instrument}
-            bar={bar}
-            beatsPerBar={beatsPerBar}
-            slotsPerBeat={slotsPerBeat}
-            instrument={instrument}
-            selected={instrument === selectedInstrument}
-            pendingArticulations={pendingArticulations}
-            pendingSticking={pendingSticking}
-            onSetDivision={onSetDivision}
-            onToggleSlot={onToggleSlot}
-            onToggleArticulation={onToggleArticulation}
-            onSetSticking={onSetSticking}
+        {Array.from({ length: beatsPerBar }, (_, beatIndex) => (
+          <BeatHeaderCell
+            key={beatIndex}
+            beatIndex={beatIndex}
+            resolution={beatResolutions[beatIndex]}
+            onSetResolution={(r) => onSetBeatResolution(beatIndex, r)}
           />
         ))}
       </div>
+
+      {rowInstruments.map((instrument) => (
+        <LaneRow
+          key={instrument}
+          bar={bar}
+          beatsPerBar={beatsPerBar}
+          beatResolutions={beatResolutions}
+          instrument={instrument}
+          selected={instrument === selectedInstrument}
+          pendingArticulations={pendingArticulations}
+          pendingSticking={pendingSticking}
+          onSetDivision={onSetDivision}
+          onToggleSlot={onToggleSlot}
+          onToggleArticulation={onToggleArticulation}
+          onSetSticking={onSetSticking}
+        />
+      ))}
     </div>
   );
 }
 
-function BeatHeader({
-  beatsPerBar,
-  slotsPerBeat,
+function BeatHeaderCell({
+  beatIndex,
+  resolution,
+  onSetResolution,
 }: {
-  beatsPerBar: number;
-  slotsPerBeat: number;
+  beatIndex: number;
+  resolution: Resolution;
+  onSetResolution: (r: Resolution) => void;
 }) {
   return (
     <div
-      className="grid border-b border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500"
-      style={{
-        gridTemplateColumns: `repeat(${beatsPerBar * slotsPerBeat}, minmax(0, 1fr))`,
-      }}
-    >
-      {Array.from({ length: beatsPerBar }, (_, beat) =>
-        Array.from({ length: slotsPerBeat }, (_, slot) => (
-          <div
-            key={`${beat}-${slot}`}
-            className={cn(
-              "border-r border-stone-200 px-1 py-1 text-center tabular-nums last:border-r-0",
-              slot === 0 && "border-l-2 border-l-stone-400",
-            )}
-          >
-            {slot === 0 ? beat + 1 : ""}
-          </div>
-        )),
+      className={cn(
+        "flex flex-1 flex-col items-center gap-1 border-r border-stone-200 px-1 py-1 last:border-r-0",
+        beatIndex === 0 && "border-l-2 border-l-stone-400",
       )}
+      style={{ minWidth: `${Math.max(150, resolution.slotsPerBeat * 40)}px` }}
+    >
+      <div className="text-[10px] font-bold tracking-wide text-stone-500">
+        Beat {beatIndex + 1}
+      </div>
+      <div className="flex flex-wrap justify-center gap-0.5">
+        {RESOLUTIONS.map((r) => {
+          const active =
+            resolution.kind === r.value.kind &&
+            resolution.slotsPerBeat === r.value.slotsPerBeat;
+          return (
+            <button
+              key={r.label}
+              type="button"
+              onClick={() => onSetResolution(r.value)}
+              className={cn(
+                "rounded border px-1.5 py-0.5 text-[9px] font-bold transition",
+                active
+                  ? "border-stone-900 bg-stone-900 text-white"
+                  : "border-stone-200 bg-white text-stone-500 hover:border-stone-500",
+              )}
+            >
+              {r.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -458,7 +505,7 @@ function BeatHeader({
 function LaneRow({
   bar,
   beatsPerBar,
-  slotsPerBeat,
+  beatResolutions,
   instrument,
   selected,
   pendingArticulations,
@@ -470,7 +517,7 @@ function LaneRow({
 }: {
   bar: Bar;
   beatsPerBar: number;
-  slotsPerBeat: number;
+  beatResolutions: Resolution[];
   instrument: Instrument;
   selected: boolean;
   pendingArticulations: Set<Articulation>;
@@ -499,42 +546,50 @@ function LaneRow({
   ) => void;
 }) {
   return (
-    <>
+    <div className="flex min-w-max border-b border-stone-200 last:border-b-0">
       <div
         className={cn(
-          "flex items-center border-r border-b border-stone-200 px-2 py-2 text-[11px] font-bold",
+          "w-[90px] shrink-0 border-r border-stone-200 px-2 py-2 text-[11px] font-bold",
           selected ? "bg-amber-50 text-stone-900" : "bg-white text-stone-600",
         )}
       >
         {instrumentLabels[instrument]}
       </div>
-      <div
-        className="grid border-b border-stone-200"
-        style={{
-          gridTemplateColumns: `repeat(${beatsPerBar * slotsPerBeat}, minmax(0, 1fr))`,
-        }}
-      >
-        {Array.from({ length: beatsPerBar }, (_, beatIndex) =>
-          Array.from({ length: slotsPerBeat }, (_, displaySlot) => (
-            <GridCell
-              key={`${beatIndex}-${displaySlot}`}
-              bar={bar}
-              beatIndex={beatIndex}
-              slotsPerBeat={slotsPerBeat}
-              displaySlot={displaySlot}
-              instrument={instrument}
-              isBeatStart={displaySlot === 0}
-              pendingArticulations={pendingArticulations}
-              pendingSticking={pendingSticking}
-              onSetDivision={onSetDivision}
-              onToggleSlot={onToggleSlot}
-              onToggleArticulation={onToggleArticulation}
-              onSetSticking={onSetSticking}
-            />
-          )),
-        )}
-      </div>
-    </>
+      {Array.from({ length: beatsPerBar }, (_, beatIndex) => {
+        const resolution = beatResolutions[beatIndex];
+        const slotsPerBeat = resolution.slotsPerBeat;
+        return (
+          <div
+            key={beatIndex}
+            className={cn(
+              "flex flex-1 border-r border-stone-200 last:border-r-0",
+              beatIndex === 0 && "border-l-2 border-l-stone-400",
+            )}
+            style={{
+              minWidth: `${Math.max(150, slotsPerBeat * 40)}px`,
+            }}
+          >
+            {Array.from({ length: slotsPerBeat }, (_, displaySlot) => (
+              <GridCell
+                key={displaySlot}
+                bar={bar}
+                beatIndex={beatIndex}
+                slotsPerBeat={slotsPerBeat}
+                displaySlot={displaySlot}
+                instrument={instrument}
+                isBeatStart={displaySlot === 0}
+                pendingArticulations={pendingArticulations}
+                pendingSticking={pendingSticking}
+                onSetDivision={onSetDivision}
+                onToggleSlot={onToggleSlot}
+                onToggleArticulation={onToggleArticulation}
+                onSetSticking={onSetSticking}
+              />
+            ))}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
