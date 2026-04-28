@@ -19,6 +19,7 @@ export interface LaidOutHit {
 export interface LaidOutLane {
   instrument: string;
   category: InstrumentCategory;
+  rowGroup: RowGroup;
   division: number;
   tuplet?: number;
   /** Center x of each slot. */
@@ -31,12 +32,22 @@ export interface LaidOutLane {
   beamSegments: { x1: number; x2: number }[];
 }
 
+export interface LaidOutBeam {
+  rowGroup: RowGroup;
+  y: number;
+  depth: number; // 1 = outermost (8th), 2 = inner (16th), 3 = (32nd)
+  x1: number;
+  x2: number;
+}
+
 export interface LaidOutBeat {
   index: number;
   x: number;
   width: number;
   lanes: LaidOutLane[];
   tuplet?: number;
+  /** Merged beams (underlines) drawn under this beat, grouped by row. */
+  beams: LaidOutBeam[];
 }
 
 export interface LaidOutBar {
@@ -248,6 +259,7 @@ function layoutBar(
         laidLanes.push({
           instrument: lane.instrument,
           category,
+          rowGroup: group,
           division: groupData.division,
           tuplet: groupData.tuplet,
           tickXs,
@@ -271,12 +283,15 @@ function layoutBar(
       });
     });
 
+    const beams = mergeBeams(laidLanes);
+
     beats.push({
       index: beatIndex,
       x: beatX,
       width: beatWidth,
       lanes: laidLanes,
       tuplet: beat.tuplet,
+      beams,
     });
   });
 
@@ -293,6 +308,69 @@ function layoutBar(
     repeatPrevious: bar.repeatPrevious,
     repeatCount: bar.repeatCount,
   };
+}
+
+/**
+ * Merge adjacent lane beams (per row-group, per depth level) into a single
+ * continuous underline. In handwritten jianpu-style drum notation two 8th
+ * notes inside the same beat share a beam, and a mixed `8 + 16 16` split
+ * shares the outer 8-beam across the whole beat while the inner 16-beam
+ * only spans the second half.
+ *
+ * Input: one beat's `LaidOutLane[]` (may contain multiple sub-groups per
+ * instrument lane).
+ * Output: merged beam segments ready for the renderer.
+ */
+function mergeBeams(laneSegments: LaidOutLane[]): LaidOutBeam[] {
+  const byRow = new Map<RowGroup, LaidOutLane[]>();
+  for (const lane of laneSegments) {
+    if (lane.beamDepth <= 0) continue;
+    const existing = byRow.get(lane.rowGroup);
+    if (existing) existing.push(lane);
+    else byRow.set(lane.rowGroup, [lane]);
+  }
+
+  const out: LaidOutBeam[] = [];
+  for (const [rowGroup, lanes] of byRow) {
+    // Different lanes in the same row-group can have identical beam y (since
+    // they all render on the same row). We merge by x range first, then for
+    // every depth level take the union of (x-range) for lanes with depth >=
+    // level.
+    const y = lanes[0].beamY;
+    const maxDepth = lanes.reduce((m, l) => Math.max(m, l.beamDepth), 0);
+
+    for (let depth = 1; depth <= maxDepth; depth += 1) {
+      const spans = lanes
+        .filter((l) => l.beamDepth >= depth)
+        .flatMap((l) => l.beamSegments)
+        .sort((a, b) => a.x1 - b.x1);
+      if (!spans.length) continue;
+      const merged = mergeSpans(spans, 10);
+      merged.forEach((s) => {
+        out.push({ rowGroup, y: y + (depth - 1) * 3, depth, x1: s.x1, x2: s.x2 });
+      });
+    }
+  }
+  return out;
+}
+
+/** Merge sorted span list; two spans are joined if their gap is <= tolerance. */
+function mergeSpans(
+  spans: { x1: number; x2: number }[],
+  tolerance: number,
+): { x1: number; x2: number }[] {
+  if (!spans.length) return [];
+  const out = [{ ...spans[0] }];
+  for (let i = 1; i < spans.length; i += 1) {
+    const last = out[out.length - 1];
+    const cur = spans[i];
+    if (cur.x1 - last.x2 <= tolerance) {
+      last.x2 = Math.max(last.x2, cur.x2);
+    } else {
+      out.push({ ...cur });
+    }
+  }
+  return out;
 }
 
 /**

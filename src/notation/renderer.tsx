@@ -171,24 +171,24 @@ function BarView({
         </text>
       ) : (
         <>
-          {beats.map((beat) =>
-            beat.lanes.map((lane, laneIdx) => (
-              <Fragment key={`lane-${bar.index}-${beat.index}-${laneIdx}`}>
-                {lane.beamSegments.map((segment, i) =>
-                  Array.from({ length: lane.beamDepth }, (__, depthIdx) => (
-                    <line
-                      key={`beam-${i}-${depthIdx}`}
-                      x1={segment.x1}
-                      x2={segment.x2}
-                      y1={lane.beamY + depthIdx * 3}
-                      y2={lane.beamY + depthIdx * 3}
-                      className="stroke-stone-700"
-                      strokeWidth={1}
-                    />
-                  )),
-                )}
-                {lane.tuplet ? (
+          {beats.map((beat) => (
+            <Fragment key={`beat-${bar.index}-${beat.index}`}>
+              {beat.beams.map((b, i) => (
+                <line
+                  key={`beam-${i}`}
+                  x1={b.x1}
+                  x2={b.x2}
+                  y1={b.y}
+                  y2={b.y}
+                  className="stroke-stone-700"
+                  strokeWidth={1}
+                />
+              ))}
+              {beat.lanes
+                .filter((l) => l.tuplet)
+                .map((lane, li) => (
                   <text
+                    key={`tuplet-${li}`}
                     x={
                       (lane.tickXs[0] + lane.tickXs[lane.tickXs.length - 1]) / 2
                     }
@@ -198,10 +198,9 @@ function BarView({
                   >
                     {lane.tuplet}
                   </text>
-                ) : null}
-              </Fragment>
-            )),
-          )}
+                ))}
+            </Fragment>
+          ))}
 
           {bar.hits.map((laid, i) => (
             <HitGlyph key={`hit-${i}`} laid={laid} />

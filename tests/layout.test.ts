@@ -117,6 +117,104 @@ describe("layoutBar beam segments", () => {
   });
 });
 
+describe("beam merging across groups", () => {
+  it("two 8ths split across a beat share one outer beam", () => {
+    // Beat 1: o , o (two halves, each a single hit) → one continuous 8-beam
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o , o / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    // Beam merged for cymbals should be a single segment spanning both halves
+    const cymBeams = b0.beams.filter((b) => b.rowGroup === "cymbals");
+    expect(cymBeams).toHaveLength(1); // one depth-1 segment, merged
+    expect(cymBeams[0].depth).toBe(1);
+    const firstHh = b0.lanes.filter((l) => l.rowGroup === "cymbals")[0];
+    const lastHh = b0.lanes.filter((l) => l.rowGroup === "cymbals").at(-1)!;
+    // Merged segment spans from first lane's x1 to last lane's x2.
+    expect(cymBeams[0].x1).toBeCloseTo(firstHh.beamSegments[0].x1, 0);
+    expect(cymBeams[0].x2).toBeCloseTo(lastHh.beamSegments[0].x2, 0);
+  });
+
+  it("8 + 16 16 (o , xx) merges outer beam, inner stays split", () => {
+    // Beat 1 split: first half o (1/8), second half xx (2 x 1/16)
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o , xx / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    const cymBeams = b0.beams.filter((b) => b.rowGroup === "cymbals");
+    // depth 1 (outer) merged across both halves
+    const d1 = cymBeams.filter((b) => b.depth === 1);
+    expect(d1).toHaveLength(1);
+    // depth 2 only exists on the second half
+    const d2 = cymBeams.filter((b) => b.depth === 2);
+    expect(d2).toHaveLength(1);
+    // depth 2 span narrower than depth 1 span
+    expect(d2[0].x2 - d2[0].x1).toBeLessThan(d1[0].x2 - d1[0].x1);
+  });
+
+  it("16 16 , 8 (xx , o) merges outer beam, inner only in first half", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xx , o / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    const d1 = b0.beams.filter((b) => b.rowGroup === "cymbals" && b.depth === 1);
+    const d2 = b0.beams.filter((b) => b.rowGroup === "cymbals" && b.depth === 2);
+    expect(d1).toHaveLength(1);
+    expect(d2).toHaveLength(1);
+    expect(d2[0].x1).toBeLessThan(d1[0].x2 / 2 + d1[0].x1 / 2);
+  });
+
+  it("rest-only group breaks the beam chain", () => {
+    // First half is a rest → no outer beam on first half → two segments
+    // (one for the single-hit group) would be possible; here rest group
+    // contributes nothing so only the hit group's beam remains.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: - , xx / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    const cymBeams = b0.beams.filter((b) => b.rowGroup === "cymbals");
+    // Only second-half beams exist
+    cymBeams.forEach((b) => {
+      expect(b.x1).toBeGreaterThan(b0.x + b0.width / 2 - 5);
+    });
+  });
+
+  it("whole-beat 4 × 16ths has 2 merged beams spanning the beat", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    const cymBeams = b0.beams.filter((b) => b.rowGroup === "cymbals");
+    expect(cymBeams).toHaveLength(2);
+    expect(cymBeams[0].depth).toBe(1);
+    expect(cymBeams[1].depth).toBe(2);
+  });
+
+  it("cymbal and drum rows produce independent merged beams", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o , o / x / x / x  sn: o , o / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    const cymBeams = b0.beams.filter((b) => b.rowGroup === "cymbals");
+    const sn_or_merged = b0.beams.filter((b) => b.rowGroup !== "cymbals");
+    expect(cymBeams).toHaveLength(1);
+    expect(sn_or_merged.length).toBeGreaterThanOrEqual(1);
+    // Independent y positions
+    expect(cymBeams[0].y).not.toBe(sn_or_merged[0].y);
+  });
+
+  it("triplet group draws beam and tuplet label", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    const beams = b0.beams.filter((b) => b.rowGroup === "snare");
+    expect(beams.length).toBeGreaterThan(0);
+    const sn = b0.lanes.find((l) => l.instrument === "snare")!;
+    expect(sn.tuplet).toBe(3);
+  });
+});
+
 describe("hit row-group assignment", () => {
   it("every hit has a rowGroup that matches its instrument", () => {
     const bar = layoutBarOf(
