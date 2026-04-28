@@ -577,7 +577,7 @@ function LaneBeatCell({
   return (
     <div
       className={cn(
-        "relative border-r border-b border-stone-200",
+        "group/lane relative border-r border-b border-stone-200",
         isFirstBeat && "border-l-2 border-l-stone-400",
       )}
     >
@@ -824,6 +824,8 @@ function LaneSettingsButton({
       ? ""
       : `/${plan.columns.length}`;
 
+  const customized = plan.split || !plan.usesBarResolution;
+
   return (
     <>
       <button
@@ -834,14 +836,15 @@ function LaneSettingsButton({
           setOpen((v) => !v);
         }}
         className={cn(
-          "absolute top-0.5 right-0.5 rounded px-1 text-[8px] font-bold leading-tight transition",
-          plan.split || !plan.usesBarResolution
-            ? "bg-amber-500 text-white"
-            : "bg-stone-200/80 text-stone-500 opacity-0 group-hover:opacity-100 hover:bg-stone-300",
+          "absolute top-0.5 right-0.5 z-10 flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[8px] font-bold leading-none transition",
+          customized
+            ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+            : "border-stone-200 bg-white/95 text-stone-500 opacity-60 hover:bg-stone-900 hover:text-white hover:opacity-100 group-hover/lane:opacity-100",
         )}
-        title="Customize this beat's grid for this instrument"
+        title="Customize this beat's subdivision / split"
       >
-        ⚙{indicator}
+        <span>⚙</span>
+        {indicator ? <span className="tracking-tight">{indicator}</span> : null}
       </button>
       <FloatingMenu
         anchor={anchor}
