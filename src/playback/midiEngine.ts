@@ -17,7 +17,7 @@ import { gmDrumMap, DEFAULT_NOTE_DURATION_S } from "../notation/midi";
  * tail after Stop, but timing during playback is rock-solid.
  */
 
-const LOOKAHEAD_MS = 100;
+const LOOKAHEAD_MS = 150;
 const TICK_MS = 25;
 
 interface PendingMsg {
@@ -41,7 +41,10 @@ export class MidiEngine implements PlaybackEngine {
   /** MIDI notes that have been handed to the MIDI subsystem as note-on
    *  but whose note-off hasn't been released. */
   private active = new Set<number>();
-  private schedulerTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Worker-based timer that isn't throttled when the tab is hidden. */
+  private schedulerWorker: Worker | null = null;
+  private workerRunning = false;
 
   constructor(outputName: string | null = null) {
     this.name = outputName ? `MIDI: ${outputName}` : "Web MIDI";
@@ -98,10 +101,7 @@ export class MidiEngine implements PlaybackEngine {
     // Drop anything still in the look-ahead queue.
     this.pending = [];
 
-    if (this.schedulerTimer !== null) {
-      clearInterval(this.schedulerTimer);
-      this.schedulerTimer = null;
-    }
+    this.stopScheduler();
 
     const output = this.output;
     if (!output) return;
@@ -131,25 +131,44 @@ export class MidiEngine implements PlaybackEngine {
 
   dispose(): void {
     this.stop();
+    if (this.schedulerWorker) {
+      this.schedulerWorker.terminate();
+      this.schedulerWorker = null;
+    }
     this.output = null;
     this.access = null;
   }
 
   private ensureScheduler(): void {
-    if (this.schedulerTimer !== null) return;
-    this.schedulerTimer = setInterval(() => this.tick(), TICK_MS);
-    // Also run immediately so the first event doesn't wait up to 25 ms.
+    if (!this.schedulerWorker) {
+      this.schedulerWorker = new Worker(
+        new URL("./timerWorker.ts", import.meta.url),
+        { type: "module" },
+      );
+      this.schedulerWorker.addEventListener("message", (e) => {
+        if (e.data?.type === "tick") this.tick();
+      });
+    }
+    if (!this.workerRunning) {
+      this.schedulerWorker.postMessage({ type: "start", intervalMs: TICK_MS });
+      this.workerRunning = true;
+    }
+    // Run first tick immediately so the first event doesn't wait.
     this.tick();
+  }
+
+  private stopScheduler(): void {
+    if (this.schedulerWorker && this.workerRunning) {
+      this.schedulerWorker.postMessage({ type: "stop" });
+      this.workerRunning = false;
+    }
   }
 
   private tick(): void {
     const output = this.output;
     if (!output) return;
     if (this.pending.length === 0) {
-      if (this.schedulerTimer !== null) {
-        clearInterval(this.schedulerTimer);
-        this.schedulerTimer = null;
-      }
+      this.stopScheduler();
       return;
     }
     const horizon = performance.now() + LOOKAHEAD_MS;
