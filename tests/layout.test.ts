@@ -414,4 +414,46 @@ describe("intra-beat group layout", () => {
     );
     expect(d1).toHaveLength(1);
   });
+
+  it("front-8 back-16-16: the 8th note's pixel range is wider than each 16th", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o , xx / x / x / x |`,
+    );
+    const beat0 = bar.beats[0];
+    const lanes = beat0.lanes.filter((l) => l.instrument === "hihatClosed");
+    expect(lanes).toHaveLength(2);
+    // Each lane's beam segment covers the visual range of the group.
+    const g0span = lanes[0].beamSegments[0]
+      ? lanes[0].beamSegments[0].x2 - lanes[0].beamSegments[0].x1
+      : Math.abs(lanes[0].tickXs[0] - beat0.x) * 2;
+    const g1seg = lanes[1].beamSegments[0];
+    const g1span = g1seg ? g1seg.x2 - g1seg.x1 : 0;
+    // Both halves span approximately equal width (ratio 0.5 each).
+    expect(Math.abs(g0span - g1span)).toBeLessThan(1.5);
+    // Inside group 1, the two 16th ticks should be half the spacing of group 0's single tick's allocated slot.
+    const g1tickGap = lanes[1].tickXs[1] - lanes[1].tickXs[0];
+    // Group 0 has only 1 tick so we infer its "slot width" = its full ratio (half the beat).
+    const beatWidth = beat0.width;
+    const g0slotWidth = 0.5 * beatWidth; // ratio 0.5, 1 division
+    const g1slotWidth = (0.5 * beatWidth) / 2; // ratio 0.5, 2 divisions
+    expect(Math.abs(g1tickGap - g1slotWidth)).toBeLessThan(1.5);
+    // 8th slot is roughly 2x the 16th slot width.
+    expect(g0slotWidth / g1slotWidth).toBeCloseTo(2, 0);
+  });
+
+  it("uneven 8 + triplet split: triplet ticks are evenly spaced within their half", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o , (3)xxx / x / x / x |`,
+    );
+    const beat0 = bar.beats[0];
+    const lanes = beat0.lanes.filter((l) => l.instrument === "snare");
+    expect(lanes).toHaveLength(2);
+    const triplet = lanes[1];
+    expect(triplet.tickXs).toHaveLength(3);
+    const gaps = [
+      triplet.tickXs[1] - triplet.tickXs[0],
+      triplet.tickXs[2] - triplet.tickXs[1],
+    ];
+    expect(Math.abs(gaps[0] - gaps[1])).toBeLessThan(0.5);
+  });
 });

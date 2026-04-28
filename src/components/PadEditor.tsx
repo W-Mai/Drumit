@@ -127,12 +127,16 @@ type CellPlan =
       /** True if the displayed grid is driven by the lane's division rather
        *  than the bar-level resolution (i.e. the user customized this lane). */
       custom: boolean;
+      /** Relative width units within the beat (all beat-slot share equal value). */
+      widthUnits: number;
     }
   | {
       kind: "group-slot";
       groupIndex: number;
       slotIndex: number;
       slotsInGroup: number;
+      /** Relative width units within the beat = group.ratio / group.division. */
+      widthUnits: number;
     };
 
 interface LaneBeatPlan {
@@ -152,12 +156,14 @@ function planLaneBeat(
   if (lane?.groups && lane.groups.length > 1) {
     const columns: CellPlan[] = [];
     lane.groups.forEach((g, groupIndex) => {
+      const widthUnits = g.ratio / Math.max(1, g.division);
       for (let slotIndex = 0; slotIndex < g.division; slotIndex += 1) {
         columns.push({
           kind: "group-slot",
           groupIndex,
           slotIndex,
           slotsInGroup: g.division,
+          widthUnits,
         });
       }
     });
@@ -182,11 +188,13 @@ function planLaneBeat(
     ? Math.max(1, laneDiv)
     : barResolution.slotsPerBeat;
 
+  const widthUnits = 1 / Math.max(1, slotsPerBeat);
   const columns: CellPlan[] = Array.from({ length: slotsPerBeat }, (_, i) => ({
     kind: "beat-slot",
     slotIndex: i,
     slotsPerBeat,
     custom,
+    widthUnits,
   }));
   return {
     beatIndex,
@@ -585,7 +593,9 @@ function LaneBeatCell({
       <div
         className="grid h-full w-full"
         style={{
-          gridTemplateColumns: `repeat(${plan.columns.length}, minmax(24px, 1fr))`,
+          gridTemplateColumns: plan.columns
+            .map((c) => `minmax(${minColumnWidth(c)}px, ${c.widthUnits}fr)`)
+            .join(" "),
         }}
       >
         {plan.columns.map((col, i) => (
@@ -1113,6 +1123,26 @@ function Chip({
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Lower bound on a cell's rendered width. 16th-note cells compress to ~16px
+ * but 32nd / sextuplet cells can go smaller; keep at least 12px so hit marks
+ * remain clickable and readable.
+ */
+function minColumnWidth(column: CellPlan): number {
+  // 1/4 full-beat (widthUnits=1): ≥ 44px
+  // 1/8 half-beat (0.5): ≥ 32px
+  // 1/16 (0.25): ≥ 24px
+  // 1/32 (0.125): ≥ 14px
+  // sextuplet (~0.167): ≥ 18px
+  const u = column.widthUnits;
+  if (u >= 0.9) return 60;
+  if (u >= 0.45) return 40;
+  if (u >= 0.3) return 28;
+  if (u >= 0.2) return 22;
+  if (u >= 0.14) return 16;
+  return 12;
+}
 
 function inferBarResolution(bar: Bar): Resolution | null {
   let maxBinary = 0;
