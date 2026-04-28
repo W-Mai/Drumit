@@ -24,6 +24,7 @@ import {
 } from "./notation/edit";
 import { PadEditor } from "./components/PadEditor";
 import { PlaybackBar } from "./components/PlaybackBar";
+import { useHotkeys } from "./lib/useHotkeys";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
 
@@ -73,6 +74,25 @@ export default function App() {
     barIndex: number;
     beatIndex: number;
   } | null>(null);
+
+  useHotkeys([
+    {
+      key: "ArrowLeft",
+      description: "Previous bar",
+      handler: () =>
+        setSelectedBar((i) =>
+          i === null ? 0 : Math.max(0, i - 1),
+        ),
+    },
+    {
+      key: "ArrowRight",
+      description: "Next bar",
+      handler: () =>
+        setSelectedBar((i) =>
+          i === null ? 0 : Math.min(totalBars - 1, i + 1),
+        ),
+    },
+  ]);
 
   const layout = useMemo(
     () =>
