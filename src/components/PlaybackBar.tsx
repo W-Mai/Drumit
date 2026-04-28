@@ -23,6 +23,7 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
   const [selectedOutput, setSelectedOutput] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [loopEnabled, setLoopEnabled] = useState(false);
 
   const midiAvailable =
     typeof navigator !== "undefined" && !!navigator.requestMIDIAccess;
@@ -47,17 +48,25 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
   }, [engineKind]);
 
   const controller = useMemo(() => {
+    const loop =
+      loopEnabled && typeof startBar === "number"
+        ? { startBar, endBar: startBar }
+        : null;
     return new PlaybackController({
       engine,
       score,
       metronome,
       tempoOverride,
       startBar,
+      loop,
       onCursor: (p) => onCursor?.(p),
-      onEnd: () => setPlaying(false),
+      onEnd: () => {
+        setPlaying(false);
+        onStop?.();
+      },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine, score, metronome, tempoOverride, startBar]);
+  }, [engine, score, metronome, tempoOverride, startBar, loopEnabled]);
 
   // Dispose previous controller when it changes.
   useEffect(() => {
@@ -159,6 +168,28 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
           onChange={(e) => setMetronome(e.target.checked)}
         />
         Click
+      </label>
+
+      <label
+        className={cn(
+          "flex items-center gap-1",
+          typeof startBar === "number"
+            ? "text-stone-600"
+            : "text-stone-300",
+        )}
+        title={
+          typeof startBar === "number"
+            ? `Loop bar ${startBar + 1}`
+            : "Select a bar first"
+        }
+      >
+        <input
+          type="checkbox"
+          checked={loopEnabled}
+          disabled={typeof startBar !== "number"}
+          onChange={(e) => setLoopEnabled(e.target.checked)}
+        />
+        Loop bar
       </label>
 
       {error ? (

@@ -33,7 +33,7 @@ export class PlaybackController {
   private events: PlaybackEvent[] = [];
   private metronomeEvts: PlaybackEvent[] = [];
   private totalDuration = 0;
-  private cursorTimer: number | null = null;
+  private cursorTimer: ReturnType<typeof setInterval> | null = null;
 
   private options: PlaybackControllerOptions;
 
@@ -91,21 +91,36 @@ export class PlaybackController {
     if (this.state === "playing") return;
     await this.engine.ensureReady();
 
-    // Determine start time offset (if startBar is set).
-    const startOffset = this.computeBarTime(this.options.startBar ?? 0);
+    const loop = this.options.loop ?? null;
+    const startOffset = loop
+      ? this.computeBarTime(loop.startBar)
+      : this.computeBarTime(this.options.startBar ?? 0);
+    const endOffset = loop
+      ? this.computeBarEndTime(loop.endBar)
+      : this.totalDuration;
 
     const all = [...this.events, ...this.metronomeEvts];
     for (const evt of all) {
       if (evt.time < startOffset) continue;
+      if (evt.time >= endOffset) continue;
       const when = evt.time - startOffset;
       this.engine.scheduleEvent(evt, when);
     }
 
     this.state = "playing";
     const startedAt = performance.now();
-    this.cursorTimer = window.setInterval(() => {
+    this.cursorTimer = globalThis.setInterval(() => {
       const elapsed = (performance.now() - startedAt) / 1000 + startOffset;
-      if (elapsed >= this.totalDuration) {
+      if (elapsed >= endOffset) {
+        if (loop) {
+          // Loop: stop current sounds and restart immediately.
+          this.stop();
+          // Restart asynchronously so the stop has time to flush.
+          setTimeout(() => {
+            if (this.options.loop) this.play();
+          }, 5);
+          return;
+        }
         this.stop();
         this.options.onEnd?.();
         return;
@@ -113,6 +128,10 @@ export class PlaybackController {
       const pos = this.positionAt(elapsed);
       this.options.onCursor?.({ ...pos, time: elapsed });
     }, 33);
+  }
+
+  setLoop(loop: { startBar: number; endBar: number } | null) {
+    this.options.loop = loop;
   }
 
   pause(): void {
@@ -126,7 +145,7 @@ export class PlaybackController {
   stop(): void {
     this.engine.stop();
     if (this.cursorTimer !== null) {
-      window.clearInterval(this.cursorTimer);
+      globalThis.clearInterval(this.cursorTimer);
       this.cursorTimer = null;
     }
     this.state = "idle";
@@ -147,10 +166,19 @@ export class PlaybackController {
 
   private computeBarTime(barIndex: number): number {
     if (barIndex <= 0) return 0;
-    // Find the first event at or after the given bar.
     for (const ev of this.events) {
       if (ev.barIndex >= barIndex) return ev.time;
     }
+    return this.totalDuration;
+  }
+
+  /** Time just after the last event of the given bar (end boundary). */
+  private computeBarEndTime(barIndex: number): number {
+    // Find events in (barIndex+1).
+    for (const ev of this.events) {
+      if (ev.barIndex > barIndex) return ev.time;
+    }
+    // If it's the last bar, use totalDuration.
     return this.totalDuration;
   }
 
