@@ -13,6 +13,8 @@ import type {
   LaneGroup,
   RepeatHint,
 } from "../notation/types";
+import { FloatingMenu } from "./FloatingMenu";
+import { InstrumentIcon } from "./InstrumentIcon";
 
 /* ------------------------------------------------------------------ */
 /* Props                                                               */
@@ -421,29 +423,29 @@ function StepGrid({
           gridTemplateColumns: `minmax(100px, 112px) repeat(${totalColumns}, minmax(28px, 44px))`,
         }}
       >
-        {/* Row 1: beat header row */}
+        {/* Beat header rows (2 rows: wide beat title + sub-column pips). */}
         <div className="sticky left-0 z-10 border-r border-b border-stone-200 bg-stone-50 px-2 py-2 text-[10px] font-bold tracking-wide text-stone-500 uppercase">
           Beat
         </div>
+        {plans.map((plan) => (
+          <BeatTitleCell
+            key={`bt-${plan.beatIndex}`}
+            plan={plan}
+            presentInstruments={presentInstruments}
+            onSplitBeat={onSplitBeat}
+            onSetGroupDivision={onSetGroupDivision}
+          />
+        ))}
+
+        {/* Sub-header row: sub-group labels only needed when a beat is split */}
+        <div className="sticky left-0 z-10 border-r border-b border-stone-200 bg-white" />
         {plans.flatMap((plan) =>
           plan.columns.map((col, i) => (
-            <BeatHeaderCell
-              key={`bh-${plan.beatIndex}-${i}`}
+            <SubHeaderCell
+              key={`sh-${plan.beatIndex}-${i}`}
               plan={plan}
               column={col}
               localIndex={i}
-              onSplit={(count) => {
-                // Split *each* currently used instrument so the beat layout
-                // is consistent across all lanes.
-                presentInstruments.forEach((inst) =>
-                  onSplitBeat(plan.beatIndex, inst, count),
-                );
-              }}
-              onChangeGroupDivision={(groupIndex, d) => {
-                presentInstruments.forEach((inst) =>
-                  onSetGroupDivision(plan.beatIndex, inst, groupIndex, d),
-                );
-              }}
             />
           )),
         )}
@@ -479,152 +481,202 @@ function StepGrid({
 }
 
 /* ------------------------------------------------------------------ */
-/* Beat header cell                                                    */
+/* Beat header cells                                                   */
 /* ------------------------------------------------------------------ */
 
-function BeatHeaderCell({
+function BeatTitleCell({
   plan,
-  column,
-  localIndex,
-  onSplit,
-  onChangeGroupDivision,
+  presentInstruments,
+  onSplitBeat,
+  onSetGroupDivision,
 }: {
   plan: BeatPlan;
-  column: BeatColumn;
-  localIndex: number;
-  onSplit: (count: number) => void;
-  onChangeGroupDivision: (groupIndex: number, d: number) => void;
+  presentInstruments: Instrument[];
+  onSplitBeat: Props["onSplitBeat"];
+  onSetGroupDivision: Props["onSetGroupDivision"];
 }) {
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
 
-  // Only render a label on the first column of the beat (for un-split beats)
-  // or the first column of each group (for split beats).
-  const showLabel =
-    column.kind === "slot"
-      ? column.slotIndex === 0
-      : column.slotIndex === 0;
-
-  const beatNumber = plan.beatIndex + 1;
-  const groupLabel =
-    column.kind === "group-slot" ? `${column.groupIndex + 1}` : "";
+  const span = plan.columns.length;
+  const groupCount = plan.split
+    ? new Set(
+        plan.columns
+          .filter(
+            (c): c is Extract<BeatColumn, { kind: "group-slot" }> =>
+              c.kind === "group-slot",
+          )
+          .map((c) => c.groupIndex),
+      ).size
+    : 1;
 
   return (
-    <div
-      className={cn(
-        "relative border-b border-stone-200 bg-stone-50 text-center",
-        // Thick left border at start of beat
-        localIndex === 0 && "border-l-2 border-l-stone-400",
-      )}
-    >
-      {showLabel ? (
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className={cn(
-            "block w-full truncate px-1 py-1.5 text-[10px] font-bold tracking-wide transition",
-            plan.split
-              ? "bg-amber-100 text-stone-900"
-              : "text-stone-500 hover:bg-stone-200",
-          )}
-          title="Click for split / merge menu"
+    <>
+      <button
+        ref={setAnchor}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex items-center justify-center border-r border-b border-stone-200 bg-stone-50 px-2 py-2 text-[11px] font-bold tracking-wide transition select-none",
+          "hover:bg-stone-200",
+          plan.split && "bg-amber-50 text-stone-900",
+          "border-l-2 border-l-stone-400",
+        )}
+        style={{ gridColumn: `span ${span}` }}
+        title="Click to split / merge this beat"
+      >
+        Beat {plan.beatIndex + 1}
+        {plan.split ? ` · ${groupCount} groups` : ""}
+        <svg
+          viewBox="0 0 12 12"
+          className="ml-1 size-3 opacity-60"
+          fill="currentColor"
+          aria-hidden
         >
-          {plan.split ? `${beatNumber}.${groupLabel}` : beatNumber}
-        </button>
-      ) : (
-        <div className="py-1.5 text-[10px] text-stone-300">·</div>
-      )}
+          <path d="M2 4 L6 8 L10 4 Z" />
+        </svg>
+      </button>
 
-      {open && showLabel && (
-        <BeatHeaderPopover
+      <FloatingMenu
+        anchor={anchor}
+        open={open}
+        onClose={() => setOpen(false)}
+      >
+        <BeatPopoverContent
           plan={plan}
-          column={column}
-          onClose={() => setOpen(false)}
-          onSplit={(n) => {
-            onSplit(n);
+          groupCount={groupCount}
+          onPickSplit={(n) => {
+            presentInstruments.forEach((inst) =>
+              onSplitBeat(plan.beatIndex, inst, n),
+            );
             setOpen(false);
           }}
-          onChangeGroupDivision={(gi, d) => {
-            onChangeGroupDivision(gi, d);
+          onPickGroupDivision={(gi, d) => {
+            presentInstruments.forEach((inst) =>
+              onSetGroupDivision(plan.beatIndex, inst, gi, d),
+            );
           }}
         />
+      </FloatingMenu>
+    </>
+  );
+}
+
+function BeatPopoverContent({
+  plan,
+  groupCount,
+  onPickSplit,
+  onPickGroupDivision,
+}: {
+  plan: BeatPlan;
+  groupCount: number;
+  onPickSplit: (n: number) => void;
+  onPickGroupDivision: (groupIndex: number, d: number) => void;
+}) {
+  // For each group, surface a mini division picker so the user can set
+  // (for example) group 1 = 1 slot and group 2 = 3 slots (tripled).
+  const groupDivisions: number[] = plan.split
+    ? Array.from({ length: groupCount }, (_, gi) => {
+        const col = plan.columns.find(
+          (c): c is Extract<BeatColumn, { kind: "group-slot" }> =>
+            c.kind === "group-slot" && c.groupIndex === gi,
+        );
+        return col ? col.slotsInGroup : 1;
+      })
+    : [];
+
+  return (
+    <div className="min-w-[220px] text-left">
+      <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+        Beat {plan.beatIndex + 1} · {plan.split ? `${groupCount} groups` : "single"}
+      </div>
+      <div className="mb-3 flex gap-1">
+        {[1, 2, 3, 4].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onPickSplit(n)}
+            className={cn(
+              "flex-1 rounded-md border px-2 py-1 text-[11px] font-bold transition",
+              groupCount === n
+                ? "border-stone-900 bg-stone-900 text-white"
+                : "border-stone-200 bg-white text-stone-700 hover:border-stone-500",
+            )}
+          >
+            {n === 1 ? "Merge" : `Split ${n}`}
+          </button>
+        ))}
+      </div>
+      {plan.split && (
+        <>
+          <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+            Division per group
+          </div>
+          <div className="flex flex-col gap-1">
+            {groupDivisions.map((current, gi) => (
+              <div
+                key={gi}
+                className="flex items-center gap-2 rounded-md bg-stone-50 px-2 py-1"
+              >
+                <span className="min-w-[48px] text-[10px] font-bold text-stone-500">
+                  Grp {gi + 1}
+                </span>
+                <div className="flex flex-1 gap-1">
+                  {[1, 2, 3, 4].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => onPickGroupDivision(gi, d)}
+                      className={cn(
+                        "flex-1 rounded border px-1.5 py-0.5 text-[11px] font-bold transition",
+                        current === d
+                          ? "border-amber-500 bg-amber-100 text-stone-900"
+                          : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+                      )}
+                    >
+                      /{d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
 }
 
-function BeatHeaderPopover({
+function SubHeaderCell({
   plan,
   column,
-  onClose,
-  onSplit,
-  onChangeGroupDivision,
+  localIndex,
 }: {
   plan: BeatPlan;
   column: BeatColumn;
-  onClose: () => void;
-  onSplit: (n: number) => void;
-  onChangeGroupDivision: (groupIndex: number, d: number) => void;
+  localIndex: number;
 }) {
-  // The popover lives directly below the beat label. Close on backdrop click.
+  const isBeatStart =
+    column.kind === "slot" ? column.slotIndex === 0 : localIndex === 0;
+  const isGroupStart =
+    column.kind === "group-slot" && column.slotIndex === 0;
+
+  const label =
+    plan.split && isGroupStart && column.kind === "group-slot"
+      ? `${plan.beatIndex + 1}.${column.groupIndex + 1}`
+      : "";
+
   return (
-    <>
-      <button
-        aria-label="close"
-        onClick={onClose}
-        className="fixed inset-0 z-20 cursor-default"
-        tabIndex={-1}
-      />
-      <div className="absolute top-full left-1/2 z-30 mt-1 w-max -translate-x-1/2 rounded-lg border border-stone-200 bg-white p-2 text-left shadow-xl">
-        <div className="mb-1.5 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
-          Beat {plan.beatIndex + 1} · {plan.split ? "split" : "no split"}
-        </div>
-        <div className="mb-2 flex gap-1">
-          {[1, 2, 3, 4].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onSplit(n)}
-              className={cn(
-                "rounded border px-2 py-0.5 text-[10px] font-bold",
-                plan.columns.length /
-                  (plan.split && column.kind === "group-slot"
-                    ? column.slotsInGroup
-                    : 1) ===
-                  n
-                  ? "border-stone-900 bg-stone-900 text-white"
-                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
-              )}
-            >
-              {n === 1 ? "Merge" : `Split ${n}`}
-            </button>
-          ))}
-        </div>
-        {plan.split && column.kind === "group-slot" && (
-          <div>
-            <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
-              Sub-group {column.groupIndex + 1} division
-            </div>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4].map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => onChangeGroupDivision(column.groupIndex, d)}
-                  className={cn(
-                    "rounded border px-2 py-0.5 text-[10px] font-bold",
-                    column.slotsInGroup === d
-                      ? "border-stone-900 bg-stone-900 text-white"
-                      : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
-                  )}
-                >
-                  /{d}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </>
+    <div
+      className={cn(
+        "flex items-center justify-center border-b border-stone-200 bg-white py-1 text-[9px] font-bold text-stone-400",
+        localIndex === 0 && "border-l-2 border-l-stone-400",
+        isBeatStart && !isGroupStart && "border-l-2 border-l-stone-400",
+        isGroupStart && "border-l border-dashed border-amber-400",
+      )}
+    >
+      {label || <span className="text-stone-200">·</span>}
+    </div>
   );
 }
 
@@ -651,10 +703,16 @@ function InstrumentRow({
 }) {
   return (
     <>
-      <div className="sticky left-0 z-10 flex items-center border-r border-b border-stone-200 bg-white px-2 py-2">
-        <div className="text-[11px] font-bold text-stone-700">
-          {instrumentLabels[instrument]}
-          <span className="ml-1 font-mono text-[9px] font-normal text-stone-400">
+      <div className="sticky left-0 z-10 flex items-center gap-2 border-r border-b border-stone-200 bg-white px-2 py-2">
+        <InstrumentIcon
+          instrument={instrument}
+          className="size-5 shrink-0 text-stone-700"
+        />
+        <div className="flex min-w-0 flex-col leading-tight">
+          <span className="truncate text-[11px] font-bold text-stone-700">
+            {instrumentLabels[instrument]}
+          </span>
+          <span className="truncate font-mono text-[9px] text-stone-400">
             {canonicalAlias[instrument]}
           </span>
         </div>
@@ -740,28 +798,36 @@ function StepCell({
   const isGroupStart =
     column.kind === "group-slot" && column.slotIndex === 0;
 
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      onContextMenu={handleContextMenu}
-      title={hit ? describeHit(hit) : "Click to fill · Right-click for more"}
-      className={cn(
-        "relative flex aspect-square items-center justify-center border-b border-stone-200 text-sm transition select-none",
-        localIndex === 0 && "border-l-2 border-l-stone-400",
-        isBeatStart && !isGroupStart && "border-l-2 border-l-stone-400",
-        isGroupStart && "border-l border-dashed border-amber-500",
-        hit
-          ? hitBgClass(hit)
-          : "bg-white text-stone-200 hover:bg-stone-100",
-      )}
-    >
-      {hit ? renderHitBadge(hit) : null}
+  const [cellAnchor, setCellAnchor] = useState<HTMLButtonElement | null>(null);
 
-      {menuOpen && (
-        <StepContextMenu
+  return (
+    <>
+      <button
+        ref={setCellAnchor}
+        type="button"
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        title={hit ? describeHit(hit) : "Click to fill · Right-click for more"}
+        className={cn(
+          "relative flex aspect-square items-center justify-center border-b border-stone-200 text-sm transition select-none",
+          localIndex === 0 && "border-l-2 border-l-stone-400",
+          isBeatStart && !isGroupStart && "border-l-2 border-l-stone-400",
+          isGroupStart && "border-l border-dashed border-amber-500",
+          hit
+            ? hitBgClass(hit)
+            : "bg-white text-stone-200 hover:bg-stone-100",
+        )}
+      >
+        {hit ? renderHitBadge(hit) : null}
+      </button>
+
+      <FloatingMenu
+        anchor={cellAnchor}
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+      >
+        <StepContextMenuContent
           hit={hit}
-          onClose={() => setMenuOpen(false)}
           onToggle={() => {
             handleClick();
             setMenuOpen(false);
@@ -769,7 +835,6 @@ function StepCell({
           onToggleArticulation={(art) => {
             const { slotIndex, groupIndex } = slotAddressFromColumn(column);
             if (!hit) {
-              // Need to activate first; then articulate.
               handleClick();
             }
             onToggleArticulation(
@@ -792,90 +857,79 @@ function StepCell({
             );
           }}
         />
-      )}
-    </button>
+      </FloatingMenu>
+    </>
   );
 }
 
-function StepContextMenu({
+function StepContextMenuContent({
   hit,
-  onClose,
   onToggle,
   onToggleArticulation,
   onSetSticking,
 }: {
   hit: Hit | null;
-  onClose: () => void;
   onToggle: () => void;
   onToggleArticulation: (art: Articulation) => void;
   onSetSticking: (s: "R" | "L" | null) => void;
 }) {
   return (
-    <>
+    <div className="min-w-[200px] text-left">
       <button
-        aria-label="close"
-        onClick={onClose}
-        className="fixed inset-0 z-20 cursor-default"
-        tabIndex={-1}
-      />
-      <div className="absolute top-full left-1/2 z-30 mt-1 w-max -translate-x-1/2 rounded-lg border border-stone-200 bg-white p-2 text-left shadow-xl">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="mb-1 block w-full rounded border border-stone-200 px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
-        >
-          {hit ? "Remove hit" : "Add hit"}
-        </button>
-        <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
-          Articulations
-        </div>
-        <div className="mb-2 flex gap-1">
-          {(
-            [
-              { label: ">", value: "accent" },
-              { label: "()", value: "ghost" },
-              { label: "f", value: "flam" },
-              { label: "~", value: "roll" },
-            ] as const
-          ).map(({ label, value }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => onToggleArticulation(value)}
-              className={cn(
-                "rounded border px-2 py-0.5 text-[10px] font-bold",
-                hit?.articulations.includes(value)
-                  ? "border-amber-500 bg-amber-100 text-stone-900"
-                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
-          Sticking
-        </div>
-        <div className="flex gap-1">
-          {(["R", "L", null] as const).map((s) => (
-            <button
-              key={s ?? "none"}
-              type="button"
-              onClick={() => onSetSticking(s)}
-              className={cn(
-                "rounded border px-2 py-0.5 text-[10px] font-bold",
-                hit?.sticking === s ||
-                  (s === null && !hit?.sticking)
-                  ? "border-amber-500 bg-amber-100 text-stone-900"
-                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
-              )}
-            >
-              {s ?? "—"}
-            </button>
-          ))}
-        </div>
+        type="button"
+        onClick={onToggle}
+        className="mb-2 block w-full rounded-md border border-stone-200 px-2 py-1 text-[11px] font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
+      >
+        {hit ? "Remove hit" : "Add hit"}
+      </button>
+      <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+        Articulations
       </div>
-    </>
+      <div className="mb-3 flex gap-1">
+        {(
+          [
+            { label: ">", value: "accent" },
+            { label: "()", value: "ghost" },
+            { label: "f", value: "flam" },
+            { label: "~", value: "roll" },
+          ] as const
+        ).map(({ label, value }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onToggleArticulation(value)}
+            className={cn(
+              "flex-1 rounded border px-2 py-1 text-[11px] font-bold transition",
+              hit?.articulations.includes(value)
+                ? "border-amber-500 bg-amber-100 text-stone-900"
+                : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+        Sticking
+      </div>
+      <div className="flex gap-1">
+        {(["R", "L", null] as const).map((s) => (
+          <button
+            key={s ?? "none"}
+            type="button"
+            onClick={() => onSetSticking(s)}
+            className={cn(
+              "flex-1 rounded border px-2 py-1 text-[11px] font-bold transition",
+              hit?.sticking === s || (s === null && !hit?.sticking)
+                ? "border-amber-500 bg-amber-100 text-stone-900"
+                : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+            )}
+          >
+            {s ?? "—"}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -890,28 +944,63 @@ function AddInstrumentMenu({
   options: Instrument[];
   onPick: (i: Instrument) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+
   if (!options.length)
     return (
       <div className="text-[10px] text-stone-300">All instruments added</div>
     );
+
   return (
-    <select
-      className="w-full rounded border border-stone-200 bg-white px-1 py-0.5 text-[10px] font-bold text-stone-600"
-      value=""
-      onChange={(e) => {
-        if (e.target.value) onPick(e.target.value as Instrument);
-        e.currentTarget.value = "";
-      }}
-    >
-      <option value="" disabled>
-        + Add instrument…
-      </option>
-      {options.map((i) => (
-        <option key={i} value={i}>
-          {instrumentLabels[i]} ({canonicalAlias[i]})
-        </option>
-      ))}
-    </select>
+    <>
+      <button
+        ref={setAnchor}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between rounded-md border border-dashed border-stone-300 bg-white px-2 py-1.5 text-[11px] font-bold text-stone-600 hover:border-stone-500 hover:bg-stone-50"
+      >
+        + Add
+        <svg
+          viewBox="0 0 12 12"
+          className="size-3 opacity-60"
+          fill="currentColor"
+          aria-hidden
+        >
+          <path d="M2 4 L6 8 L10 4 Z" />
+        </svg>
+      </button>
+      <FloatingMenu
+        anchor={anchor}
+        open={open}
+        onClose={() => setOpen(false)}
+      >
+        <div className="w-[260px]">
+          <div className="mb-2 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+            Add instrument
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {options.map((i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  onPick(i);
+                  setOpen(false);
+                }}
+                className="flex flex-col items-center gap-1 rounded-lg border border-stone-200 bg-white p-2 text-[10px] font-bold text-stone-700 transition hover:border-stone-900 hover:bg-stone-900 hover:text-amber-100"
+                title={`${instrumentLabels[i]} (${canonicalAlias[i]})`}
+              >
+                <InstrumentIcon instrument={i} className="size-6" />
+                <span className="truncate text-center leading-tight">
+                  {instrumentLabels[i]}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </FloatingMenu>
+    </>
   );
 }
 
