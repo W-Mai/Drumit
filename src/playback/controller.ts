@@ -9,149 +9,274 @@ import type { PlaybackEngine } from "./engine";
 
 export type PlaybackState = "idle" | "playing" | "paused";
 
+export interface CursorPos {
+  barIndex: number;
+  beatIndex: number;
+  time: number;
+}
+
 export interface PlaybackControllerOptions {
   engine: PlaybackEngine;
   score: Score;
-  /** When true, include metronome click events. */
   metronome?: boolean;
-  /** Tempo override in BPM (0 = use score tempo). */
   tempoOverride?: number;
-  /** Looping range: [startBarIdx, endBarIdx] inclusive. */
   loop?: { startBar: number; endBar: number } | null;
-  /** Start playback from this bar index (0-based). */
   startBar?: number;
-  /** Called every ~30ms with the current playhead position. */
-  onCursor?: (pos: { barIndex: number; beatIndex: number; time: number }) => void;
-  /** Called when the playback reaches the end (unless loop is on). */
-  onEnd?: () => void;
 }
 
+type Listener<T> = (v: T) => void;
+
+/**
+ * Headless playback state machine.
+ *
+ * Lifecycle:
+ *   idle ──play()──► playing
+ *   playing ──pause()──► paused ──play()──► playing
+ *   *       ──stop()──► idle (cursor cleared)
+ *
+ * The UI subscribes to `onStateChange` / `onCursor` / `onEnd` instead of
+ * tracking "playing" itself. All option changes can be applied while
+ * playing and the playback continues seamlessly from the current position.
+ */
 export class PlaybackController {
   private engine: PlaybackEngine;
   private score: Score;
-  private state: PlaybackState = "idle";
+  private metronome: boolean;
+  private tempoOverride: number;
+  private loop: { startBar: number; endBar: number } | null;
+  private startBar: number;
+
   private events: PlaybackEvent[] = [];
   private metronomeEvts: PlaybackEvent[] = [];
   private totalDuration = 0;
+
+  private state: PlaybackState = "idle";
+  /** Seconds into the score where playback should resume from. */
+  private pauseTime = 0;
+  /** wall-clock `performance.now()` at last `play()`. */
+  private startedAt = 0;
+  /** Cached play-session `startOffset` (in score time). */
+  private startOffset = 0;
+  /** Cached `endOffset` for loop/play-once. */
+  private endOffset = 0;
+
   private cursorTimer: ReturnType<typeof setInterval> | null = null;
 
-  private options: PlaybackControllerOptions;
+  private stateListeners = new Set<Listener<PlaybackState>>();
+  private cursorListeners = new Set<Listener<CursorPos>>();
+  private endListeners = new Set<Listener<void>>();
 
   constructor(options: PlaybackControllerOptions) {
     this.engine = options.engine;
     this.score = options.score;
-    this.options = options;
+    this.metronome = options.metronome ?? false;
+    this.tempoOverride = options.tempoOverride ?? 0;
+    this.loop = options.loop ?? null;
+    this.startBar = options.startBar ?? 0;
     this.reschedule();
   }
 
-  setEngine(engine: PlaybackEngine) {
-    this.stop();
-    this.engine = engine;
-  }
+  /* ------------ subscriptions ------------ */
 
-  setScore(score: Score) {
-    this.stop();
-    this.score = score;
-    this.reschedule();
+  onStateChange(fn: Listener<PlaybackState>): () => void {
+    this.stateListeners.add(fn);
+    return () => {
+      this.stateListeners.delete(fn);
+    };
   }
-
-  setTempo(tempoOverride: number) {
-    this.options.tempoOverride = tempoOverride;
-    const wasPlaying = this.state === "playing";
-    this.stop();
-    this.reschedule();
-    if (wasPlaying) this.play();
+  onCursor(fn: Listener<CursorPos>): () => void {
+    this.cursorListeners.add(fn);
+    return () => {
+      this.cursorListeners.delete(fn);
+    };
   }
-
-  setMetronome(on: boolean) {
-    this.options.metronome = on;
-    const wasPlaying = this.state === "playing";
-    this.stop();
-    this.reschedule();
-    if (wasPlaying) this.play();
+  onEnd(fn: Listener<void>): () => void {
+    this.endListeners.add(fn);
+    return () => {
+      this.endListeners.delete(fn);
+    };
   }
-
   getState(): PlaybackState {
     return this.state;
   }
 
-  private reschedule() {
-    const opts: ScheduleOptions = {
-      tempoOverride: this.options.tempoOverride,
-    };
-    const { events, totalDuration } = schedule(this.score, opts);
-    this.events = events;
-    this.totalDuration = totalDuration;
-    this.metronomeEvts = this.options.metronome
-      ? metronomeEvents(this.score, totalDuration, opts)
-      : [];
+  /* ------------ option setters (safe to call while playing) ------------ */
+
+  setEngine(engine: PlaybackEngine): void {
+    const wasPlaying = this.state === "playing";
+    this.teardownScheduling();
+    this.engine = engine;
+    if (wasPlaying) void this.play();
   }
+
+  setScore(score: Score): void {
+    this.score = score;
+    this.reschedule();
+    this.reapplyIfPlaying();
+  }
+
+  setMetronome(on: boolean): void {
+    this.metronome = on;
+    this.reschedule();
+    this.reapplyIfPlaying();
+  }
+
+  setTempo(tempoOverride: number): void {
+    this.tempoOverride = tempoOverride;
+    this.reschedule();
+    this.reapplyIfPlaying();
+  }
+
+  setLoop(loop: { startBar: number; endBar: number } | null): void {
+    this.loop = loop;
+    this.reapplyIfPlaying();
+  }
+
+  /** Move the play head without stopping. */
+  setStartBar(startBar: number): void {
+    this.startBar = startBar;
+    if (this.state === "playing") {
+      this.teardownScheduling();
+      this.pauseTime = this.computeBarTime(startBar);
+      // Re-enter playback synchronously at the new position; state stays
+      // "playing" throughout.
+      this.beginPlayback(this.pauseTime);
+    } else if (this.state === "paused") {
+      this.pauseTime = this.computeBarTime(startBar);
+    }
+  }
+
+  /* ------------ transport ------------ */
 
   async play(): Promise<void> {
     if (this.state === "playing") return;
     await this.engine.ensureReady();
 
-    const loop = this.options.loop ?? null;
-    const startOffset = loop
-      ? this.computeBarTime(loop.startBar)
-      : this.computeBarTime(this.options.startBar ?? 0);
-    const endOffset = loop
-      ? this.computeBarEndTime(loop.endBar)
-      : this.totalDuration;
+    const resumeFrom =
+      this.state === "paused"
+        ? this.pauseTime
+        : this.loop
+          ? this.computeBarTime(this.loop.startBar)
+          : this.computeBarTime(this.startBar);
 
-    const all = [...this.events, ...this.metronomeEvts];
-    for (const evt of all) {
-      if (evt.time < startOffset) continue;
-      if (evt.time >= endOffset) continue;
-      const when = evt.time - startOffset;
-      this.engine.scheduleEvent(evt, when);
-    }
-
-    this.state = "playing";
-    const startedAt = performance.now();
-    this.cursorTimer = globalThis.setInterval(() => {
-      const elapsed = (performance.now() - startedAt) / 1000 + startOffset;
-      if (elapsed >= endOffset) {
-        if (loop) {
-          // Loop: stop current sounds and restart immediately.
-          this.stop();
-          // Restart asynchronously so the stop has time to flush.
-          setTimeout(() => {
-            if (this.options.loop) this.play();
-          }, 5);
-          return;
-        }
-        this.stop();
-        this.options.onEnd?.();
-        return;
-      }
-      const pos = this.positionAt(elapsed);
-      this.options.onCursor?.({ ...pos, time: elapsed });
-    }, 33);
+    this.beginPlayback(resumeFrom);
   }
 
-  setLoop(loop: { startBar: number; endBar: number } | null) {
-    this.options.loop = loop;
+  /** Synchronous, no-ensureReady playback starter used by setters + play(). */
+  private beginPlayback(resumeFrom: number): void {
+    this.startOffset = resumeFrom;
+    this.endOffset = this.loop
+      ? this.computeBarEndTime(this.loop.endBar)
+      : this.totalDuration;
+
+    if (resumeFrom >= this.endOffset) {
+      this.pauseTime = 0;
+      if (this.state !== "idle") this.setState("idle");
+      return;
+    }
+
+    this.scheduleRange(resumeFrom, this.endOffset);
+    this.startedAt = performance.now();
+    this.startTicker();
+    if (this.state !== "playing") this.setState("playing");
   }
 
   pause(): void {
-    // Lightweight: true pause requires per-event cancellation. For now we
-    // treat pause as stop (scheduled events continue until drained). A full
-    // implementation would maintain handles to cancel future events.
-    this.stop();
-    this.state = "paused";
+    if (this.state !== "playing") return;
+    const elapsed = this.currentTime();
+    this.teardownScheduling();
+    this.pauseTime = elapsed;
+    this.setState("paused");
   }
 
   stop(): void {
+    this.teardownScheduling();
+    this.pauseTime = 0;
+    if (this.state !== "idle") this.setState("idle");
+  }
+
+  /** Toggle between play and pause (useful for hotkey). */
+  togglePlay(): void {
+    if (this.state === "playing") this.pause();
+    else void this.play();
+  }
+
+  dispose(): void {
+    this.stop();
+    this.engine.dispose?.();
+    this.stateListeners.clear();
+    this.cursorListeners.clear();
+    this.endListeners.clear();
+  }
+
+  /* ------------ internals ------------ */
+
+  private reschedule(): void {
+    const opts: ScheduleOptions = { tempoOverride: this.tempoOverride };
+    const { events, totalDuration } = schedule(this.score, opts);
+    this.events = events;
+    this.totalDuration = totalDuration;
+    this.metronomeEvts = this.metronome
+      ? metronomeEvents(this.score, totalDuration, opts)
+      : [];
+  }
+
+  private reapplyIfPlaying(): void {
+    if (this.state !== "playing") return;
+    const elapsed = this.currentTime();
+    this.teardownScheduling();
+    this.pauseTime = elapsed;
+    this.beginPlayback(elapsed);
+  }
+
+  private scheduleRange(from: number, to: number): void {
+    const all = [...this.events, ...this.metronomeEvts];
+    for (const evt of all) {
+      if (evt.time < from) continue;
+      if (evt.time >= to) continue;
+      this.engine.scheduleEvent(evt, evt.time - from);
+    }
+  }
+
+  private startTicker(): void {
+    this.cursorTimer = globalThis.setInterval(() => {
+      const elapsed = this.currentTime();
+      if (elapsed >= this.endOffset) {
+        if (this.loop) {
+          this.teardownScheduling();
+          this.pauseTime = this.computeBarTime(this.loop.startBar);
+          void this.play();
+          return;
+        }
+        // Natural end → stop (clears cursor).
+        this.stop();
+        this.endListeners.forEach((fn) => fn());
+        return;
+      }
+      const pos = this.positionAt(elapsed);
+      this.cursorListeners.forEach((fn) => fn({ ...pos, time: elapsed }));
+    }, 30);
+  }
+
+  private teardownScheduling(): void {
     this.engine.stop();
     if (this.cursorTimer !== null) {
       globalThis.clearInterval(this.cursorTimer);
       this.cursorTimer = null;
     }
-    this.state = "idle";
   }
 
-  /** Given an elapsed time, return the bar/beat position. */
+  private setState(next: PlaybackState): void {
+    if (this.state === next) return;
+    this.state = next;
+    this.stateListeners.forEach((fn) => fn(next));
+  }
+
+  private currentTime(): number {
+    if (this.state === "paused") return this.pauseTime;
+    return (performance.now() - this.startedAt) / 1000 + this.startOffset;
+  }
+
   private positionAt(time: number): { barIndex: number; beatIndex: number } {
     for (let i = this.events.length - 1; i >= 0; i -= 1) {
       if (this.events[i].time <= time) {
@@ -172,18 +297,10 @@ export class PlaybackController {
     return this.totalDuration;
   }
 
-  /** Time just after the last event of the given bar (end boundary). */
   private computeBarEndTime(barIndex: number): number {
-    // Find events in (barIndex+1).
     for (const ev of this.events) {
       if (ev.barIndex > barIndex) return ev.time;
     }
-    // If it's the last bar, use totalDuration.
     return this.totalDuration;
-  }
-
-  dispose(): void {
-    this.stop();
-    this.engine.dispose?.();
   }
 }

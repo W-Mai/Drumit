@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Score } from "../notation/types";
-import { PlaybackController } from "../playback/controller";
+import {
+  PlaybackController,
+  type PlaybackState,
+} from "../playback/controller";
 import type { PlaybackEngine } from "../playback/engine";
 import { SynthEngine } from "../playback/synthEngine";
 import { MidiEngine } from "../playback/midiEngine";
@@ -22,8 +25,8 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
   const [midiOutputs, setMidiOutputs] = useState<MIDIOutput[]>([]);
   const [selectedOutput, setSelectedOutput] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
   const [loopEnabled, setLoopEnabled] = useState(false);
+  const [playState, setPlayState] = useState<PlaybackState>("idle");
 
   const midiAvailable =
     typeof navigator !== "undefined" && !!navigator.requestMIDIAccess;
@@ -43,58 +46,87 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
     })();
   }, [engineKind, midiAvailable, selectedOutput]);
 
+  // Engine re-created only when kind changes.
   const engine = useMemo<PlaybackEngine>(() => {
     return engineKind === "midi" ? new MidiEngine() : new SynthEngine();
   }, [engineKind]);
 
+  // Controller re-created only when engine changes (cheap engine swap).
   const controller = useMemo(() => {
-    const loop =
-      loopEnabled && typeof startBar === "number"
-        ? { startBar, endBar: startBar }
-        : null;
     return new PlaybackController({
       engine,
       score,
       metronome,
       tempoOverride,
       startBar,
-      loop,
-      onCursor: (p) => onCursor?.(p),
-      onEnd: () => {
-        setPlaying(false);
-        onStop?.();
-      },
+      loop:
+        loopEnabled && typeof startBar === "number"
+          ? { startBar, endBar: startBar }
+          : null,
     });
+    // score / metronome / loop / tempo changes handled via setters below,
+    // we only want controller identity tied to engine to avoid re-setup.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine, score, metronome, tempoOverride, startBar, loopEnabled]);
+  }, [engine]);
 
-  // Dispose previous controller when it changes.
+  // Subscribe to controller events.
+  useEffect(() => {
+    const offState = controller.onStateChange(setPlayState);
+    const offCursor = controller.onCursor((p) => onCursor?.(p));
+    const offEnd = controller.onEnd(() => onStop?.());
+    return () => {
+      offState();
+      offCursor();
+      offEnd();
+    };
+  }, [controller, onCursor, onStop]);
+
+  // Push external option changes into the controller (no restart).
+  useEffect(() => {
+    controller.setScore(score);
+  }, [controller, score]);
+  useEffect(() => {
+    controller.setMetronome(metronome);
+  }, [controller, metronome]);
+  useEffect(() => {
+    controller.setTempo(tempoOverride);
+  }, [controller, tempoOverride]);
+  useEffect(() => {
+    if (typeof startBar === "number") {
+      controller.setLoop(
+        loopEnabled ? { startBar, endBar: startBar } : null,
+      );
+      controller.setStartBar(startBar);
+    }
+  }, [controller, loopEnabled, startBar]);
+
+  // Cleanup on unmount / engine swap.
   useEffect(() => {
     return () => {
       controller.dispose();
     };
   }, [controller]);
 
+  const playing = playState === "playing";
+  const paused = playState === "paused";
+
   const handlePlay = async () => {
     setError(null);
-    if (!controller) return;
     try {
-      if (engineKind === "midi" && engine) {
+      if (engineKind === "midi") {
         const m = engine as MidiEngine;
         await m.ensureReady();
         if (selectedOutput) m.selectOutputById(selectedOutput);
       }
       await controller.play();
-      setPlaying(true);
     } catch (err) {
       setError((err as Error).message);
-      setPlaying(false);
     }
   };
 
+  const handlePause = () => controller.pause();
   const handleStop = () => {
-    controller?.stop();
-    setPlaying(false);
+    controller.stop();
     onStop?.();
   };
 
@@ -103,15 +135,30 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
       <div className="flex items-center gap-1">
         <button
           type="button"
-          onClick={playing ? handleStop : handlePlay}
+          onClick={playing ? handlePause : handlePlay}
           className={cn(
             "rounded-full px-3 py-1 font-bold transition",
             playing
-              ? "bg-red-500 text-white hover:bg-red-600"
-              : "bg-emerald-500 text-white hover:bg-emerald-600",
+              ? "bg-amber-500 text-white hover:bg-amber-600"
+              : paused
+                ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                : "bg-emerald-500 text-white hover:bg-emerald-600",
           )}
         >
-          {playing ? "■ Stop" : "▶ Play"}
+          {playing ? "❚❚ Pause" : paused ? "▶ Resume" : "▶ Play"}
+        </button>
+        <button
+          type="button"
+          onClick={handleStop}
+          disabled={playState === "idle"}
+          className={cn(
+            "rounded-full px-3 py-1 font-bold transition",
+            playState === "idle"
+              ? "cursor-not-allowed bg-stone-100 text-stone-400"
+              : "bg-stone-900 text-white hover:bg-stone-700",
+          )}
+        >
+          ■ Stop
         </button>
       </div>
 
@@ -155,7 +202,9 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
           min={40}
           max={300}
           value={tempoOverride || score.tempo?.bpm || 100}
-          onChange={(e) => setTempoOverride(Number.parseInt(e.target.value, 10) || 0)}
+          onChange={(e) =>
+            setTempoOverride(Number.parseInt(e.target.value, 10) || 0)
+          }
           className="w-16 rounded border border-stone-200 bg-white px-2 py-0.5 text-right font-bold"
         />
         bpm
@@ -173,9 +222,7 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
       <label
         className={cn(
           "flex items-center gap-1",
-          typeof startBar === "number"
-            ? "text-stone-600"
-            : "text-stone-300",
+          typeof startBar === "number" ? "text-stone-600" : "text-stone-300",
         )}
         title={
           typeof startBar === "number"
@@ -191,6 +238,10 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
         />
         Loop bar
       </label>
+
+      <span className="ml-auto text-[10px] text-stone-400 tabular-nums">
+        {playState}
+      </span>
 
       {error ? (
         <span className="rounded bg-red-50 px-2 py-0.5 font-bold text-red-700">

@@ -21,19 +21,34 @@ function makeFakeEngine() {
   return { engine, scheduled, getStopCount: () => stopped };
 }
 
-describe("PlaybackController", () => {
+describe("PlaybackController — transport", () => {
+  it("starts in idle state and transitions on play/pause/stop", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    const states: string[] = [];
+    ctrl.onStateChange((s) => states.push(s));
+    expect(ctrl.getState()).toBe("idle");
+    await ctrl.play();
+    expect(ctrl.getState()).toBe("playing");
+    ctrl.pause();
+    expect(ctrl.getState()).toBe("paused");
+    await ctrl.play();
+    expect(ctrl.getState()).toBe("playing");
+    ctrl.stop();
+    expect(ctrl.getState()).toBe("idle");
+    expect(states).toEqual(["playing", "paused", "playing", "idle"]);
+  });
+
   it("schedules only events between startOffset and end", async () => {
     const { score } = parseDrumtab(
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
     );
     const { engine, scheduled } = makeFakeEngine();
-    const ctrl = new PlaybackController({
-      engine,
-      score,
-      startBar: 1, // start at bar 2 (0-indexed 1)
-    });
+    const ctrl = new PlaybackController({ engine, score, startBar: 1 });
     await ctrl.play();
-    // All scheduled events should be from the 2nd bar (snare only).
     const instruments = new Set(scheduled.map((s) => s.event.hit.instrument));
     expect(instruments).toEqual(new Set(["snare"]));
     ctrl.stop();
@@ -47,11 +62,75 @@ describe("PlaybackController", () => {
     const ctrl = new PlaybackController({
       engine,
       score,
-      loop: { startBar: 1, endBar: 1 }, // only the 2nd bar
+      loop: { startBar: 1, endBar: 1 },
     });
     await ctrl.play();
     const instruments = new Set(scheduled.map((s) => s.event.hit.instrument));
     expect(instruments).toEqual(new Set(["snare"]));
+    ctrl.stop();
+  });
+
+  it("setLoop while playing re-applies seamlessly", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    const { engine, getStopCount } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    await ctrl.play();
+    expect(ctrl.getState()).toBe("playing");
+    ctrl.setLoop({ startBar: 0, endBar: 0 });
+    expect(ctrl.getState()).toBe("playing");
+    expect(getStopCount()).toBeGreaterThan(0); // teardown happened
+    ctrl.stop();
+  });
+
+  it("setMetronome while playing keeps state playing", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    await ctrl.play();
+    ctrl.setMetronome(true);
+    expect(ctrl.getState()).toBe("playing");
+    ctrl.stop();
+  });
+
+  it("setStartBar while playing jumps to the new bar", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    const { engine, scheduled } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    await ctrl.play();
+    scheduled.length = 0;
+    ctrl.setStartBar(1); // synchronous re-apply
+    const instrumentsAfter = new Set(
+      scheduled.map((s) => s.event.hit.instrument),
+    );
+    expect(instrumentsAfter).toEqual(new Set(["snare"]));
+    ctrl.stop();
+  });
+
+  it("pause records current time; resume continues from there", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    const { engine, scheduled } = makeFakeEngine();
+    const ctrl = new PlaybackController({
+      engine,
+      score,
+      startBar: 1, // start from bar 2
+    });
+    await ctrl.play();
+    ctrl.pause();
+    const firstRun = scheduled.length;
+    scheduled.length = 0;
+    await ctrl.play(); // resume from pause
+    // Should not re-send events that were already sent before pause (they
+    // are all from bar 2 regardless, but the set should be the same).
+    expect(firstRun).toBeGreaterThan(0);
+    expect(scheduled.length).toBeLessThanOrEqual(firstRun);
     ctrl.stop();
   });
 });
