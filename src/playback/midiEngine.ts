@@ -3,11 +3,14 @@ import type { PlaybackEngine } from "./engine";
 import { gmDrumMap, DEFAULT_NOTE_DURATION_S } from "../notation/midi";
 
 /**
- * A Web MIDI output engine. Sends noteOn/noteOff messages to the selected
+ * Web MIDI output engine. Sends noteOn/noteOff messages to the selected
  * MIDI output port on channel 10 (standard percussion channel).
  *
- * The browser must grant MIDI access; without a user gesture many browsers
- * refuse. Callers are expected to call `requestAccess()` from a click.
+ * Unlike Web Audio, Web MIDI's `send(msg, futureTime)` schedules the message
+ * in the underlying MIDI subsystem and CANNOT be cancelled. If we queued
+ * three seconds of future events and the user hits Stop, those events would
+ * still play. To make Stop actually stop, we dispatch every message through
+ * a local `setTimeout` so Stop can clear the timers before they fire.
  */
 export class MidiEngine implements PlaybackEngine {
   readonly kind = "midi" as const;
@@ -15,10 +18,12 @@ export class MidiEngine implements PlaybackEngine {
 
   private access: MIDIAccess | null = null;
   private output: MIDIOutput | null = null;
-  private readonly channel = 9; // MIDI channels are 0-indexed, 9 = channel 10
+  private readonly channel = 9; // 0-indexed, 9 = MIDI channel 10
 
-  /** All currently-sounding notes so we can force a stop. */
-  private activeNotes: { port: MIDIOutput; note: number; scheduledAt: number }[] = [];
+  /** Pending dispatch timers, cleared on stop(). */
+  private timers = new Set<ReturnType<typeof setTimeout>>();
+  /** Notes currently sounding, so Stop can release them. */
+  private active = new Set<number>();
 
   constructor(outputName: string | null = null) {
     this.name = outputName ? `MIDI: ${outputName}` : "Web MIDI";
@@ -40,45 +45,71 @@ export class MidiEngine implements PlaybackEngine {
 
   selectOutputById(id: string | null): void {
     if (!this.access) return;
-    if (!id) {
-      this.output = null;
-      return;
-    }
-    this.output = this.access.outputs.get(id) ?? null;
+    this.output = id ? (this.access.outputs.get(id) ?? null) : null;
   }
 
   scheduleEvent(event: PlaybackEvent, whenSeconds: number): void {
-    if (!this.output) return;
+    const output = this.output;
+    if (!output) return;
     const note = gmDrumMap[event.hit.instrument];
     if (note === undefined) return;
-    const onTime = performance.now() + whenSeconds * 1000;
-    const offTime = onTime + (event.duration || DEFAULT_NOTE_DURATION_S) * 1000;
-    const status = 0x90 | this.channel; // noteOn
+
+    const onDelayMs = Math.max(0, whenSeconds * 1000);
+    const duration = (event.duration || DEFAULT_NOTE_DURATION_S) * 1000;
+    const offDelayMs = onDelayMs + duration;
+    const statusOn = 0x90 | this.channel;
     const statusOff = 0x80 | this.channel;
-    this.output.send([status, note, event.velocity], onTime);
-    this.output.send([statusOff, note, 0], offTime);
-    this.activeNotes.push({ port: this.output, note, scheduledAt: onTime });
+
+    const onTimer = setTimeout(() => {
+      this.timers.delete(onTimer);
+      try {
+        output.send([statusOn, note, event.velocity]);
+        this.active.add(note);
+      } catch {
+        // output may have been closed
+      }
+    }, onDelayMs);
+    this.timers.add(onTimer);
+
+    const offTimer = setTimeout(() => {
+      this.timers.delete(offTimer);
+      try {
+        output.send([statusOff, note, 0]);
+        this.active.delete(note);
+      } catch {
+        // ignore
+      }
+    }, offDelayMs);
+    this.timers.add(offTimer);
   }
 
   stop(): void {
-    if (!this.output) return;
-    const now = performance.now();
+    // Cancel every pending dispatch.
+    for (const t of this.timers) clearTimeout(t);
+    this.timers.clear();
+
+    // Release everything currently sounding on this channel.
+    const output = this.output;
+    if (!output) return;
     const statusOff = 0x80 | this.channel;
-    for (const n of this.activeNotes) {
+    for (const note of this.active) {
       try {
-        n.port.send([statusOff, n.note, 0], now);
+        output.send([statusOff, note, 0]);
       } catch {
         // ignore
       }
     }
-    // All notes off on channel 10.
-    const statusCc = 0xb0 | this.channel;
+    this.active.clear();
+
+    // Broadcast "All Notes Off" (CC 123) and "All Sound Off" (CC 120) for
+    // good measure — some soft synths ignore stray noteOffs.
+    const cc = 0xb0 | this.channel;
     try {
-      this.output.send([statusCc, 123, 0], now);
+      output.send([cc, 123, 0]);
+      output.send([cc, 120, 0]);
     } catch {
       // ignore
     }
-    this.activeNotes = [];
   }
 
   dispose(): void {
