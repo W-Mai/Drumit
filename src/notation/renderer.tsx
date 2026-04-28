@@ -207,23 +207,17 @@ function BarView({
   );
 }
 
-const MAX_BASE_SIZE = 7; // px — used for a kick hit at comfortable spacing
-const MIN_BASE_SIZE = 2.5;
-
-function computeHitSize(slotWidth: number, instrumentScale: number): number {
-  // Base is limited by the slot's width (so two adjacent hits don't touch)
-  // and by the row's vertical budget (ROW_HEIGHT ~ 26 → ~10 half-height max).
-  const horizontalBudget = slotWidth * 0.4;
-  const verticalBudget = 9;
-  const base = Math.min(horizontalBudget, verticalBudget, MAX_BASE_SIZE);
-  const scaled = base * instrumentScale;
-  return Math.max(MIN_BASE_SIZE, scaled);
-}
+/**
+ * Base hit-glyph size in px. Kept constant across the whole score so the
+ * notation reads like a traditional drum chart — density differences show
+ * up as variable bar widths, not variable note-head sizes.
+ */
+const HIT_BASE_SIZE = 4.5;
 
 function HitGlyph({ laid }: { laid: LaidOutHit }) {
-  const { hit, x, y, slotWidth } = laid;
+  const { hit, x, y } = laid;
   const scale = instrumentSizeScale[hit.instrument] ?? 1;
-  const size = computeHitSize(slotWidth, scale);
+  const size = HIT_BASE_SIZE * scale;
   return (
     <g>
       {hit.articulations.includes("ghost") ? (
@@ -294,12 +288,11 @@ function HitHead({
   size: number;
 }) {
   if (hit.head === "x") {
-    const sw = Math.max(1, Math.min(1.8, size * 0.3));
     return (
       <path
         d={`M ${x - size} ${y - size} L ${x + size} ${y + size} M ${x + size} ${y - size} L ${x - size} ${y + size}`}
         className="fill-none stroke-stone-900"
-        strokeWidth={sw}
+        strokeWidth={1.8}
         strokeLinecap="round"
       />
     );

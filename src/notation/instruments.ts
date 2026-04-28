@@ -134,11 +134,11 @@ export function defaultHeadFor(instrument: Instrument): Head {
  * kick largest). Other instruments use 1.0 (the renderer's base size).
  */
 export const instrumentSizeScale: Record<Instrument, number> = {
-  kick: 1.5,
+  kick: 1.2,
   snare: 1.0,
-  tomHigh: 0.8,
-  tomMid: 1.1,
-  floorTom: 1.0,
+  tomHigh: 0.75,
+  tomMid: 0.95,
+  floorTom: 1.05,
   hihatClosed: 1.0,
   hihatHalfOpen: 1.0,
   hihatOpen: 1.0,
