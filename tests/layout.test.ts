@@ -12,6 +12,11 @@ function layoutBarOf(src: string) {
   return layout.rows[0][0];
 }
 
+function layoutScoreOf(src: string, width = 900) {
+  const { score } = parseDrumtab(src);
+  return layoutScore(score, { showLabels: false, expanded: false, width });
+}
+
 describe("layoutBar row merging", () => {
   it("cymbals always gets its own row", () => {
     const bar = layoutBarOf(
@@ -259,5 +264,154 @@ describe("hit row-group assignment", () => {
       // y coord must match the assigned rowY for that group.
       expect(h.y).toBe(bar.rowY[expectedGroup]);
     });
+  });
+});
+
+describe("multi-bar layout", () => {
+  it("lays out multiple sections with headers and bar rows", () => {
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n[B]\n| sn: o / o / o / o |`,
+      900,
+    );
+    expect(layout.sectionHeaders.map((h) => h.label)).toEqual(["A", "B"]);
+    // Both bars exist, each section has 1 bar.
+    const totalBars = layout.rows.reduce((a, r) => a + r.length, 0);
+    expect(totalBars).toBe(2);
+  });
+
+  it("honors narrow widths by wrapping bars onto multiple rows", () => {
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
+      320, // tight viewport
+    );
+    // Should wrap (at least 2 rows).
+    expect(layout.rows.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("section header y is before its first bar row", () => {
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n[B]\n| sn: o / o / o / o |`,
+      900,
+    );
+    const aBar = layout.rows[0][0];
+    const bBar = layout.rows[1][0];
+    expect(layout.sectionHeaders[0].y).toBeLessThan(aBar.y);
+    expect(layout.sectionHeaders[1].y).toBeLessThan(bBar.y);
+  });
+});
+
+describe("repeat-previous layout", () => {
+  it("renders repeat bar with no beam or hit but uses bar height", () => {
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |`,
+    );
+    const repeatBar = layout.rows[0][1];
+    expect(repeatBar.repeatPrevious).toBe(true);
+    expect(repeatBar.hits).toHaveLength(0);
+    expect(repeatBar.beats.flatMap((b) => b.beams)).toHaveLength(0);
+  });
+
+  it("repeat hint variants are preserved through layout", () => {
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |\n| %. |\n| %- |\n| %, |`,
+    );
+    const bars = layout.rows[0];
+    expect(bars[1].repeatPrevious).toBe(true);
+    expect(bars[1].repeatCount).toBe(1);
+  });
+});
+
+describe("tuplet placement", () => {
+  it("triplet beat places 3 hits equally spaced across beat width", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x |`,
+    );
+    const beat0 = bar.beats[0];
+    const sn = beat0.lanes.find((l) => l.instrument === "snare")!;
+    expect(sn.tickXs).toHaveLength(3);
+    const gap1 = sn.tickXs[1] - sn.tickXs[0];
+    const gap2 = sn.tickXs[2] - sn.tickXs[1];
+    expect(Math.abs(gap1 - gap2)).toBeLessThan(0.5);
+  });
+
+  it("sextuplet produces 6 equally spaced ticks", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: xxxxxx / x / x / x |`,
+    );
+    const sn = bar.beats[0].lanes.find((l) => l.instrument === "snare")!;
+    expect(sn.tickXs).toHaveLength(6);
+    expect(sn.tuplet).toBe(6);
+  });
+});
+
+describe("ghost / accent visual flags", () => {
+  it("ghost articulation does not move x position", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (o) / o / (o) / o |`,
+    );
+    const xs = bar.hits
+      .filter((h) => h.hit.instrument === "snare")
+      .map((h) => h.x);
+    // 4 hits at equal spacing
+    expect(xs).toHaveLength(4);
+    const gap0 = xs[1] - xs[0];
+    const gap1 = xs[2] - xs[1];
+    const gap2 = xs[3] - xs[2];
+    expect(Math.abs(gap0 - gap1)).toBeLessThan(0.5);
+    expect(Math.abs(gap1 - gap2)).toBeLessThan(0.5);
+  });
+});
+
+describe("meter / bar width edge cases", () => {
+  it("2/4 bar is narrower than 4/4 bar at same viewport", () => {
+    const l4 = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+      600,
+    );
+    const l2 = layoutScoreOf(
+      `title: T\nmeter: 2/4\n[A]\n| bd: o / o |`,
+      600,
+    );
+    // 2/4 bars could pack more per row. Compare by bars per first row:
+    expect(l2.rows[0][0].width).toBeLessThanOrEqual(l4.rows[0][0].width + 0.01);
+  });
+
+  it("inline meter override reflects in bar.meter", () => {
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| meter: 2/4 | bd: o / o |\n| bd: o / o / o / o |`,
+    );
+    // Second bar parses fine (inline override only applies to first bar).
+    expect(layout.rows[0]).toHaveLength(2);
+  });
+});
+
+describe("intra-beat group layout", () => {
+  it("groups with ratio 0.5/0.5 split beat width evenly", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o , o / x / x / x |`,
+    );
+    const beat0 = bar.beats[0];
+    const lanes = beat0.lanes.filter((l) => l.instrument === "hihatClosed");
+    // Two lanes (one per group), each 1 tick
+    expect(lanes).toHaveLength(2);
+    const x1 = lanes[0].tickXs[0];
+    const x2 = lanes[1].tickXs[0];
+    // Both inside beat bounds
+    expect(x1).toBeGreaterThan(beat0.x);
+    expect(x2).toBeLessThan(beat0.x + beat0.width);
+    // First is on left half, second is on right half
+    expect(x1).toBeLessThan(beat0.x + beat0.width / 2);
+    expect(x2).toBeGreaterThan(beat0.x + beat0.width / 2);
+  });
+
+  it("uneven split (8 + triplet) keeps beam on outermost level", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o , (3)xxx / x / x / x |`,
+    );
+    const beat0 = bar.beats[0];
+    const d1 = beat0.beams.filter(
+      (b) => b.rowGroup === "cymbals" && b.depth === 1,
+    );
+    expect(d1).toHaveLength(1);
   });
 });

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parseDrumtab } from "../src/notation/parser";
 import {
+  deleteBar,
+  insertBarAfter,
+  setBarRepeatPrevious,
   setLaneDivision,
   setGroupDivision,
   splitBeatIntoGroups,
@@ -121,5 +124,84 @@ describe("edit operations — per-lane independence", () => {
     // first group's slot (single hit) survives as the merged content
     expect(hh.slots).toHaveLength(1);
     expect(hh.slots[0]).not.toBeNull();
+  });
+});
+
+describe("edit operations — bar-level actions", () => {
+  it("insertBarAfter duplicates the selected bar", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const next = insertBarAfter(score, 0);
+    expect(next.sections[0].bars).toHaveLength(2);
+    const b0 = next.sections[0].bars[0];
+    const b1 = next.sections[0].bars[1];
+    expect(b0.beats.length).toBe(b1.beats.length);
+  });
+
+  it("deleteBar drops the selected bar", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: x / x / x / x |`,
+    );
+    const next = deleteBar(score, 0);
+    expect(next.sections[0].bars).toHaveLength(1);
+    const sn = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "snare",
+    );
+    expect(sn).toBeDefined();
+  });
+
+  it("setBarRepeatPrevious converts a pattern bar into a repeat", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
+    );
+    const next = setBarRepeatPrevious(score, 1, "dot");
+    expect(next.sections[0].bars[1].repeatPrevious).toBe(true);
+    expect(next.sections[0].bars[1].repeatHint).toBe("dot");
+    expect(next.sections[0].bars[1].beats).toHaveLength(0);
+  });
+
+  it("setBarRepeatPrevious(null) turns a repeat back into an empty pattern bar", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |`,
+    );
+    const next = setBarRepeatPrevious(score, 1, null);
+    const bar = next.sections[0].bars[1];
+    expect(bar.repeatPrevious).toBe(false);
+    expect(bar.repeatHint).toBeUndefined();
+    expect(bar.beats.length).toBeGreaterThan(0);
+  });
+});
+
+describe("edit operations — chained mutations are immutable", () => {
+  it("each operation returns a new score, original untouched", () => {
+    const { score: original } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const before = JSON.stringify(original);
+    const next = splitBeatIntoGroups(original, 0, 0, "kick", 2);
+    const after = JSON.stringify(original);
+    expect(after).toBe(before); // unchanged
+    // And the new score differs.
+    expect(JSON.stringify(next)).not.toBe(before);
+  });
+
+  it("chained: split → set sub-div → toggle hits results in final AST", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: - / - / - / - |`,
+    );
+    let s = splitBeatIntoGroups(score, 0, 0, "kick", 2);
+    s = setGroupDivision(s, 0, 0, "kick", 1, 3); // second half triplet
+    s = toggleSlot(s, 0, 0, "kick", 0, 1); // first triplet slot
+    s = toggleSlot(s, 0, 0, "kick", 2, 1); // third triplet slot
+    const kick = s.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(kick.groups).toHaveLength(2);
+    const g1 = kick.groups![1];
+    expect(g1.division).toBe(3);
+    expect(g1.slots[0]).not.toBeNull();
+    expect(g1.slots[1]).toBeNull();
+    expect(g1.slots[2]).not.toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseDrumtab } from "../src/notation/parser";
 import { serializeScore } from "../src/notation/serialize";
+import { splitBeatIntoGroups, toggleSlot } from "../src/notation/edit";
 
 describe("serializeScore", () => {
   it("round-trips a simple bar", () => {
@@ -82,5 +83,86 @@ meter: 4/4
     const snBeat1 = bar.beats[1].lanes.find((l) => l.instrument === "snare");
     const ghost = snBeat1?.slots[0];
     expect(ghost?.articulations).toContain("ghost");
+  });
+
+  it("serializer output can be re-parsed without diagnostics (idempotent)", () => {
+    const src = `title: Test
+artist: Me
+tempo: 120
+meter: 4/4
+
+[A]
+| hh: xxxx / xxxx / xxxx / xxxx  bd: o / - / o / -  sn: - / o / - / o |
+| % |
+
+[B]
+| hh: o , (3)xxx / x / x / x |
+
+[Outro]
+| cr: o / - / - / - |
+`;
+    const { score } = parseDrumtab(src);
+    const out1 = serializeScore(score);
+    const { score: score2, diagnostics } = parseDrumtab(out1);
+    expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
+    const out2 = serializeScore(score2);
+    // Second serialization should be stable (bit-for-bit identical to first).
+    expect(out2).toBe(out1);
+  });
+
+  it("serializer preserves bar repeat count suffix", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o | x3\n`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    const { score: s2 } = parseDrumtab(out);
+    expect(s2.sections[0].bars[0].repeatCount).toBe(3);
+  });
+
+  it("serializer preserves sticking and accent modifiers", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| sn: >o/R / >o/L / >o/R / >o/L |`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    const { score: s2 } = parseDrumtab(out);
+    const beat0 = s2.sections[0].bars[0].beats[0];
+    const sn = beat0.lanes.find((l) => l.instrument === "snare")!;
+    expect(sn.slots[0]?.articulations).toContain("accent");
+    expect(sn.slots[0]?.sticking).toBe("R");
+  });
+
+  it("serializer preserves section labels and order", () => {
+    const src = `title: T\nmeter: 4/4\n[Intro]\n| bd: o / o / o / o |\n[A]\n| sn: o / o / o / o |\n[Solo]\n| hh: x / x / x / x |`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    const { score: s2 } = parseDrumtab(out);
+    expect(s2.sections.map((s) => s.label)).toEqual(["Intro", "A", "Solo"]);
+  });
+
+  it("serializer emits empty-content rests when a lane starts with rest beats", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: - / - / o / o |`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    const { score: s2 } = parseDrumtab(out);
+    const bd0 = s2.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    );
+    expect(bd0?.slots[0]).toBeNull();
+  });
+
+  it("serializer handles split with >2 groups", () => {
+    // Build via edit API since there's no shorthand for 3+ groups
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    let s = splitBeatIntoGroups(score, 0, 0, "kick", 3);
+    s = toggleSlot(s, 0, 0, "kick", 0, 0);
+    s = toggleSlot(s, 0, 0, "kick", 0, 1);
+    s = toggleSlot(s, 0, 0, "kick", 0, 2);
+    const out = serializeScore(s);
+    const { score: s2, diagnostics } = parseDrumtab(out);
+    expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
+    const bd = s2.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    );
+    expect(bd?.groups).toHaveLength(3);
   });
 });
