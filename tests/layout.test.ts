@@ -195,17 +195,45 @@ describe("beam merging across groups", () => {
     expect(cymBeams[1].depth).toBe(2);
   });
 
-  it("cymbal and drum rows produce independent merged beams", () => {
+  it("cymbal and drum rows with SAME rhythm share one collapsed beam on bottom row", () => {
     const bar = layoutBarOf(
       `title: T\nmeter: 4/4\n[A]\n| hh: o , o / x / x / x  sn: o , o / x / x / x |`,
     );
     const b0 = bar.beats[0];
-    const cymBeams = b0.beams.filter((b) => b.rowGroup === "cymbals");
-    const sn_or_merged = b0.beams.filter((b) => b.rowGroup !== "cymbals");
-    expect(cymBeams).toHaveLength(1);
-    expect(sn_or_merged.length).toBeGreaterThanOrEqual(1);
-    // Independent y positions
-    expect(cymBeams[0].y).not.toBe(sn_or_merged[0].y);
+    // Same rhythm (`o , o`) on both lanes → 1 merged beam at the snare row.
+    expect(b0.beams).toHaveLength(1);
+    expect(b0.beams[0].rowGroup).toBe("snare");
+  });
+
+  it("cymbal and drum rows with DIFFERENT rhythms each keep their own beam", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / x / x / x  sn: o , o / x / x / x |`,
+    );
+    const b0 = bar.beats[0];
+    // hh = 1/16 × 4 (2 beams) and snare = 2 × 8ths with outer beam: different.
+    const rows = new Set(b0.beams.map((b) => b.rowGroup));
+    expect(rows.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("hh `oo` and bd `o-` — same beam shape, one beam collapsed to kick", () => {
+    // Both beams are a single depth-1 8th underline spanning the whole beat,
+    // so the visual under-line is identical → collapse onto the bottom row.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / x / x / x  bd: o- / - / - / - |`,
+    );
+    const b0 = bar.beats[0];
+    expect(b0.beams).toHaveLength(1);
+    expect(b0.beams[0].rowGroup).toBe("kick");
+  });
+
+  it("hh `oo` and bd `oo` — same rhythm, one collapsed beam", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / x / x / x  bd: oo / - / - / - |`,
+    );
+    const b0 = bar.beats[0];
+    expect(b0.beams).toHaveLength(1);
+    // Collapsed onto the bottom row (kick) since rhythm is identical.
+    expect(b0.beams[0].rowGroup).toBe("kick");
   });
 
   it("triplet group draws beam and tuplet label", () => {

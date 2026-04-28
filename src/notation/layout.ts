@@ -296,7 +296,7 @@ function layoutBar(
       });
     });
 
-    const beams = mergeBeams(laidLanes);
+    const beams = mergeBeams(laidLanes, rowY);
     const tuplets = mergeTuplets(laidLanes);
 
     beats.push({
@@ -336,7 +336,10 @@ function layoutBar(
  * instrument lane).
  * Output: merged beam segments ready for the renderer.
  */
-function mergeBeams(laneSegments: LaidOutLane[]): LaidOutBeam[] {
+function mergeBeams(
+  laneSegments: LaidOutLane[],
+  rowY: Partial<Record<RowGroup, number>>,
+): LaidOutBeam[] {
   const byRow = new Map<RowGroup, LaidOutLane[]>();
   for (const lane of laneSegments) {
     if (lane.beamDepth <= 0) continue;
@@ -345,15 +348,18 @@ function mergeBeams(laneSegments: LaidOutLane[]): LaidOutBeam[] {
     else byRow.set(lane.rowGroup, [lane]);
   }
 
-  const out: LaidOutBeam[] = [];
+  // Step 1: per-row merged beams.
+  type RowBeam = {
+    rowGroup: RowGroup;
+    rowAnchorY: number; // beam Y of the first lane of this row
+    depth: number;
+    x1: number;
+    x2: number;
+  };
+  const perRowBeams: RowBeam[] = [];
   for (const [rowGroup, lanes] of byRow) {
-    // Different lanes in the same row-group can have identical beam y (since
-    // they all render on the same row). We merge by x range first, then for
-    // every depth level take the union of (x-range) for lanes with depth >=
-    // level.
-    const y = lanes[0].beamY;
+    const rowAnchorY = lanes[0].beamY;
     const maxDepth = lanes.reduce((m, l) => Math.max(m, l.beamDepth), 0);
-
     for (let depth = 1; depth <= maxDepth; depth += 1) {
       const spans = lanes
         .filter((l) => l.beamDepth >= depth)
@@ -361,12 +367,55 @@ function mergeBeams(laneSegments: LaidOutLane[]): LaidOutBeam[] {
         .sort((a, b) => a.x1 - b.x1);
       if (!spans.length) continue;
       const merged = mergeSpans(spans, 10);
-      merged.forEach((s) => {
-        out.push({ rowGroup, y: y + (depth - 1) * 3, depth, x1: s.x1, x2: s.x2 });
-      });
+      merged.forEach((s) =>
+        perRowBeams.push({ rowGroup, rowAnchorY, depth, x1: s.x1, x2: s.x2 }),
+      );
     }
   }
-  return out;
+
+  // Step 2: collapse beams that are visually identical across rows —
+  // same depth and (approximately) the same x-range. Keep only the
+  // instance on the bottom-most row. This is what users call "same
+  // rhythm" at a glance: the under-line shapes are indistinguishable so
+  // drawing them on multiple lanes is redundant.
+  const EPS = 1.5;
+  const kept: RowBeam[] = [];
+  const dropped = new Set<number>();
+  for (let i = 0; i < perRowBeams.length; i += 1) {
+    if (dropped.has(i)) continue;
+    const bi = perRowBeams[i];
+    // Find all matching beams on other rows.
+    const matches: number[] = [i];
+    for (let j = i + 1; j < perRowBeams.length; j += 1) {
+      if (dropped.has(j)) continue;
+      const bj = perRowBeams[j];
+      if (bi.rowGroup === bj.rowGroup) continue;
+      if (bi.depth !== bj.depth) continue;
+      if (Math.abs(bi.x1 - bj.x1) > EPS) continue;
+      if (Math.abs(bi.x2 - bj.x2) > EPS) continue;
+      matches.push(j);
+    }
+    if (matches.length === 1) {
+      kept.push(bi);
+      continue;
+    }
+    // Pick bottom-most row.
+    const anchor = matches
+      .map((idx) => perRowBeams[idx])
+      .reduce((bottom, b) =>
+        (rowY[b.rowGroup] ?? 0) > (rowY[bottom.rowGroup] ?? 0) ? b : bottom,
+      );
+    kept.push(anchor);
+    matches.forEach((idx) => dropped.add(idx));
+  }
+
+  return kept.map((b) => ({
+    rowGroup: b.rowGroup,
+    y: b.rowAnchorY + (b.depth - 1) * 3,
+    depth: b.depth,
+    x1: b.x1,
+    x2: b.x2,
+  }));
 }
 
 /** Merge sorted span list; two spans are joined if their gap is <= tolerance. */
