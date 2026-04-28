@@ -103,6 +103,55 @@ describe("scheduler", () => {
   });
 });
 
+describe("articulation expansion", () => {
+  it("flam emits a soft grace note ~18ms before the main hit", () => {
+    // Put the flam on beat 2 so the grace doesn't get clamped to t=0.
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| sn: - / fo / x / x |`,
+    );
+    const sn = events
+      .filter((e) => e.hit.instrument === "snare")
+      .sort((a, b) => a.time - b.time);
+    expect(sn.length).toBeGreaterThanOrEqual(2);
+    const grace = sn[0];
+    const main = sn[1];
+    expect(main.time - grace.time).toBeCloseTo(0.018, 3);
+    expect(grace.velocity).toBeLessThan(main.velocity);
+  });
+
+  it("roll expands a single slot into 4 rapid hits", () => {
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| sn: ~o / x / x / x |`,
+    );
+    const rollHits = events.filter(
+      (e) => e.hit.instrument === "snare" && e.time < 1,
+    );
+    expect(rollHits).toHaveLength(4);
+  });
+
+  it("choke keeps a single event with shorter duration", () => {
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| cr: o! / - / - / - |`,
+    );
+    const ch = events.filter((e) => e.hit.instrument === "crashLeft");
+    expect(ch).toHaveLength(1);
+    expect(ch[0].duration).toBeLessThanOrEqual(0.03);
+  });
+
+  it("ghost reduces velocity, accent raises it", () => {
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| sn: (o) / >o / o / o |`,
+    );
+    const sn = events
+      .filter((e) => e.hit.instrument === "snare")
+      .slice()
+      .sort((a, b) => a.time - b.time);
+    const [ghost, accent, plain] = sn;
+    expect(ghost.velocity).toBeLessThan(plain.velocity);
+    expect(accent.velocity).toBeGreaterThan(plain.velocity);
+  });
+});
+
 describe("GM drum map", () => {
   it("has a note number for every instrument", () => {
     for (const [inst, note] of Object.entries(gmDrumMap)) {

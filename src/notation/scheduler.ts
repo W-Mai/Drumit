@@ -73,14 +73,10 @@ export function schedule(
               const slotDuration = groupDuration / Math.max(1, group.division);
               group.slots.forEach((hit, slotIndex) => {
                 if (!hit) return;
-                events.push({
-                  time: groupStart + slotIndex * slotDuration,
-                  duration: slotDuration,
-                  velocity: hitVelocity(hit),
-                  hit,
-                  barIndex,
-                  beatIndex,
-                });
+                const slotTime = groupStart + slotIndex * slotDuration;
+                expandHit(hit, slotTime, slotDuration, barIndex, beatIndex).forEach((e) =>
+                  events.push(e),
+                );
               });
               groupStart += groupDuration;
             }
@@ -98,6 +94,71 @@ export function schedule(
   events.sort((a, b) => a.time - b.time);
 
   return { events, totalDuration: cursor };
+}
+
+/**
+ * Expand a single notated hit into playback events. Most hits emit exactly
+ * one event, but articulations can add or replace sounds:
+ *   - flam  → grace hit ~15ms before the main one (lower velocity)
+ *   - roll  → 4 rapid hits across the slot duration
+ *   - choke → main hit at max velocity, short duration to signal release
+ *
+ * Ghost / accent are already reflected in `hitVelocity`.
+ */
+function expandHit(
+  hit: Hit,
+  time: number,
+  slotDuration: number,
+  barIndex: number,
+  beatIndex: number,
+): PlaybackEvent[] {
+  const base: PlaybackEvent = {
+    time,
+    duration: slotDuration,
+    velocity: hitVelocity(hit),
+    hit,
+    barIndex,
+    beatIndex,
+  };
+
+  const events: PlaybackEvent[] = [];
+
+  if (hit.articulations.includes("flam")) {
+    // Grace note ~18ms before the main hit, 60% velocity, same instrument.
+    events.push({
+      ...base,
+      time: Math.max(0, time - 0.018),
+      duration: 0.018,
+      velocity: Math.round(base.velocity * 0.55),
+    });
+  }
+
+  if (hit.articulations.includes("roll")) {
+    // 4 rapid strokes across the slot (32nd-ish at the slot's tempo).
+    const n = 4;
+    const step = Math.max(0.015, slotDuration / n);
+    for (let i = 0; i < n; i += 1) {
+      events.push({
+        ...base,
+        time: time + i * step,
+        duration: step,
+        velocity: i === 0 ? base.velocity : Math.round(base.velocity * 0.7),
+      });
+    }
+    return events;
+  }
+
+  if (hit.articulations.includes("choke")) {
+    events.push({
+      ...base,
+      velocity: Math.min(127, Math.round(base.velocity * 1.1)),
+      duration: Math.min(slotDuration, 0.03),
+    });
+    return events;
+  }
+
+  events.push(base);
+  return events;
 }
 
 /**
