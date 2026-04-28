@@ -21,6 +21,8 @@ interface Props {
   showLabels: boolean;
   selectedBarIndex?: number | null;
   onSelectBar?: (index: number) => void;
+  /** Current playhead position — highlights the active bar (and beat within it). */
+  playCursor?: { barIndex: number; beatIndex: number } | null;
 }
 
 export function DrumChart({
@@ -28,6 +30,7 @@ export function DrumChart({
   showLabels,
   selectedBarIndex,
   onSelectBar,
+  playCursor,
 }: Props) {
   return (
     <svg
@@ -69,15 +72,21 @@ export function DrumChart({
       ))}
 
       {layout.rows.flatMap((row) =>
-        row.map((bar) => (
-          <BarView
-            key={`bar-${bar.index}`}
-            bar={bar}
-            showLabels={showLabels}
-            selected={selectedBarIndex === bar.index - 1}
-            onSelect={onSelectBar ? () => onSelectBar(bar.index - 1) : undefined}
-          />
-        )),
+        row.map((bar) => {
+          const globalIdx = bar.index - 1;
+          const isPlayhead = playCursor?.barIndex === globalIdx;
+          return (
+            <BarView
+              key={`bar-${bar.index}`}
+              bar={bar}
+              showLabels={showLabels}
+              selected={selectedBarIndex === globalIdx}
+              isPlayhead={isPlayhead}
+              playBeatIndex={isPlayhead ? playCursor?.beatIndex : undefined}
+              onSelect={onSelectBar ? () => onSelectBar(globalIdx) : undefined}
+            />
+          );
+        }),
       )}
     </svg>
   );
@@ -87,11 +96,15 @@ function BarView({
   bar,
   showLabels,
   selected,
+  isPlayhead,
+  playBeatIndex,
   onSelect,
 }: {
   bar: LaidOutBar;
   showLabels: boolean;
   selected?: boolean;
+  isPlayhead?: boolean;
+  playBeatIndex?: number;
   onSelect?: () => void;
 }) {
   const { x, y, width, height, rowGroups, rowY, beats } = bar;
@@ -113,12 +126,25 @@ function BarView({
         height={height - 4}
         rx={8}
         className={
-          selected
-            ? "fill-amber-200/60 stroke-amber-500"
-            : "fill-transparent stroke-transparent hover:fill-stone-200/40"
+          isPlayhead
+            ? "fill-emerald-100/70 stroke-emerald-500"
+            : selected
+              ? "fill-amber-200/60 stroke-amber-500"
+              : "fill-transparent stroke-transparent hover:fill-stone-200/40"
         }
-        strokeWidth={selected ? 1.5 : 0}
+        strokeWidth={isPlayhead || selected ? 1.5 : 0}
       />
+
+      {/* Current-beat vertical playhead line (only when this bar is the playhead). */}
+      {isPlayhead && typeof playBeatIndex === "number" && beats[playBeatIndex] ? (
+        <rect
+          x={beats[playBeatIndex].x - 1}
+          y={barlineTop}
+          width={beats[playBeatIndex].width + 2}
+          height={barlineBottom - barlineTop}
+          className="fill-emerald-300/40"
+        />
+      ) : null}
 
       <text
         x={x}

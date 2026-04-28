@@ -69,6 +69,11 @@ export default function App() {
       ? null
       : Math.min(selectedBar, Math.max(0, totalBars - 1));
 
+  const [playCursor, setPlayCursor] = useState<{
+    barIndex: number;
+    beatIndex: number;
+  } | null>(null);
+
   const layout = useMemo(
     () =>
       layoutScore(score, {
@@ -168,6 +173,10 @@ export default function App() {
         <PlaybackBar
           score={score}
           startBar={clampedSelectedBar ?? 0}
+          onCursor={(p) =>
+            setPlayCursor({ barIndex: p.barIndex, beatIndex: p.beatIndex })
+          }
+          onStop={() => setPlayCursor(null)}
         />
 
         <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
@@ -193,6 +202,7 @@ export default function App() {
                 showLabels={showLabels}
                 selectedBarIndex={clampedSelectedBar}
                 onSelectBar={(idx) => setSelectedBar(idx)}
+                playCursor={playCursor}
               />
             )}
           </div>

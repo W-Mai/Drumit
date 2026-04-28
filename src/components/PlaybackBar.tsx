@@ -12,9 +12,10 @@ interface Props {
   score: Score;
   startBar?: number;
   onCursor?: (pos: { barIndex: number; beatIndex: number }) => void;
+  onStop?: () => void;
 }
 
-export function PlaybackBar({ score, startBar, onCursor }: Props) {
+export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [tempoOverride, setTempoOverride] = useState<number>(0);
   const [metronome, setMetronome] = useState(false);
@@ -85,6 +86,7 @@ export function PlaybackBar({ score, startBar, onCursor }: Props) {
   const handleStop = () => {
     controller?.stop();
     setPlaying(false);
+    onStop?.();
   };
 
   return (
