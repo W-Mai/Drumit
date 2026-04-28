@@ -1,7 +1,20 @@
 import { Fragment } from "react";
-import type { LaidOutBar, LaidOutHit, LaidOutLayout } from "./layout";
+import type { LaidOutBar, LaidOutHit, LaidOutLayout, RowGroup } from "./layout";
 import type { Hit } from "./types";
 import { instrumentSizeScale } from "./instruments";
+
+function rowGroupLabel(g: RowGroup): string {
+  switch (g) {
+    case "cymbals":
+      return "Cym";
+    case "toms":
+      return "Tom";
+    case "snare":
+      return "Sn";
+    case "kick":
+      return "BD";
+  }
+}
 
 interface Props {
   layout: LaidOutLayout;
@@ -81,7 +94,11 @@ function BarView({
   selected?: boolean;
   onSelect?: () => void;
 }) {
-  const { x, y, width, cymbalY, drumY, beats } = bar;
+  const { x, y, width, height, rowGroups, rowY, beats } = bar;
+  const firstRowY = rowY[rowGroups[0]] ?? y + 20;
+  const lastRowY = rowY[rowGroups[rowGroups.length - 1]] ?? firstRowY;
+  const barlineTop = firstRowY - 12;
+  const barlineBottom = lastRowY + 24;
 
   return (
     <g
@@ -93,7 +110,7 @@ function BarView({
         x={x - 8}
         y={y + 2}
         width={width + 16}
-        height={drumY - y + 28}
+        height={height - 4}
         rx={8}
         className={
           selected
@@ -112,40 +129,33 @@ function BarView({
         {bar.repeatCount > 1 ? ` · ×${bar.repeatCount}` : ""}
       </text>
 
-      {showLabels ? (
-        <>
-          <text
-            x={x - 6}
-            y={cymbalY + 4}
-            textAnchor="end"
-            className="fill-stone-400 text-[10px] font-semibold"
-          >
-            Cym
-          </text>
-          <text
-            x={x - 6}
-            y={drumY + 4}
-            textAnchor="end"
-            className="fill-stone-400 text-[10px] font-semibold"
-          >
-            Drum
-          </text>
-        </>
-      ) : null}
+      {showLabels
+        ? rowGroups.map((g) => (
+            <text
+              key={g}
+              x={x - 6}
+              y={(rowY[g] ?? firstRowY) + 4}
+              textAnchor="end"
+              className="fill-stone-400 text-[9px] font-semibold"
+            >
+              {rowGroupLabel(g)}
+            </text>
+          ))
+        : null}
 
       <line
         x1={x}
         x2={x}
-        y1={cymbalY - 8}
-        y2={drumY + 24}
+        y1={barlineTop}
+        y2={barlineBottom}
         className="stroke-stone-400"
         strokeWidth={1.2}
       />
       <line
         x1={x + width}
         x2={x + width}
-        y1={cymbalY - 8}
-        y2={drumY + 24}
+        y1={barlineTop}
+        y2={barlineBottom}
         className="stroke-stone-400"
         strokeWidth={1.2}
       />
@@ -153,7 +163,7 @@ function BarView({
       {bar.repeatPrevious ? (
         <text
           x={x + width / 2}
-          y={y + 46}
+          y={(firstRowY + lastRowY) / 2 + 14}
           textAnchor="middle"
           className="fill-stone-700 text-[40px] font-black"
         >

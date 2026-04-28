@@ -2,6 +2,7 @@ import { instrumentCategory } from "./instruments";
 import type {
   Bar,
   Hit,
+  Instrument,
   InstrumentCategory,
   LaneGroup,
   Score,
@@ -12,6 +13,7 @@ export interface LaidOutHit {
   y: number;
   hit: Hit;
   category: InstrumentCategory;
+  rowGroup: RowGroup;
 }
 
 export interface LaidOutLane {
@@ -43,8 +45,10 @@ export interface LaidOutBar {
   y: number;
   width: number;
   height: number;
-  cymbalY: number;
-  drumY: number;
+  /** Y for every row group actually used in this bar. */
+  rowY: Partial<Record<RowGroup, number>>;
+  /** Ordered list of row groups used in this bar, from top to bottom. */
+  rowGroups: RowGroup[];
   beats: LaidOutBeat[];
   hits: LaidOutHit[];
   repeatPrevious: boolean;
@@ -70,15 +74,50 @@ export interface LayoutOptions {
   width: number;
 }
 
-export const CYMBAL_ROW_Y = 26;
-export const DRUM_ROW_Y = 58;
-export const BAR_HEIGHT = 84;
+export const BAR_CONTENT_TOP = 20;
+export const ROW_HEIGHT = 26; // vertical space per voicing row (note head + beam band)
 export const ROW_GAP = 28;
 export const SECTION_GAP = 44;
 export const SECTION_HEAD_OFFSET = 20;
 
 const MIN_BEAT_WIDTH = 44;
 const BAR_GAP_X = 18;
+
+/**
+ * Fixed top-to-bottom order of voicing rows (the "lanes" visible in a bar).
+ * Only rows that are actually used in a given bar are rendered, but they are
+ * always laid out in this order so the chart is readable at a glance.
+ */
+export type RowGroup = "cymbals" | "toms" | "snare" | "kick";
+
+export const ROW_GROUP_ORDER: RowGroup[] = [
+  "cymbals",
+  "toms",
+  "snare",
+  "kick",
+];
+
+export function rowGroupFor(instrument: Instrument): RowGroup {
+  switch (instrument) {
+    case "hihatClosed":
+    case "hihatOpen":
+    case "hihatHalfOpen":
+    case "hihatFoot":
+    case "ride":
+    case "rideBell":
+    case "crashLeft":
+    case "crashRight":
+      return "cymbals";
+    case "tomHigh":
+    case "tomMid":
+    case "floorTom":
+      return "toms";
+    case "snare":
+      return "snare";
+    case "kick":
+      return "kick";
+  }
+}
 
 export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout {
   const beatsPerBar = score.meter.beats;
@@ -104,22 +143,21 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     y += SECTION_GAP;
 
     let rowBars: LaidOutBar[] = [];
+    const flushRow = () => {
+      if (!rowBars.length) return;
+      const rowMaxHeight = Math.max(...rowBars.map((b) => b.height));
+      rows.push(rowBars);
+      rowBars = [];
+      y += rowMaxHeight + ROW_GAP;
+    };
     section.bars.forEach((bar, idx) => {
       const col = idx % barsPerRow;
-      if (col === 0 && rowBars.length) {
-        rows.push(rowBars);
-        rowBars = [];
-        y += BAR_HEIGHT + ROW_GAP;
-      }
+      if (col === 0) flushRow();
       const x = leftMargin + col * (barWidth + BAR_GAP_X);
       rowBars.push(layoutBar(bar, barIndex, x, y, barWidth, beatsPerBar));
       barIndex += 1;
     });
-    if (rowBars.length) {
-      rows.push(rowBars);
-      rowBars = [];
-      y += BAR_HEIGHT + ROW_GAP;
-    }
+    flushRow();
   });
 
   return {
@@ -141,8 +179,21 @@ function layoutBar(
   width: number,
   beatsPerBar: number,
 ): LaidOutBar {
-  const cymbalY = y + CYMBAL_ROW_Y;
-  const drumY = y + DRUM_ROW_Y;
+  // Pre-pass: discover which row groups this bar actually uses.
+  const usedGroups = new Set<RowGroup>();
+  bar.beats.forEach((beat) =>
+    beat.lanes.forEach((lane) => usedGroups.add(rowGroupFor(lane.instrument))),
+  );
+  const rowGroups = ROW_GROUP_ORDER.filter((g) => usedGroups.has(g));
+  if (rowGroups.length === 0) rowGroups.push("snare"); // safety for empty bar
+
+  const rowCount = rowGroups.length;
+  const rowY: Partial<Record<RowGroup, number>> = {};
+  rowGroups.forEach((group, i) => {
+    rowY[group] = y + BAR_CONTENT_TOP + i * ROW_HEIGHT;
+  });
+  const barHeight = BAR_CONTENT_TOP + rowCount * ROW_HEIGHT + 18; // +18 for bottom beam space
+
   const innerLeft = x + 12;
   const innerRight = x + width - 12;
   const beatWidth = (innerRight - innerLeft) / beatsPerBar;
@@ -155,7 +206,8 @@ function layoutBar(
 
     beat.lanes.forEach((lane) => {
       const category = instrumentCategory[lane.instrument];
-      const rowY = category === "cymbal" ? cymbalY : drumY;
+      const group = rowGroupFor(lane.instrument);
+      const laneY = rowY[group]!;
 
       const groups = lane.groups ?? [
         {
@@ -167,10 +219,10 @@ function layoutBar(
       ];
 
       let groupX = beatX;
-      groups.forEach((group) => {
-        const groupWidth = beatWidth * group.ratio;
-        const tickXs = evenTicks(groupX, groupWidth, group.division);
-        const beamDepth = beamDepthForGroup(group);
+      groups.forEach((groupData) => {
+        const groupWidth = beatWidth * groupData.ratio;
+        const tickXs = evenTicks(groupX, groupWidth, groupData.division);
+        const beamDepth = beamDepthForGroup(groupData);
         const beamSegments =
           beamDepth > 0
             ? [
@@ -184,21 +236,22 @@ function layoutBar(
         laidLanes.push({
           instrument: lane.instrument,
           category,
-          division: group.division,
-          tuplet: group.tuplet,
+          division: groupData.division,
+          tuplet: groupData.tuplet,
           tickXs,
-          beamY: rowY + 12,
+          beamY: laneY + 12,
           beamDepth,
           beamSegments,
         });
 
-        group.slots.forEach((hit, slotIndex) => {
+        groupData.slots.forEach((hit, slotIndex) => {
           if (!hit) return;
           hits.push({
             x: tickXs[slotIndex],
-            y: rowY,
+            y: laneY,
             hit,
             category,
+            rowGroup: group,
           });
         });
 
@@ -220,9 +273,9 @@ function layoutBar(
     x,
     y,
     width,
-    height: BAR_HEIGHT,
-    cymbalY,
-    drumY,
+    height: barHeight,
+    rowY,
+    rowGroups,
     beats,
     hits,
     repeatPrevious: bar.repeatPrevious,
