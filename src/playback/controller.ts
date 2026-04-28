@@ -128,7 +128,13 @@ export class PlaybackController {
   }
 
   setLoop(loop: { startBar: number; endBar: number } | null): void {
-    this.loop = loop;
+    // Normalize: treat endBar < startBar as single-bar loop on startBar.
+    this.loop = loop
+      ? {
+          startBar: Math.min(loop.startBar, loop.endBar),
+          endBar: Math.max(loop.startBar, loop.endBar),
+        }
+      : null;
     this.reapplyIfPlaying();
   }
 
@@ -243,9 +249,12 @@ export class PlaybackController {
       const elapsed = this.currentTime();
       if (elapsed >= this.endOffset) {
         if (this.loop) {
+          // Restart synchronously from the loop start. beginPlayback sets up
+          // new timers and schedules events; state stays "playing".
           this.teardownScheduling();
-          this.pauseTime = this.computeBarTime(this.loop.startBar);
-          void this.play();
+          const from = this.computeBarTime(this.loop.startBar);
+          this.pauseTime = from;
+          this.beginPlayback(from);
           return;
         }
         // Natural end → stop (clears cursor).
