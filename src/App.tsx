@@ -163,26 +163,50 @@ export default function App() {
         </div>
       </header>
 
-      <section className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(380px,0.9fr)_minmax(520px,1.6fr)]">
+      <section className="flex flex-col gap-5">
+        <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
+          <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
+            <h2 className="text-sm font-extrabold">Preview</h2>
+            <div className="flex gap-2">
+              <ToggleButton
+                active={showLabels}
+                onClick={() => setShowLabels((v) => !v)}
+              >
+                {showLabels ? "Hide labels" : "Show labels"}
+              </ToggleButton>
+            </div>
+          </div>
+          <div className="max-h-[58vh] min-h-[320px] overflow-auto bg-stone-100/40 p-4">
+            {hasErrors ? (
+              <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
+                Fix parse errors to update the preview.
+              </div>
+            ) : (
+              <DrumChart
+                layout={layout}
+                showLabels={showLabels}
+                selectedBarIndex={clampedSelectedBar}
+                onSelectBar={(idx) => setSelectedBar(idx)}
+              />
+            )}
+          </div>
+        </article>
+
         <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
           <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
             <h2 className="text-sm font-extrabold">
-              {mode === "visual"
-                ? selectedBarData
-                  ? `Bar editor`
-                  : "Bar editor"
-                : "Source"}
+              {mode === "visual" ? "Bar editor" : "Source"}
             </h2>
             <Diagnostics diagnostics={diagnostics} />
           </div>
 
-          <div className="max-h-[76vh] overflow-auto p-4">
+          <div className="max-h-[70vh] overflow-auto p-4">
             {mode === "source" ? (
               <textarea
                 value={currentSource}
                 onChange={(event) => handleSourceChange(event.target.value)}
                 spellCheck={false}
-                className="block h-[64vh] w-full resize-y rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 outline-none"
+                className="block h-[50vh] w-full resize-y rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 outline-none"
               />
             ) : selectedBarData && clampedSelectedBar !== null ? (
               <PadEditor
@@ -265,37 +289,9 @@ export default function App() {
                 }
               />
             ) : (
-              <div className="grid min-h-[320px] place-items-center text-sm text-stone-500">
-                Click a bar on the right to edit it.
+              <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
+                Click a bar in the preview above to edit it.
               </div>
-            )}
-          </div>
-        </article>
-
-        <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
-          <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
-            <h2 className="text-sm font-extrabold">Preview</h2>
-            <div className="flex gap-2">
-              <ToggleButton
-                active={showLabels}
-                onClick={() => setShowLabels((v) => !v)}
-              >
-                {showLabels ? "Hide labels" : "Show labels"}
-              </ToggleButton>
-            </div>
-          </div>
-          <div className="max-h-[82vh] min-h-[420px] overflow-auto bg-stone-100/40 p-4">
-            {hasErrors ? (
-              <div className="grid min-h-[320px] place-items-center text-sm text-stone-500">
-                Fix parse errors to update the preview.
-              </div>
-            ) : (
-              <DrumChart
-                layout={layout}
-                showLabels={showLabels}
-                selectedBarIndex={clampedSelectedBar}
-                onSelectBar={(idx) => setSelectedBar(idx)}
-              />
             )}
           </div>
         </article>
