@@ -48,27 +48,61 @@ export function DrumChart({
         className="fill-stone-50"
       />
 
-      <text x={18} y={20} className="fill-stone-900 text-[14px] font-bold">
-        {layout.title}
-      </text>
-      <text
-        x={layout.width - 18}
-        y={20}
-        textAnchor="end"
-        className="fill-stone-500 text-[11px]"
-      >
-        {[layout.meter, layout.tempo].filter(Boolean).join("   ")}
-      </text>
-
-      {layout.sectionHeaders.map((header, i) => (
+      {/* Header band: title + metadata, divider underneath */}
+      <g>
         <text
-          key={`section-${i}`}
-          x={18}
-          y={header.y}
-          className="fill-stone-900 text-[13px] font-extrabold tracking-wide"
+          x={24}
+          y={22}
+          className="fill-stone-900 text-[16px] font-bold"
         >
-          [{header.label}]
+          {layout.title}
         </text>
+        {layout.artist ? (
+          <text
+            x={24}
+            y={38}
+            className="fill-stone-500 text-[11px] italic"
+          >
+            {layout.artist}
+          </text>
+        ) : null}
+        <text
+          x={layout.width - 24}
+          y={22}
+          textAnchor="end"
+          className="fill-stone-500 text-[11px] font-semibold tabular-nums"
+        >
+          {[layout.meter, layout.tempo].filter(Boolean).join("   ")}
+        </text>
+        <line
+          x1={24}
+          x2={layout.width - 24}
+          y1={44}
+          y2={44}
+          className="stroke-stone-300"
+          strokeWidth={1}
+        />
+      </g>
+
+      {/* Section headers: pill-style label + thin underline */}
+      {layout.sectionHeaders.map((header, i) => (
+        <g key={`section-${i}`}>
+          <rect
+            x={20}
+            y={header.y - 14}
+            width={Math.max(44, header.label.length * 9 + 20)}
+            height={20}
+            rx={6}
+            className="fill-stone-900"
+          />
+          <text
+            x={30}
+            y={header.y}
+            className="fill-amber-100 text-[12px] font-extrabold tracking-wider"
+          >
+            {header.label.toUpperCase()}
+          </text>
+        </g>
       ))}
 
       {layout.rows.flatMap((row) =>

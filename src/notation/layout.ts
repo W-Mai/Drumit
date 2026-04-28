@@ -87,6 +87,7 @@ export interface LaidOutLayout {
   height: number;
   rows: LaidOutBar[][];
   title: string;
+  artist?: string;
   tempo?: string;
   meter: string;
   sectionHeaders: Array<{ label: string; y: number }>;
@@ -102,13 +103,15 @@ export interface LayoutOptions {
 }
 
 export const BAR_CONTENT_TOP = 20;
-export const ROW_HEIGHT = 26; // vertical space per voicing row (note head + beam band)
-export const ROW_GAP = 28;
-export const SECTION_GAP = 44;
-export const SECTION_HEAD_OFFSET = 20;
+export const ROW_HEIGHT = 28; // vertical space per voicing row (note head + beam band)
+export const ROW_GAP = 36;
+export const SECTION_GAP_BEFORE = 32;
+export const SECTION_HEADER_HEIGHT = 28;
+/** The top band reserved for title / tempo / meter. */
+export const HEADER_BAND_HEIGHT = 44;
 
 const MIN_BEAT_WIDTH = 44;
-const BAR_GAP_X = 18;
+const BAR_GAP_X = 24;
 
 /**
  * Fixed top-to-bottom order of voicing rows (the "lanes" visible in a bar).
@@ -162,12 +165,13 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
 
   const rows: LaidOutBar[][] = [];
   const sectionHeaders: Array<{ label: string; y: number }> = [];
-  let y = 10;
+  let y = HEADER_BAND_HEIGHT;
   let barIndex = 1;
 
-  score.sections.forEach((section) => {
-    sectionHeaders.push({ label: section.label, y: y + SECTION_HEAD_OFFSET });
-    y += SECTION_GAP;
+  score.sections.forEach((section, sectionIdx) => {
+    if (sectionIdx > 0) y += SECTION_GAP_BEFORE;
+    sectionHeaders.push({ label: section.label, y: y + 18 });
+    y += SECTION_HEADER_HEIGHT;
 
     let rowBars: LaidOutBar[] = [];
     const flushRow = () => {
@@ -189,9 +193,10 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
 
   return {
     width: options.width,
-    height: y + 8,
+    height: y + 16,
     rows,
     title: score.title,
+    artist: score.artist,
     tempo: score.tempo ? `♩ = ${score.tempo.bpm}` : undefined,
     meter: `${score.meter.beats}/${score.meter.beatUnit}`,
     sectionHeaders,
