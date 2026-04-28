@@ -344,6 +344,94 @@ describe("tuplet placement", () => {
   });
 });
 
+describe("tuplet label merging", () => {
+  it("single triplet lane → single label", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x |`,
+    );
+    const tuplets = bar.beats[0].tuplets;
+    expect(tuplets).toHaveLength(1);
+    expect(tuplets[0].number).toBe(3);
+    expect(tuplets[0].rowGroup).toBe("snare");
+  });
+
+  it("two lanes both triplet → merged into one label", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x  hh: (3)xxx / x / x / x |`,
+    );
+    const tuplets = bar.beats[0].tuplets;
+    expect(tuplets).toHaveLength(1);
+    expect(tuplets[0].number).toBe(3);
+  });
+
+  it("merged label sits at bottom-most row", () => {
+    // Both snare and hi-hat are triplets. Merged label should sit on snare
+    // (below cymbals) — snare's y is larger (further down the page).
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x  hh: (3)xxx / x / x / x |`,
+    );
+    const tuplets = bar.beats[0].tuplets;
+    expect(tuplets[0].rowGroup).toBe("snare");
+  });
+
+  it("different tuplet numbers do not merge", () => {
+    // Snare 3-tuplet, hi-hat 5-tuplet.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x  hh: xxxxx / x / x / x |`,
+    );
+    const tuplets = bar.beats[0].tuplets;
+    expect(tuplets).toHaveLength(2);
+    const numbers = tuplets.map((t) => t.number).sort();
+    expect(numbers).toEqual([3, 5]);
+  });
+
+  it("adjacent same-tuplet rows merge but non-tuplet rows break segment", () => {
+    // kick (bottom, no tuplet, breaks), snare triplet, hh triplet. Since kick
+    // isn't a tuplet its presence doesn't affect merging (merging is on
+    // tuplet-bearing rows). Expected 1 merged label.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o  sn: (3)xxx / x / x / x  hh: (3)xxx / x / x / x |`,
+    );
+    const tuplets = bar.beats[0].tuplets;
+    expect(tuplets).toHaveLength(1);
+    expect(tuplets[0].number).toBe(3);
+  });
+
+  it("three rows split 1-2 same + 3 different still merges bottom pair", () => {
+    // Build: kick triplet, snare triplet, hh 5-tuplet → bottom 2 merge, hh stays
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: (3)ooo / o / o / o  sn: (3)xxx / x / x / x  hh: xxxxx / x / x / x |`,
+    );
+    // kick+snare both triplet → 1 merged label at kick (bottom-most); hh 5 → 1 label
+    const tuplets = bar.beats[0].tuplets;
+    expect(tuplets).toHaveLength(2);
+    const byRow = Object.fromEntries(tuplets.map((t) => [t.rowGroup, t.number]));
+    expect(byRow["cymbals"]).toBe(5);
+    // kick+snare merged: the label sits at the bottom-most row = kick.
+    expect(byRow["kick"]).toBe(3);
+    // snare row should NOT have its own label (merged away)
+    expect(byRow["snare"]).toBeUndefined();
+  });
+
+  it("tuplet label x is horizontally centered across all merged lanes", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x  hh: (3)xxx / x / x / x |`,
+    );
+    const beat0 = bar.beats[0];
+    const t = beat0.tuplets[0];
+    // Triplet ticks span the whole beat; center should be at beat center.
+    const beatCenter = beat0.x + beat0.width / 2;
+    expect(Math.abs(t.x - beatCenter)).toBeLessThan(2);
+  });
+
+  it("non-tuplet beats have no tuplet labels", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx |`,
+    );
+    bar.beats.forEach((b) => expect(b.tuplets).toHaveLength(0));
+  });
+});
+
 describe("ghost / accent visual flags", () => {
   it("ghost articulation does not move x position", () => {
     const bar = layoutBarOf(

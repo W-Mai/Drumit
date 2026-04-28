@@ -184,21 +184,17 @@ function BarView({
                   strokeWidth={1}
                 />
               ))}
-              {beat.lanes
-                .filter((l) => l.tuplet)
-                .map((lane, li) => (
-                  <text
-                    key={`tuplet-${li}`}
-                    x={
-                      (lane.tickXs[0] + lane.tickXs[lane.tickXs.length - 1]) / 2
-                    }
-                    y={lane.beamY + lane.beamDepth * 3 + 10}
-                    textAnchor="middle"
-                    className="fill-stone-700 text-[9px] font-extrabold"
-                  >
-                    {lane.tuplet}
-                  </text>
-                ))}
+              {beat.tuplets.map((t, li) => (
+                <text
+                  key={`tuplet-${li}`}
+                  x={t.x}
+                  y={t.y}
+                  textAnchor="middle"
+                  className="fill-stone-700 text-[9px] font-extrabold"
+                >
+                  {t.number}
+                </text>
+              ))}
             </Fragment>
           ))}
 

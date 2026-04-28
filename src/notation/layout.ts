@@ -40,6 +40,17 @@ export interface LaidOutBeam {
   x2: number;
 }
 
+export interface LaidOutTuplet {
+  /** The tuplet number to display (3 = triplet, 5 = quintuplet, ...). */
+  number: number;
+  /** The y coordinate to draw at (picked based on `rowGroup`). */
+  y: number;
+  /** Horizontal center where the number should sit. */
+  x: number;
+  /** Row group whose lane this label is anchored to (for vertical placement). */
+  rowGroup: RowGroup;
+}
+
 export interface LaidOutBeat {
   index: number;
   x: number;
@@ -48,6 +59,8 @@ export interface LaidOutBeat {
   tuplet?: number;
   /** Merged beams (underlines) drawn under this beat, grouped by row. */
   beams: LaidOutBeam[];
+  /** Tuplet number labels (merged across adjacent lanes with same tuplet). */
+  tuplets: LaidOutTuplet[];
 }
 
 export interface LaidOutBar {
@@ -284,6 +297,7 @@ function layoutBar(
     });
 
     const beams = mergeBeams(laidLanes);
+    const tuplets = mergeTuplets(laidLanes);
 
     beats.push({
       index: beatIndex,
@@ -292,6 +306,7 @@ function layoutBar(
       lanes: laidLanes,
       tuplet: beat.tuplet,
       beams,
+      tuplets,
     });
   });
 
@@ -371,6 +386,131 @@ function mergeSpans(
     }
   }
   return out;
+}
+
+/**
+ * Merge tuplet number labels within a beat. Adjacent rows (scanning bottom→
+ * top of the row stack) that share the same tuplet number collapse into a
+ * single label drawn below the bottom-most row of the segment. Rows that
+ * carry a different tuplet number break the segment, each keeping its own
+ * label. Non-tuplet lanes are invisible to this merging (they don't
+ * contribute a label and also don't break an otherwise contiguous run,
+ * because the segmenting is done on rows that *have* a tuplet).
+ */
+function mergeTuplets(laneSegments: LaidOutLane[]): LaidOutTuplet[] {
+  // 1. Flatten to (rowGroup, tuplet, y, x1, x2) entries for segments with a
+  //    tuplet. Multiple sub-groups on a single lane can each contribute.
+  interface Entry {
+    rowGroup: RowGroup;
+    tuplet: number;
+    y: number;
+    x1: number;
+    x2: number;
+  }
+  const entries: Entry[] = [];
+  for (const lane of laneSegments) {
+    if (!lane.tuplet) continue;
+    if (lane.tickXs.length === 0) continue;
+    const x1 = lane.tickXs[0];
+    const x2 = lane.tickXs[lane.tickXs.length - 1];
+    entries.push({
+      rowGroup: lane.rowGroup,
+      tuplet: lane.tuplet,
+      y: lane.beamY,
+      x1,
+      x2,
+    });
+  }
+  if (!entries.length) return [];
+
+  // 2. Group entries by rowGroup, keep max y per rowGroup (rows are single y).
+  //    Within a rowGroup, multiple entries (from split groups) get combined
+  //    into the union of their x-ranges but count as one tuplet if all agree.
+  const byRow = new Map<
+    RowGroup,
+    { rowGroup: RowGroup; tuplet: number; y: number; x1: number; x2: number }
+  >();
+  const mixedRows = new Set<RowGroup>();
+  for (const e of entries) {
+    const existing = byRow.get(e.rowGroup);
+    if (!existing) {
+      byRow.set(e.rowGroup, { ...e });
+    } else if (existing.tuplet === e.tuplet) {
+      existing.x1 = Math.min(existing.x1, e.x1);
+      existing.x2 = Math.max(existing.x2, e.x2);
+    } else {
+      // Conflicting tuplets on the same row-group — rare but possible with
+      // split lanes having different group tuplets. Fall back to emitting a
+      // separate label per entry for this row.
+      mixedRows.add(e.rowGroup);
+    }
+  }
+
+  // 3. Scan bottom→top. Rows in kick → snare → toms → cymbals order.
+  const rowOrderBottomUp: RowGroup[] = ["kick", "snare", "toms", "cymbals"];
+
+  const out: LaidOutTuplet[] = [];
+  // Handle mixed rows first (one label per entry, no merging).
+  for (const rg of mixedRows) {
+    for (const e of entries.filter((x) => x.rowGroup === rg)) {
+      out.push({
+        number: e.tuplet,
+        y: e.y + 12,
+        x: (e.x1 + e.x2) / 2,
+        rowGroup: e.rowGroup,
+      });
+    }
+  }
+
+  // Then merge adjacent same-tuplet rows for the non-mixed rows.
+  type Segment = {
+    tuplet: number;
+    y: number;
+    x1: number;
+    x2: number;
+    rowGroup: RowGroup;
+  };
+  // Non-tuplet rows are skipped entirely (they neither contribute nor break
+  // a merged segment). Only rows that actually carry a tuplet participate.
+  let current: Segment | null = null;
+  for (const rg of rowOrderBottomUp) {
+    if (mixedRows.has(rg)) {
+      if (current) {
+        out.push(segmentToLabel(current));
+        current = null;
+      }
+      continue;
+    }
+    const entry = byRow.get(rg);
+    if (!entry) continue; // skip rows without tuplet — don't break current
+    if (current && current.tuplet === entry.tuplet) {
+      // Merge: extend x-range. Y stays at the lowest (current.y was set by
+      // the first, bottom-most row.)
+      current.x1 = Math.min(current.x1, entry.x1);
+      current.x2 = Math.max(current.x2, entry.x2);
+    } else {
+      if (current) out.push(segmentToLabel(current));
+      current = {
+        tuplet: entry.tuplet,
+        y: entry.y,
+        x1: entry.x1,
+        x2: entry.x2,
+        rowGroup: entry.rowGroup,
+      };
+    }
+  }
+  if (current) out.push(segmentToLabel(current));
+
+  return out;
+
+  function segmentToLabel(s: Segment): LaidOutTuplet {
+    return {
+      number: s.tuplet,
+      y: s.y + 12,
+      x: (s.x1 + s.x2) / 2,
+      rowGroup: s.rowGroup,
+    };
+  }
 }
 
 /**
