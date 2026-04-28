@@ -20,7 +20,7 @@ export type Articulation =
   | "rimshot"
   | "choke";
 
-export type Head = "solid" | "x" | "partial" | "open";
+export type Head = "solid" | "x" | "partial" | "open" | "slash";
 
 export interface Hit {
   instrument: Instrument;

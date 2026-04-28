@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import type { LaidOutBar, LaidOutHit, LaidOutLayout } from "./layout";
 import type { Hit } from "./types";
+import { instrumentSizeScale } from "./instruments";
 
 interface Props {
   layout: LaidOutLayout;
@@ -173,7 +174,7 @@ function BarView({
 
 function HitGlyph({ laid }: { laid: LaidOutHit }) {
   const { hit, x, y } = laid;
-  const size = 5.5;
+  const size = 5.5 * (instrumentSizeScale[hit.instrument] ?? 1);
   return (
     <g>
       {hit.articulations.includes("ghost") ? (
@@ -274,6 +275,20 @@ function HitHead({
         r={size}
         className="fill-stone-50 stroke-stone-900"
         strokeWidth={1.6}
+      />
+    );
+  }
+  if (hit.head === "slash") {
+    // "\" stroke: from upper-right to lower-left.
+    return (
+      <line
+        x1={x + size}
+        y1={y - size}
+        x2={x - size}
+        y2={y + size}
+        className="stroke-stone-900"
+        strokeWidth={2}
+        strokeLinecap="round"
       />
     );
   }

@@ -154,9 +154,10 @@ function layoutBar(
       const slotX = tickXs[slotIndex];
       slot.hits.forEach((hit) => {
         const category = instrumentCategory[hit.instrument];
+        const baseY = category === "cymbal" ? cymbalY : drumY;
         hits.push({
           x: slotX,
-          y: category === "cymbal" ? cymbalY : drumY,
+          y: baseY + verticalOffsetFor(hit.instrument, category),
           hit,
           category,
         });
@@ -177,6 +178,38 @@ function layoutBar(
     repeatPrevious: bar.repeatPrevious,
     repeatCount: bar.repeatCount,
   };
+}
+
+/**
+ * Within the compressed "cymbal" or "drum" row, nudge hits up/down by
+ * instrument so coincident hits don't literally stack on top of each other.
+ */
+function verticalOffsetFor(
+  instrument: import("./types").Instrument,
+  category: import("./types").InstrumentCategory,
+): number {
+  if (category === "cymbal") {
+    if (instrument === "crash") return -6;
+    if (instrument === "ride") return -2;
+    if (instrument === "hihatOpen") return 2;
+    if (instrument === "hihatHalfOpen") return 1;
+    return 0; // hihatClosed
+  }
+  // drums: smaller toms sit high, kick sits low
+  switch (instrument) {
+    case "tomHigh":
+      return -10;
+    case "tomMid":
+      return -4;
+    case "snare":
+      return 0;
+    case "floorTom":
+      return 4;
+    case "kick":
+      return 8;
+    default:
+      return 0;
+  }
 }
 
 function computeBeams(

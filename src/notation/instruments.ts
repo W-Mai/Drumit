@@ -79,7 +79,26 @@ export function defaultHeadFor(instrument: Instrument): Head {
       return "open";
     case "tomHigh":
     case "tomMid":
+      return "solid";
     case "floorTom":
-      return "open";
+      return "slash";
   }
 }
+
+/**
+ * Visual size multiplier per instrument. Drums get progressively larger
+ * toward the kick to mirror the physical kit (tom1 small, tom2 medium,
+ * kick largest). Other instruments use 1.0 (the renderer's base size).
+ */
+export const instrumentSizeScale: Record<Instrument, number> = {
+  kick: 1.5,
+  snare: 1.0,
+  tomHigh: 0.8,
+  tomMid: 1.1,
+  floorTom: 1.0,
+  hihatClosed: 1.0,
+  hihatHalfOpen: 1.0,
+  hihatOpen: 1.0,
+  ride: 1.0,
+  crash: 1.0,
+};
