@@ -425,19 +425,19 @@ function StepGrid({
       <div
         className="grid min-w-max"
         style={{
-          gridTemplateColumns: `160px repeat(${beatsPerBar}, minmax(180px, 1fr))`,
+          gridTemplateColumns: `140px repeat(${beatsPerBar}, minmax(160px, 1fr))`,
         }}
       >
         {/* Top-left corner */}
-        <div className="border-r border-b border-stone-200 bg-stone-50 px-2 py-2 text-[10px] font-bold tracking-wide text-stone-500 uppercase">
-          Instrument · Customize
+        <div className="flex h-8 items-center border-r border-b border-stone-200 bg-stone-50 px-2 text-[10px] font-bold tracking-wide text-stone-500 uppercase">
+          Instrument
         </div>
-        {/* Beat header labels (no split menus here anymore — each lane has its own) */}
+        {/* Beat header labels */}
         {Array.from({ length: beatsPerBar }, (_, i) => (
           <div
             key={`bh-${i}`}
             className={cn(
-              "flex items-center justify-center border-r border-b border-stone-200 bg-stone-50 py-1.5 text-[11px] font-extrabold tracking-wide text-stone-500",
+              "flex h-8 items-center justify-center border-r border-b border-stone-200 bg-stone-50 text-[11px] font-extrabold tracking-wide text-stone-500",
               i === 0 && "border-l-2 border-l-stone-400",
             )}
           >
@@ -463,14 +463,14 @@ function StepGrid({
         ))}
 
         {/* Add instrument row */}
-        <div className="border-t border-r border-stone-200 bg-white px-2 py-2">
+        <div className="flex h-10 items-center border-t border-r border-stone-200 bg-white px-2">
           <AddInstrumentMenu
             options={availableInstruments}
             onPick={onAddInstrument}
           />
         </div>
         <div
-          className="border-t border-stone-200"
+          className="h-10 border-t border-stone-200"
           style={{ gridColumn: `span ${beatsPerBar}` }}
         />
       </div>
@@ -507,7 +507,7 @@ function InstrumentRow({
 }) {
   return (
     <>
-      <div className="flex items-center gap-2 border-r border-b border-stone-200 bg-white px-2 py-2">
+      <div className="flex h-11 items-center gap-2 border-r border-b border-stone-200 bg-white px-2">
         <InstrumentIcon
           instrument={instrument}
           className="size-5 shrink-0 text-stone-700"
@@ -577,14 +577,14 @@ function LaneBeatCell({
   return (
     <div
       className={cn(
-        "group/lane relative border-r border-b border-stone-200",
+        "group/lane relative h-11 border-r border-b border-stone-200",
         isFirstBeat && "border-l-2 border-l-stone-400",
       )}
     >
       <div
         className="grid h-full w-full"
         style={{
-          gridTemplateColumns: `repeat(${plan.columns.length}, minmax(28px, 1fr))`,
+          gridTemplateColumns: `repeat(${plan.columns.length}, minmax(24px, 1fr))`,
         }}
       >
         {plan.columns.map((col, i) => (
@@ -674,7 +674,7 @@ function StepCell({
         onContextMenu={handleContextMenu}
         title={hit ? describeHit(hit) : "Click to toggle · Right-click for more"}
         className={cn(
-          "relative flex aspect-square items-center justify-center text-sm transition select-none",
+          "relative flex h-full items-center justify-center text-[13px] transition select-none",
           columnIndex > 0 && "border-l border-stone-100",
           isBeatStart && !isGroupStart && "border-l border-stone-300",
           isGroupStart &&
@@ -836,15 +836,15 @@ function LaneSettingsButton({
           setOpen((v) => !v);
         }}
         className={cn(
-          "absolute top-0.5 right-0.5 z-10 flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[8px] font-bold leading-none transition",
+          "absolute top-0 right-0 z-10 flex h-4 items-center gap-0.5 rounded-bl-md rounded-tr-md border-b border-l px-1 text-[9px] font-bold leading-none transition",
           customized
-            ? "border-amber-500 bg-amber-500 text-white shadow-sm"
-            : "border-stone-200 bg-white/95 text-stone-500 opacity-60 hover:bg-stone-900 hover:text-white hover:opacity-100 group-hover/lane:opacity-100",
+            ? "border-amber-500 bg-amber-500 text-white"
+            : "border-stone-200 bg-white text-stone-400 opacity-60 hover:bg-stone-900 hover:text-white hover:opacity-100 group-hover/lane:opacity-100",
         )}
         title="Customize this beat's subdivision / split"
       >
-        <span>⚙</span>
-        {indicator ? <span className="tracking-tight">{indicator}</span> : null}
+        <span className="text-[10px]">⚙</span>
+        {indicator ? <span>{indicator}</span> : null}
       </button>
       <FloatingMenu
         anchor={anchor}
