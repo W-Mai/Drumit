@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { dongCiDaCi } from "./notation/examples";
 import { naTianWanShang } from "./notation/samples/page03-na-tian-wan-shang";
 import { lanLianHua } from "./notation/samples/page04-lan-lian-hua";
@@ -25,6 +25,7 @@ import {
 import { PadEditor } from "./components/PadEditor";
 import { PlaybackBar } from "./components/PlaybackBar";
 import { useHotkeys } from "./lib/useHotkeys";
+import { clearStoredSource, loadStoredSource, saveStoredSource } from "./lib/storage";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
 
@@ -40,17 +41,23 @@ const samples = [
   { label: "Blues 节奏变奏 (Page 10)", src: bluesVariations },
 ];
 
-export default function App() {
-  const initialParse = useMemo(() => parseDrumtab(dongCiDaCi), []);
+function loadInitialScore() {
+  // Try to restore the user's last edit from localStorage. Falls back to
+  // the built-in example when nothing's saved (or saved data is corrupt).
+  const stored = loadStoredSource();
+  if (stored) {
+    const result = parseDrumtab(stored);
+    if (result.score.sections.length > 0) return result;
+  }
+  return parseDrumtab(dongCiDaCi);
+}
 
+export default function App() {
   // Canonical state: the Score AST is the source of truth.
-  const [score, setScore] = useState<Score>(initialParse.score);
-  // When the user is editing text, we keep a textDraft separate from score so
-  // they can type broken intermediate states. When null, text view is derived
-  // from score via serializeScore.
+  const [score, setScore] = useState<Score>(() => loadInitialScore().score);
   const [textDraft, setTextDraft] = useState<string | null>(null);
   const [textDiagnostics, setTextDiagnostics] = useState(
-    initialParse.diagnostics,
+    () => loadInitialScore().diagnostics,
   );
 
   const [mode, setMode] = useState<Mode>("visual");
@@ -59,6 +66,22 @@ export default function App() {
 
   const serializedSource = useMemo(() => serializeScore(score), [score]);
   const currentSource = textDraft ?? serializedSource;
+
+  // Debounced persistence to localStorage. Save the canonical serialized
+  // form (never the text draft, which can be mid-edit broken state).
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (saveTimer.current !== null) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveStoredSource(serializedSource);
+    }, 400);
+    return () => {
+      if (saveTimer.current !== null) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+    };
+  }, [serializedSource]);
 
   const validation = useMemo(() => validateScore(score), [score]);
   const diagnostics = [...textDiagnostics, ...validation];
@@ -186,6 +209,23 @@ export default function App() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Reset to the default example? Your saved edits will be cleared.",
+                )
+              ) {
+                clearStoredSource();
+                loadSample(dongCiDaCi);
+              }
+            }}
+            className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-500 hover:border-red-400 hover:text-red-600"
+            title="Clear saved data and reset"
+          >
+            Reset
+          </button>
         </div>
       </header>
 
