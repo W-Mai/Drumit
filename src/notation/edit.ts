@@ -6,6 +6,7 @@ import type {
   Hit,
   Instrument,
   LaneBeat,
+  LaneGroup,
   RepeatHint,
   Score,
 } from "./types";
@@ -94,16 +95,93 @@ export function setLaneDivision(
     const beat = bar.beats[beatIndex] ?? emptyBeat();
     if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
     const lane = findOrCreateLane(beat, instrument);
+    // Leaving group mode: dropping sub-beats back to a single group.
+    lane.groups = undefined;
     lane.division = division;
     const prev = lane.slots;
     lane.slots = Array.from({ length: division }, (_, i) => prev[i] ?? null);
-    lane.tuplet =
-      division === 3 || division === 5 || division === 7 || division === 6
-        ? division === 6
-          ? 6
-          : division
-        : undefined;
+    lane.tuplet = deriveAutoTuplet(division);
   });
+}
+
+/**
+ * Set group-level division (lane has `groups[]`). Keeps other groups intact.
+ * Ensures that mode by converting the lane into groups when needed.
+ */
+export function setGroupDivision(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  groupIndex: number,
+  division: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex];
+    if (!beat) return;
+    const lane = beat.lanes.find((l) => l.instrument === instrument);
+    if (!lane || !lane.groups) return;
+    const group = lane.groups[groupIndex];
+    if (!group) return;
+    group.division = division;
+    const prev = group.slots;
+    group.slots = Array.from({ length: division }, (_, i) => prev[i] ?? null);
+    group.tuplet = deriveAutoTuplet(division);
+  });
+}
+
+/** Split the lane's beat into `count` equal-ratio groups (replaces existing). */
+export function splitBeatIntoGroups(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  count: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex] ?? emptyBeat();
+    if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
+    const lane = findOrCreateLane(beat, instrument);
+    if (count <= 1) {
+      // Merge back: collapse to a single-group lane, keep first group's data.
+      if (lane.groups && lane.groups.length) {
+        const first = lane.groups[0];
+        lane.division = first.division;
+        lane.slots = first.slots;
+        lane.tuplet = first.tuplet;
+      }
+      lane.groups = undefined;
+      return;
+    }
+    const ratio = 1 / count;
+    const groups: LaneGroup[] = Array.from({ length: count }, (_, i) => {
+      // Preserve existing content in the first group when transitioning
+      // from a single-group lane into a split one.
+      if (i === 0 && (!lane.groups || lane.groups.length === 0)) {
+        return {
+          ratio,
+          division: lane.division,
+          tuplet: lane.tuplet,
+          slots: lane.slots,
+        };
+      }
+      if (lane.groups && lane.groups[i]) {
+        const existing = lane.groups[i];
+        return { ...existing, ratio };
+      }
+      return { ratio, division: 1, slots: [null] };
+    });
+    lane.groups = groups;
+    lane.division = groups[0].division;
+    lane.slots = groups[0].slots;
+    lane.tuplet = groups[0].tuplet;
+  });
+}
+
+function deriveAutoTuplet(division: number): number | undefined {
+  if (division === 3 || division === 5 || division === 7) return division;
+  if (division === 6) return 6;
+  return undefined;
 }
 
 export function toggleSlot(
@@ -112,15 +190,18 @@ export function toggleSlot(
   beatIndex: number,
   instrument: Instrument,
   slotIndex: number,
+  groupIndex = 0,
 ): Score {
   return updateBar(score, globalIndex, (bar) => {
     const beat = bar.beats[beatIndex] ?? emptyBeat();
     if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
     const lane = findOrCreateLane(beat, instrument);
-    if (!lane.slots[slotIndex]) {
-      lane.slots[slotIndex] = createHit(instrument);
+    const slots = laneGroupSlots(lane, groupIndex);
+    if (!slots) return;
+    if (!slots[slotIndex]) {
+      slots[slotIndex] = createHit(instrument);
     } else {
-      lane.slots[slotIndex] = null;
+      slots[slotIndex] = null;
     }
   });
 }
@@ -132,11 +213,15 @@ export function toggleArticulation(
   instrument: Instrument,
   slotIndex: number,
   articulation: Articulation,
+  groupIndex = 0,
 ): Score {
   return updateBar(score, globalIndex, (bar) => {
-    const hit = bar.beats[beatIndex]?.lanes.find(
+    const lane = bar.beats[beatIndex]?.lanes.find(
       (l) => l.instrument === instrument,
-    )?.slots[slotIndex];
+    );
+    if (!lane) return;
+    const slots = laneGroupSlots(lane, groupIndex);
+    const hit = slots?.[slotIndex];
     if (!hit) return;
     const i = hit.articulations.indexOf(articulation);
     if (i === -1) hit.articulations.push(articulation);
@@ -151,14 +236,29 @@ export function setSticking(
   instrument: Instrument,
   slotIndex: number,
   sticking: "R" | "L" | null,
+  groupIndex = 0,
 ): Score {
   return updateBar(score, globalIndex, (bar) => {
-    const hit = bar.beats[beatIndex]?.lanes.find(
+    const lane = bar.beats[beatIndex]?.lanes.find(
       (l) => l.instrument === instrument,
-    )?.slots[slotIndex];
+    );
+    if (!lane) return;
+    const slots = laneGroupSlots(lane, groupIndex);
+    const hit = slots?.[slotIndex];
     if (!hit) return;
     hit.sticking = sticking ?? undefined;
   });
+}
+
+function laneGroupSlots(
+  lane: LaneBeat,
+  groupIndex: number,
+): Array<Hit | null> | null {
+  if (lane.groups && lane.groups[groupIndex]) {
+    return lane.groups[groupIndex].slots;
+  }
+  if (!lane.groups && groupIndex === 0) return lane.slots;
+  return null;
 }
 
 export function emptyBeat(): Beat {

@@ -1,5 +1,11 @@
 import { instrumentCategory } from "./instruments";
-import type { Bar, Hit, InstrumentCategory, LaneBeat, Score } from "./types";
+import type {
+  Bar,
+  Hit,
+  InstrumentCategory,
+  LaneGroup,
+  Score,
+} from "./types";
 
 export interface LaidOutHit {
   x: number;
@@ -150,32 +156,53 @@ function layoutBar(
     beat.lanes.forEach((lane) => {
       const category = instrumentCategory[lane.instrument];
       const rowY = category === "cymbal" ? cymbalY : drumY;
-      const tickXs = evenTicks(beatX, beatWidth, lane.division);
-      const beamDepth = beamDepthFor(lane);
-      const beamSegments =
-        lane.division > 1
-          ? [{ x1: beatX + 4, x2: beatX + beatWidth - 4 }]
-          : [];
 
-      laidLanes.push({
-        instrument: lane.instrument,
-        category,
-        division: lane.division,
-        tuplet: lane.tuplet,
-        tickXs,
-        beamY: rowY + 12,
-        beamDepth,
-        beamSegments,
-      });
+      const groups = lane.groups ?? [
+        {
+          ratio: 1,
+          division: lane.division,
+          tuplet: lane.tuplet,
+          slots: lane.slots,
+        } satisfies LaneGroup,
+      ];
 
-      lane.slots.forEach((hit, slotIndex) => {
-        if (!hit) return;
-        hits.push({
-          x: tickXs[slotIndex],
-          y: rowY,
-          hit,
+      let groupX = beatX;
+      groups.forEach((group) => {
+        const groupWidth = beatWidth * group.ratio;
+        const tickXs = evenTicks(groupX, groupWidth, group.division);
+        const beamDepth = beamDepthForGroup(group);
+        const beamSegments =
+          group.division > 1
+            ? [
+                {
+                  x1: groupX + 3,
+                  x2: groupX + groupWidth - 3,
+                },
+              ]
+            : [];
+
+        laidLanes.push({
+          instrument: lane.instrument,
           category,
+          division: group.division,
+          tuplet: group.tuplet,
+          tickXs,
+          beamY: rowY + 12,
+          beamDepth,
+          beamSegments,
         });
+
+        group.slots.forEach((hit, slotIndex) => {
+          if (!hit) return;
+          hits.push({
+            x: tickXs[slotIndex],
+            y: rowY,
+            hit,
+            category,
+          });
+        });
+
+        groupX += groupWidth;
       });
     });
 
@@ -212,15 +239,25 @@ function evenTicks(beatX: number, beatWidth: number, division: number): number[]
 }
 
 /** Number of underline stripes under the beat group (8th/16th/32nd). */
-function beamDepthFor(lane: LaneBeat): number {
-  if (lane.division <= 1) return 0;
-  // Tuplets: triplet/sextuplet/quintuplet render with one underline plus bracket.
-  if (lane.tuplet) {
-    if (lane.tuplet === 3 || lane.tuplet === 5 || lane.tuplet === 7) return 1;
-    if (lane.tuplet === 6) return 2;
+function beamDepthForGroup(group: {
+  division: number;
+  tuplet?: number;
+  ratio: number;
+}): number {
+  if (group.division <= 1) return 0;
+  // When a group only occupies part of the beat (ratio < 1) one extra
+  // underline is implied (half-beat 8th → 16th etc.). We scale by 1/ratio.
+  const durationScale = group.ratio > 0 ? Math.round(1 / group.ratio) : 1;
+  if (group.tuplet) {
+    if (group.tuplet === 3 || group.tuplet === 5 || group.tuplet === 7) {
+      // Triplet across half beat = already 16th-triplet → 2 beams.
+      return durationScale >= 2 ? 2 : 1;
+    }
+    if (group.tuplet === 6) return durationScale >= 2 ? 3 : 2;
     return 1;
   }
-  if (lane.division >= 8) return 3;
-  if (lane.division >= 4) return 2;
+  const effective = group.division * durationScale;
+  if (effective >= 8) return 3;
+  if (effective >= 4) return 2;
   return 1;
 }

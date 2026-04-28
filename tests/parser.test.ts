@@ -94,6 +94,22 @@ describe("parseDrumtab", () => {
     expect(laneOf(bar, 1, "snare")?.slots[0]?.sticking).toBe("L");
   });
 
+  it("parses intra-beat groups separated by ,", () => {
+    const { score, diagnostics } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o , (3)xxx / o / o / o |`,
+    );
+    expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
+    const bar = score.sections[0].bars[0];
+    const sn = bar.beats[0].lanes.find((l) => l.instrument === "snare");
+    expect(sn?.groups).toBeDefined();
+    expect(sn?.groups).toHaveLength(2);
+    expect(sn?.groups?.[0].division).toBe(1);
+    expect(sn?.groups?.[1].division).toBe(3);
+    expect(sn?.groups?.[1].tuplet).toBe(3);
+    expect(sn?.groups?.[0].ratio).toBeCloseTo(0.5);
+    expect(sn?.groups?.[1].ratio).toBeCloseTo(0.5);
+  });
+
   it("lets lanes have different subdivisions on the same beat", () => {
     const { score } = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx  sn: - / - / - / xxx |`,

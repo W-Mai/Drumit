@@ -48,6 +48,23 @@ meter: 4/4
     expect(bars[4].meter).toEqual({ beats: 2, beatUnit: 4 });
   });
 
+  it("round-trips intra-beat groups", () => {
+    const src = `title: T
+meter: 4/4
+
+[A]
+| sn: o , (3)xxx / o / o / o |
+`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    const { score: s2 } = parseDrumtab(out);
+    const sn = s2.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "snare",
+    );
+    expect(sn?.groups).toHaveLength(2);
+    expect(sn?.groups?.[1].tuplet).toBe(3);
+  });
+
   it("preserves triplet and ghost note metadata", () => {
     const src = `title: T
 meter: 4/4

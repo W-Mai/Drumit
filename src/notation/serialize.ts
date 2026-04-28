@@ -92,11 +92,26 @@ function serializeBeatLane(
 ): string {
   const lane = beat.lanes.find((l) => l.instrument === instrument);
   if (!lane) return "-";
-  const tokens = lane.slots.map(slotToken).join(
-    lane.division > 4 || lane.tuplet ? " " : "",
+
+  if (lane.groups && lane.groups.length > 1) {
+    return lane.groups.map(serializeGroup).join(" , ");
+  }
+  return serializeGroup({
+    ratio: 1,
+    division: lane.division,
+    tuplet: lane.tuplet,
+    slots: lane.slots,
+  });
+}
+
+function serializeGroup(group: import("./types").LaneGroup): string {
+  const tokens = group.slots.map(slotToken).join(
+    group.division > 4 || group.tuplet ? " " : "",
   );
   const prefix =
-    lane.tuplet && lane.tuplet !== lane.division ? `(${lane.tuplet})` : "";
+    group.tuplet && group.tuplet !== group.division
+      ? `(${group.tuplet})`
+      : "";
   return prefix + tokens;
 }
 

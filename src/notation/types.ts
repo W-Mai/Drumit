@@ -43,9 +43,30 @@ export interface Slot {
 }
 
 /**
+ * One sub-section of a beat on a single lane. Used when a beat mixes time
+ * values (e.g. an 8th note followed by a triplet). Ratios across groups in a
+ * single LaneBeat must sum to 1.
+ */
+export interface LaneGroup {
+  /** Fraction of the beat this group occupies (0 < ratio <= 1). */
+  ratio: number;
+  /** Slot count within this group. */
+  division: number;
+  /** Tuplet marker if the group is not a power-of-two subdivision. */
+  tuplet?: number;
+  /** Hits indexed by slot within this group (null = rest). */
+  slots: Array<Hit | null>;
+}
+
+/**
  * Per-lane content within a single beat. Each lane decides its own division
  * (2, 3, 4, 6, 8, ...) so two instruments can play different subdivisions on
  * the same beat (e.g. hi-hat in 16ths against a snare triplet).
+ *
+ * When `groups` is set (length >= 2), the beat is further subdivided for this
+ * lane: each group covers `group.ratio` of the beat and has its own division.
+ * `division`/`slots`/`tuplet` on the outer object are ignored in that case but
+ * kept for backwards compatibility and simple single-group lanes.
  */
 export interface LaneBeat {
   instrument: Instrument;
@@ -55,6 +76,8 @@ export interface LaneBeat {
   tuplet?: number;
   /** Hits indexed by slot (null = rest / empty slot). */
   slots: Array<Hit | null>;
+  /** Mixed-time groups within the beat. When absent, the lane is a single group. */
+  groups?: LaneGroup[];
 }
 
 export interface Beat {

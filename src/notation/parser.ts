@@ -235,26 +235,59 @@ function buildBeat(
 
   lanes.forEach((lane) => {
     const beatBody = lane.beats[beatIndex] ?? "";
-    const { tuplet: explicitTuplet, body } = extractTuplet(beatBody);
-    if (explicitTuplet) beatTuplets.add(explicitTuplet);
-    const tokens = tokenizeBeat(body);
-    if (tokens.length === 0) return;
+    const groupBodies = splitGroupBodies(beatBody);
+    if (groupBodies.length === 0) return;
 
-    const slots = tokens.map((token) =>
-      parseToken(token, lane.instrument, lineNumber, diagnostics),
-    );
+    // Single group → keep the original flat shape for backwards compat.
+    if (groupBodies.length === 1) {
+      const { tuplet: explicitTuplet, body } = extractTuplet(groupBodies[0]);
+      if (explicitTuplet) beatTuplets.add(explicitTuplet);
+      const tokens = tokenizeBeat(body);
+      if (tokens.length === 0) return;
+      const slots = tokens.map((token) =>
+        parseToken(token, lane.instrument, lineNumber, diagnostics),
+      );
+      const division = slots.length;
+      const autoTuplet = detectTuplet(division, explicitTuplet);
+      laneBeats.push({
+        instrument: lane.instrument,
+        division,
+        tuplet: autoTuplet,
+        slots,
+      });
+      return;
+    }
 
-    // Auto-detect triplet / tuplet divisions for standalone lanes. If the user
-    // didn't write (3) but the token count is 3/6/5/7 we mark it as tuplet so
-    // the renderer draws the bracket and lane keeps its own even spacing.
-    const division = slots.length;
-    const autoTuplet = detectTuplet(division, explicitTuplet);
+    // Multiple groups → emit a lane with groups[] (equal ratio per group).
+    const ratio = 1 / groupBodies.length;
+    const groups = groupBodies
+      .map((body) => {
+        const { tuplet: explicitTuplet, body: inner } = extractTuplet(body);
+        if (explicitTuplet) beatTuplets.add(explicitTuplet);
+        const tokens = tokenizeBeat(inner);
+        if (tokens.length === 0) return null;
+        const slots = tokens.map((token) =>
+          parseToken(token, lane.instrument, lineNumber, diagnostics),
+        );
+        const division = slots.length;
+        return {
+          ratio,
+          division,
+          tuplet: detectTuplet(division, explicitTuplet),
+          slots,
+        };
+      })
+      .filter((g): g is NonNullable<typeof g> => g !== null);
 
+    if (groups.length === 0) return;
+    // Outer division/slots are derived from the first group so simple
+    // consumers that don't understand groups still see sensible data.
     laneBeats.push({
       instrument: lane.instrument,
-      division,
-      tuplet: autoTuplet,
-      slots,
+      division: groups[0].division,
+      tuplet: groups[0].tuplet,
+      slots: groups[0].slots,
+      groups,
     });
   });
 
@@ -278,6 +311,20 @@ function detectTuplet(division: number, explicit?: number): number | undefined {
     return division === 6 ? 6 : division;
   }
   return undefined;
+}
+
+/**
+ * Split a single beat body by `,` into per-group bodies. A group body is
+ * trimmed and empty groups are preserved as single-rest groups so the user
+ * can write `o,` to mean "first-half hit + rest second-half".
+ */
+function splitGroupBodies(raw: string): string[] {
+  if (!raw.trim()) return [];
+  if (!raw.includes(",")) return [raw.trim()];
+  return raw.split(",").map((part) => {
+    const trimmed = part.trim();
+    return trimmed === "" ? "-" : trimmed;
+  });
 }
 
 /** Extract a leading `(3)` / `(5)` etc. tuplet marker, returning the remaining body. */
