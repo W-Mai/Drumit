@@ -179,18 +179,26 @@ function layoutBar(
   width: number,
   beatsPerBar: number,
 ): LaidOutBar {
-  // Pre-pass: discover which row groups this bar actually uses.
-  const usedGroups = new Set<RowGroup>();
-  bar.beats.forEach((beat) =>
-    beat.lanes.forEach((lane) => usedGroups.add(rowGroupFor(lane.instrument))),
-  );
-  const rowGroups = ROW_GROUP_ORDER.filter((g) => usedGroups.has(g));
+  // Pre-pass: compute which row groups need a separate row because two
+  // different row groups produce hits at exactly the same instant. Groups
+  // that never collide collapse onto the same visual row (cymbals always get
+  // their own row to keep the cymbal/drum distinction clear).
+  const rowAssignment = assignRows(bar);
+  const rowGroups = ROW_GROUP_ORDER.filter((g) => rowAssignment.has(g));
   if (rowGroups.length === 0) rowGroups.push("snare"); // safety for empty bar
 
-  const rowCount = rowGroups.length;
+  const uniqueRowIndices = Array.from(
+    new Set(rowGroups.map((g) => rowAssignment.get(g)!)),
+  ).sort((a, b) => a - b);
+  const rowCount = uniqueRowIndices.length;
+  const indexToVisualRow = new Map<number, number>();
+  uniqueRowIndices.forEach((idx, visualRow) =>
+    indexToVisualRow.set(idx, visualRow),
+  );
   const rowY: Partial<Record<RowGroup, number>> = {};
-  rowGroups.forEach((group, i) => {
-    rowY[group] = y + BAR_CONTENT_TOP + i * ROW_HEIGHT;
+  rowGroups.forEach((group) => {
+    const visualRow = indexToVisualRow.get(rowAssignment.get(group)!)!;
+    rowY[group] = y + BAR_CONTENT_TOP + visualRow * ROW_HEIGHT;
   });
   const barHeight = BAR_CONTENT_TOP + rowCount * ROW_HEIGHT + 18; // +18 for bottom beam space
 
@@ -281,6 +289,91 @@ function layoutBar(
     repeatPrevious: bar.repeatPrevious,
     repeatCount: bar.repeatCount,
   };
+}
+
+/**
+ * Decide how many rows the bar needs and which row-group goes on which row.
+ * Groups are placed into rows such that any two groups that play at the
+ * exact same instant sit on different rows. Non-colliding groups share a row
+ * to keep the bar as compact as possible. Row 0 is reserved for cymbals
+ * (they never merge with drum rows) so the visual cymbal/drum distinction
+ * from handwritten jianpu drum charts stays intact.
+ */
+function assignRows(bar: Bar): Map<RowGroup, number> {
+  // 1. Gather per-group set of absolute tick positions.
+  const TICK_DEN = 48; // lcm(16, 3) = 48 ticks per beat
+  const groupTicks: Partial<Record<RowGroup, Set<number>>> = {};
+
+  bar.beats.forEach((beat, beatIndex) => {
+    const beatStart = beatIndex * TICK_DEN;
+    beat.lanes.forEach((lane) => {
+      const group = rowGroupFor(lane.instrument);
+      const laneGroups = lane.groups ?? [
+        {
+          ratio: 1,
+          division: lane.division,
+          tuplet: lane.tuplet,
+          slots: lane.slots,
+        },
+      ];
+      let groupStartTick = beatStart;
+      laneGroups.forEach((g) => {
+        const groupTickWidth = Math.round(TICK_DEN * g.ratio);
+        g.slots.forEach((hit, slotIndex) => {
+          if (!hit) return;
+          const slotTick =
+            groupStartTick +
+            Math.round((slotIndex * groupTickWidth) / g.division);
+          if (!groupTicks[group]) groupTicks[group] = new Set();
+          groupTicks[group]!.add(slotTick);
+        });
+        groupStartTick += groupTickWidth;
+      });
+    });
+  });
+
+  // 2. Greedy row assignment in ROW_GROUP_ORDER. Cymbals always get row 0;
+  //    drum groups share rows when they never collide.
+  const assignment = new Map<RowGroup, number>();
+  const rowOccupancy: Set<number>[] = []; // tick sets per row
+
+  for (const group of ROW_GROUP_ORDER) {
+    const ticks = groupTicks[group];
+    if (!ticks) continue;
+
+    if (group === "cymbals") {
+      assignment.set(group, 0);
+      rowOccupancy[0] = new Set(ticks);
+      continue;
+    }
+
+    // Find the lowest drum row index (>= 1) with no tick overlap.
+    let placed = false;
+    for (let rowIdx = 1; rowIdx < rowOccupancy.length; rowIdx += 1) {
+      const occ = rowOccupancy[rowIdx];
+      if (!occ) continue;
+      let conflict = false;
+      for (const t of ticks) {
+        if (occ.has(t)) {
+          conflict = true;
+          break;
+        }
+      }
+      if (!conflict) {
+        assignment.set(group, rowIdx);
+        ticks.forEach((t) => occ.add(t));
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      const newRow = Math.max(rowOccupancy.length, 1);
+      assignment.set(group, newRow);
+      rowOccupancy[newRow] = new Set(ticks);
+    }
+  }
+
+  return assignment;
 }
 
 function evenTicks(beatX: number, beatWidth: number, division: number): number[] {
