@@ -218,8 +218,10 @@ function parseBar(
 
 function splitBeats(raw: string): string[] {
   if (!raw) return [];
+  // A beat separator `/` must have whitespace on at least one side. The
+  // bare `/` inside `o/R` is a sticking suffix, not a beat break.
   return raw
-    .split(/\s*\/\s*/)
+    .split(/(?:\s+\/\s*|\s*\/\s+)/)
     .map((part) => part.trim())
     .filter(Boolean);
 }
@@ -338,11 +340,14 @@ function extractTuplet(raw: string): { tuplet?: number; body: string } {
 
 function tokenizeBeat(raw: string): string[] {
   if (!raw) return [];
-  // Allow both whitespace-separated and packed forms ("xxxx" or "x x x x").
+  // Whitespace-separated form is the simplest: one token per chunk.
   if (/\s/.test(raw.trim())) {
     return raw.trim().split(/\s+/);
   }
-  // Packed form: split by characters while keeping modifiers together.
+  // Packed form: each token is `[modifiers] head [suffix]` where
+  //   modifiers ∈ { >, ~, f } (may stack)
+  //   head ∈ { o, x } or a parenthesized ghost `(...)`
+  //   suffix ∈ { ! (choke), /R, /L (sticking) }
   const tokens: string[] = [];
   let i = 0;
   while (i < raw.length) {
@@ -352,19 +357,24 @@ function tokenizeBeat(raw: string): string[] {
       i += 1;
       continue;
     }
-    if (c === "(") {
-      const close = raw.indexOf(")", i);
+    let j = i;
+    // Prefix modifiers
+    while (j < raw.length && ">~f".includes(raw[j])) j += 1;
+    // Head: either a parenthesized ghost or a single character
+    if (raw[j] === "(") {
+      const close = raw.indexOf(")", j);
       if (close === -1) {
         tokens.push(raw.slice(i));
         break;
       }
-      tokens.push(raw.slice(i, close + 1));
-      i = close + 1;
-      continue;
+      j = close + 1;
+    } else if (j < raw.length) {
+      j += 1;
     }
-    let j = i;
-    if (">~f".includes(c)) j += 1;
-    j += 1;
+    // Suffix: choke `!`
+    if (raw[j] === "!") j += 1;
+    // Suffix: sticking `/R` or `/L`
+    if (raw[j] === "/" && /[rl]/i.test(raw[j + 1] ?? "")) j += 2;
     tokens.push(raw.slice(i, j));
     i = j;
   }
