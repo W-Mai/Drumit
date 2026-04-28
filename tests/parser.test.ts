@@ -40,6 +40,17 @@ describe("parseDrumtab", () => {
     expect(score.sections[0].bars[1].repeatPrevious).toBe(true);
   });
 
+  it("keeps repeat hint variants %., %-, %,", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: x / x / x / x |\n| % |\n| %. |\n| %- |\n| %, |`,
+    );
+    const bars = score.sections[0].bars;
+    expect(bars[1].repeatHint).toBe("plain");
+    expect(bars[2].repeatHint).toBe("dot");
+    expect(bars[3].repeatHint).toBe("dash");
+    expect(bars[4].repeatHint).toBe("comma");
+  });
+
   it("parses inline meter overrides", () => {
     const { score } = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| meter: 2/4 | hh: x / x |`,

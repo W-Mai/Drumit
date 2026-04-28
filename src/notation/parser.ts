@@ -138,8 +138,17 @@ function parseBar(
     source: body,
   };
 
-  if (/^(repeat previous|%)$/i.test(body.trim())) {
+  const repeatMatch = body.trim().match(/^(repeat previous|%(\.|-|,)?)$/i);
+  if (repeatMatch) {
     bar.repeatPrevious = true;
+    const suffixChar = repeatMatch[2];
+    bar.repeatHint = suffixChar
+      ? suffixChar === "."
+        ? "dot"
+        : suffixChar === "-"
+          ? "dash"
+          : "comma"
+      : "plain";
     return bar;
   }
 

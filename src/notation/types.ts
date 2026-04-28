@@ -69,6 +69,8 @@ export interface Meter {
   beatUnit: number;
 }
 
+export type RepeatHint = "plain" | "dot" | "dash" | "comma";
+
 export interface Bar {
   meter?: Meter;
   beats: Beat[];
@@ -76,6 +78,16 @@ export interface Bar {
   repeatCount: number;
   /** Marks a "repeat previous bar" placeholder */
   repeatPrevious: boolean;
+  /**
+   * Variant of the repeat mark as seen in the handwritten PDF:
+   *   plain = `%`
+   *   dot   = `%.` (小变化 / 重音?)
+   *   dash  = `%-` (延续?)
+   *   comma = `%,` (短促?)
+   * Semantically all still mean "repeat the previous bar"; the hint is kept
+   * so the renderer/playback can tweak feel later without losing information.
+   */
+  repeatHint?: RepeatHint;
   ending?: "1" | "2";
   source: string;
 }
