@@ -1,0 +1,113 @@
+import { describe, expect, it } from "vitest";
+import { parseDrumtab } from "../src/notation/parser";
+import { schedule, metronomeEvents } from "../src/notation/scheduler";
+import { gmDrumMap, hitVelocity } from "../src/notation/midi";
+
+function scheduled(src: string, tempoOverride?: number) {
+  const { score } = parseDrumtab(src);
+  return schedule(score, { tempoOverride });
+}
+
+describe("scheduler", () => {
+  it("produces events for a simple 4/4 bar at 120 bpm", () => {
+    const { events, totalDuration } = scheduled(
+      `title: T\ntempo: 120\nmeter: 4/4\n[A]\n| bd: o / o / o / o  sn: o / o / o / o |`,
+    );
+    // 4 beats at 120 bpm = 2 seconds
+    expect(totalDuration).toBeCloseTo(2, 3);
+    // Event count: 4 kick + 4 snare = 8
+    expect(events).toHaveLength(8);
+    // First kick at t=0, last at t=1.5
+    const kicks = events.filter((e) => e.hit.instrument === "kick");
+    expect(kicks[0].time).toBeCloseTo(0, 3);
+    expect(kicks[3].time).toBeCloseTo(1.5, 3);
+  });
+
+  it("honors tempo override", () => {
+    const { totalDuration } = scheduled(
+      `title: T\ntempo: 120\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+      60, // override to 60 bpm → 4 seconds
+    );
+    expect(totalDuration).toBeCloseTo(4, 3);
+  });
+
+  it("expands repeat-previous bars", () => {
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |`,
+    );
+    // 4 kicks × 2 bars = 8 events
+    expect(events.filter((e) => e.hit.instrument === "kick")).toHaveLength(8);
+  });
+
+  it("expands repeat count (x3) to 3 bar repetitions", () => {
+    const { events, totalDuration } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o | x3`,
+    );
+    expect(events.filter((e) => e.hit.instrument === "kick")).toHaveLength(12);
+    expect(totalDuration).toBeCloseTo(12, 3);
+  });
+
+  it("schedules triplets evenly within a beat", () => {
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x |`,
+    );
+    const beat0 = events
+      .filter((e) => e.hit.instrument === "snare" && e.beatIndex === 0)
+      .map((e) => e.time);
+    expect(beat0).toHaveLength(3);
+    const gap1 = beat0[1] - beat0[0];
+    const gap2 = beat0[2] - beat0[1];
+    expect(Math.abs(gap1 - gap2)).toBeLessThan(0.001);
+    // Each triplet slot = 1/3 second (60 bpm, 1 beat = 1 sec, ÷3)
+    expect(gap1).toBeCloseTo(1 / 3, 3);
+  });
+
+  it("handles intra-beat split with mixed subdivisions", () => {
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| hh: o , xx / x / x / x |`,
+    );
+    const beat0 = events
+      .filter((e) => e.hit.instrument === "hihatClosed" && e.beatIndex === 0)
+      .map((e) => e.time);
+    expect(beat0).toHaveLength(3);
+    // First 8th at t=0
+    expect(beat0[0]).toBeCloseTo(0, 3);
+    // Back-half 16ths at t=0.5 and t=0.75 (half-beat groups, div=2)
+    expect(beat0[1]).toBeCloseTo(0.5, 3);
+    expect(beat0[2]).toBeCloseTo(0.75, 3);
+  });
+
+  it("metronome events count = total beats", () => {
+    const { totalDuration } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |`,
+    );
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |`,
+    );
+    const met = metronomeEvents(score, totalDuration);
+    expect(met).toHaveLength(8); // 2 bars × 4 beats
+    // Downbeats have higher velocity
+    expect(met[0].velocity).toBeGreaterThan(met[1].velocity);
+    expect(met[4].velocity).toBeGreaterThan(met[5].velocity);
+  });
+
+  it("hit velocity reflects accent / ghost modifiers", () => {
+    const { events } = scheduled(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| sn: o / >o / (o) / o |`,
+    );
+    const ordered = events.slice().sort((a, b) => a.time - b.time);
+    const [plain, accent, ghost] = ordered;
+    expect(hitVelocity(plain.hit)).toBe(96);
+    expect(hitVelocity(accent.hit)).toBe(120);
+    expect(hitVelocity(ghost.hit)).toBe(40);
+  });
+});
+
+describe("GM drum map", () => {
+  it("has a note number for every instrument", () => {
+    for (const [inst, note] of Object.entries(gmDrumMap)) {
+      expect(note, `${inst} missing note`).toBeGreaterThan(0);
+      expect(note).toBeLessThan(128);
+    }
+  });
+});
