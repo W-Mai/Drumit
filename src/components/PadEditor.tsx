@@ -1,14 +1,22 @@
 import { useMemo, useState } from "react";
 import { serializeBar } from "../notation/serialize";
 import { cn } from "../lib/utils";
-import { instrumentLabels } from "../notation/instruments";
+import {
+  canonicalAlias,
+  instrumentLabels,
+} from "../notation/instruments";
 import type {
   Articulation,
   Bar,
   Hit,
   Instrument,
+  LaneGroup,
   RepeatHint,
 } from "../notation/types";
+
+/* ------------------------------------------------------------------ */
+/* Props                                                               */
+/* ------------------------------------------------------------------ */
 
 interface Props {
   bar: Bar;
@@ -56,8 +64,11 @@ interface Props {
   ) => void;
 }
 
-/** Instruments that are practical to pick from the pad palette. */
-const PAD_INSTRUMENTS: Instrument[] = [
+/* ------------------------------------------------------------------ */
+/* Config                                                              */
+/* ------------------------------------------------------------------ */
+
+const ALL_INSTRUMENTS: Instrument[] = [
   "hihatClosed",
   "hihatOpen",
   "hihatHalfOpen",
@@ -73,52 +84,25 @@ const PAD_INSTRUMENTS: Instrument[] = [
   "kick",
 ];
 
-type Resolution = { kind: "binary" | "triplet"; slotsPerBeat: number };
+type Resolution = {
+  kind: "binary" | "triplet";
+  slotsPerBeat: number;
+  label: string;
+};
 
-const RESOLUTIONS: { label: string; value: Resolution }[] = [
-  { label: "1/8", value: { kind: "binary", slotsPerBeat: 2 } },
-  { label: "1/16", value: { kind: "binary", slotsPerBeat: 4 } },
-  { label: "1/32", value: { kind: "binary", slotsPerBeat: 8 } },
-  { label: "Triplet", value: { kind: "triplet", slotsPerBeat: 3 } },
-  { label: "Sextuplet", value: { kind: "triplet", slotsPerBeat: 6 } },
+const RESOLUTIONS: Resolution[] = [
+  { kind: "binary", slotsPerBeat: 2, label: "1/8" },
+  { kind: "binary", slotsPerBeat: 4, label: "1/16" },
+  { kind: "binary", slotsPerBeat: 8, label: "1/32" },
+  { kind: "triplet", slotsPerBeat: 3, label: "Triplet" },
+  { kind: "triplet", slotsPerBeat: 6, label: "Sextuplet" },
 ];
 
-const ARTICULATION_PRESETS: { label: string; value: Articulation }[] = [
-  { label: ">", value: "accent" },
-  { label: "( )", value: "ghost" },
-  { label: "f", value: "flam" },
-  { label: "~", value: "roll" },
-];
+const DEFAULT_RESOLUTION: Resolution = RESOLUTIONS[1]; // 1/16
 
-const DEFAULT_RESOLUTION: Resolution = { kind: "binary", slotsPerBeat: 4 };
-
-/**
- * Pick a resolution that comfortably represents whatever is already in the
- * given beat. This is what the UI uses as the default so opening a bar with
- * a triplet shows a triplet grid, etc.
- */
-function inferBeatResolution(bar: Bar, beatIndex: number): Resolution | null {
-  const beat = bar.beats[beatIndex];
-  if (!beat) return null;
-  let maxBinary = 0;
-  let maxTriplet = 0;
-  beat.lanes.forEach((lane) => {
-    const isTriplet =
-      lane.division === 3 || lane.division === 6 || !!lane.tuplet;
-    if (isTriplet) {
-      maxTriplet = Math.max(maxTriplet, lane.division);
-    } else {
-      maxBinary = Math.max(maxBinary, lane.division);
-    }
-  });
-  if (maxTriplet && !maxBinary) {
-    return { kind: "triplet", slotsPerBeat: maxTriplet === 6 ? 6 : 3 };
-  }
-  if (maxBinary >= 8) return { kind: "binary", slotsPerBeat: 8 };
-  if (maxBinary >= 4) return { kind: "binary", slotsPerBeat: 4 };
-  if (maxBinary >= 2) return { kind: "binary", slotsPerBeat: 2 };
-  return null;
-}
+/* ------------------------------------------------------------------ */
+/* Public component                                                    */
+/* ------------------------------------------------------------------ */
 
 export function PadEditor({
   bar,
@@ -135,139 +119,63 @@ export function PadEditor({
   onToggleArticulation,
   onSetSticking,
 }: Props) {
-  const [selectedInstrument, setSelectedInstrument] =
-    useState<Instrument>("snare");
-  // Per-beat resolution override. When missing, default by inspecting the
-  // bar's beat content (so the grid matches whatever is already written).
-  const [beatResolutions, setBeatResolutions] = useState<
-    Record<number, Resolution>
-  >({});
-  const [pendingArticulations, setPendingArticulations] = useState<
-    Set<Articulation>
-  >(new Set());
-  const [pendingSticking, setPendingSticking] = useState<"R" | "L" | null>(
-    null,
+  const [barResolution, setBarResolution] = useState<Resolution>(
+    () => inferBarResolution(bar) ?? DEFAULT_RESOLUTION,
   );
 
-  const resolvedBeatResolutions: Resolution[] = useMemo(
-    () =>
-      Array.from({ length: beatsPerBar }, (_, beatIndex) => {
-        const explicit = beatResolutions[beatIndex];
-        if (explicit) return explicit;
-        return inferBeatResolution(bar, beatIndex) ?? DEFAULT_RESOLUTION;
-      }),
-    [beatResolutions, bar, beatsPerBar],
-  );
+  // Instruments the user has explicitly added beyond what the bar already has.
+  const [extraInstruments, setExtraInstruments] = useState<Instrument[]>([]);
 
   const serialized = useMemo(() => serializeBar(bar), [bar]);
 
+  const presentInstruments = useMemo(() => {
+    const seen = new Set<Instrument>();
+    bar.beats.forEach((b) =>
+      b.lanes.forEach((l) => seen.add(l.instrument)),
+    );
+    extraInstruments.forEach((i) => seen.add(i));
+    return ALL_INSTRUMENTS.filter((i) => seen.has(i));
+  }, [bar, extraInstruments]);
+
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-xs tracking-wide text-stone-500 uppercase">
-            Bar {barIndex + 1} / {totalBars}
-          </p>
-          <p className="mt-0.5 font-mono text-xs text-stone-600">
-            {bar.repeatPrevious
-              ? "repeat previous"
-              : `${bar.beats.length} beats`}
-          </p>
-        </div>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={onInsertAfter}
-            className="rounded-full border border-stone-200 bg-white px-2.5 py-1 text-xs font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
-          >
-            + Insert
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-600 hover:text-white"
-          >
-            Delete
-          </button>
-        </div>
-      </header>
-
-      <div className="flex flex-wrap gap-1.5">
-        <RepeatButton
-          active={!bar.repeatPrevious}
-          label="Pattern"
-          onClick={() => onSetRepeat(null)}
-        />
-        <RepeatButton
-          active={bar.repeatPrevious && bar.repeatHint === "plain"}
-          label="%"
-          onClick={() => onSetRepeat("plain")}
-        />
-        <RepeatButton
-          active={bar.repeatPrevious && bar.repeatHint === "dot"}
-          label="%."
-          onClick={() => onSetRepeat("dot")}
-        />
-        <RepeatButton
-          active={bar.repeatPrevious && bar.repeatHint === "dash"}
-          label="%-"
-          onClick={() => onSetRepeat("dash")}
-        />
-        <RepeatButton
-          active={bar.repeatPrevious && bar.repeatHint === "comma"}
-          label="%,"
-          onClick={() => onSetRepeat("comma")}
-        />
-      </div>
+      <BarHeader
+        barIndex={barIndex}
+        totalBars={totalBars}
+        bar={bar}
+        barResolution={barResolution}
+        onChangeResolution={setBarResolution}
+        onSetRepeat={onSetRepeat}
+        onInsertAfter={onInsertAfter}
+        onDelete={onDelete}
+      />
 
       {bar.repeatPrevious ? (
-        <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-stone-500">
+        <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-sm text-stone-500">
           This bar repeats the previous one. Click <b>Pattern</b> to add
           content.
         </div>
       ) : (
-        <>
-          <InstrumentPalette
-            selected={selectedInstrument}
-            onSelect={setSelectedInstrument}
-          />
-
-          <ArticulationPalette
-            articulations={pendingArticulations}
-            sticking={pendingSticking}
-            onToggleArticulation={(art) =>
-              setPendingArticulations((set) => {
-                const next = new Set(set);
-                if (next.has(art)) next.delete(art);
-                else next.add(art);
-                return next;
-              })
-            }
-            onCycleSticking={() =>
-              setPendingSticking((current) =>
-                current === null ? "R" : current === "R" ? "L" : null,
-              )
-            }
-          />
-
-          <Grid
-            bar={bar}
-            beatsPerBar={beatsPerBar}
-            beatResolutions={resolvedBeatResolutions}
-            onSetBeatResolution={(beatIndex, r) =>
-              setBeatResolutions((prev) => ({ ...prev, [beatIndex]: r }))
-            }
-            selectedInstrument={selectedInstrument}
-            pendingArticulations={pendingArticulations}
-            pendingSticking={pendingSticking}
-            onSetDivision={onSetDivision}
-            onSetGroupDivision={onSetGroupDivision}
-            onSplitBeat={onSplitBeat}
-            onToggleSlot={onToggleSlot}
-            onToggleArticulation={onToggleArticulation}
-            onSetSticking={onSetSticking}
-          />
-        </>
+        <StepGrid
+          bar={bar}
+          beatsPerBar={beatsPerBar}
+          barResolution={barResolution}
+          presentInstruments={presentInstruments}
+          availableInstruments={ALL_INSTRUMENTS.filter(
+            (i) => !presentInstruments.includes(i),
+          )}
+          onAddInstrument={(i) =>
+            setExtraInstruments((prev) =>
+              prev.includes(i) ? prev : [...prev, i],
+            )
+          }
+          onSetDivision={onSetDivision}
+          onSetGroupDivision={onSetGroupDivision}
+          onSplitBeat={onSplitBeat}
+          onToggleSlot={onToggleSlot}
+          onToggleArticulation={onToggleArticulation}
+          onSetSticking={onSetSticking}
+        />
       )}
 
       <details className="text-xs text-stone-500">
@@ -282,874 +190,962 @@ export function PadEditor({
   );
 }
 
-function RepeatButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs font-bold transition",
-        active
-          ? "border-stone-900 bg-stone-900 text-white"
-          : "border-stone-200 bg-white text-stone-700 hover:bg-stone-900 hover:text-white",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
+/* ------------------------------------------------------------------ */
+/* Bar header                                                          */
+/* ------------------------------------------------------------------ */
 
-function InstrumentPalette({
-  selected,
-  onSelect,
+function BarHeader({
+  barIndex,
+  totalBars,
+  bar,
+  barResolution,
+  onChangeResolution,
+  onSetRepeat,
+  onInsertAfter,
+  onDelete,
 }: {
-  selected: Instrument;
-  onSelect: (i: Instrument) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {PAD_INSTRUMENTS.map((i) => (
-        <button
-          key={i}
-          type="button"
-          onClick={() => onSelect(i)}
-          className={cn(
-            "min-w-[70px] rounded-lg border px-2 py-1 text-[11px] font-bold transition",
-            selected === i
-              ? "border-amber-500 bg-amber-100 text-stone-900 shadow-sm"
-              : "border-stone-200 bg-white text-stone-700 hover:border-stone-500",
-          )}
-        >
-          {instrumentLabels[i]}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ArticulationPalette({
-  articulations,
-  sticking,
-  onToggleArticulation,
-  onCycleSticking,
-}: {
-  articulations: Set<Articulation>;
-  sticking: "R" | "L" | null;
-  onToggleArticulation: (art: Articulation) => void;
-  onCycleSticking: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-stone-200 bg-stone-50/50 px-2 py-1.5">
-      <span className="text-[10px] font-bold tracking-wide text-stone-500 uppercase">
-        Modifiers
-      </span>
-      {ARTICULATION_PRESETS.map(({ label, value }) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => onToggleArticulation(value)}
-          title={value}
-          className={cn(
-            "rounded border px-2 py-0.5 text-[11px] font-bold",
-            articulations.has(value)
-              ? "border-amber-500 bg-amber-100 text-stone-900"
-              : "border-stone-200 bg-white text-stone-500 hover:border-stone-500",
-          )}
-        >
-          {label}
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={onCycleSticking}
-        title="Sticking: none / R / L"
-        className={cn(
-          "rounded border px-2 py-0.5 text-[11px] font-bold",
-          sticking
-            ? "border-sky-500 bg-sky-100 text-stone-900"
-            : "border-stone-200 bg-white text-stone-500 hover:border-stone-500",
-        )}
-      >
-        {sticking ? sticking : "R/L"}
-      </button>
-    </div>
-  );
-}
-
-interface GridProps {
+  barIndex: number;
+  totalBars: number;
   bar: Bar;
-  beatsPerBar: number;
-  beatResolutions: Resolution[];
-  onSetBeatResolution: (beatIndex: number, r: Resolution) => void;
-  selectedInstrument: Instrument;
-  pendingArticulations: Set<Articulation>;
-  pendingSticking: "R" | "L" | null;
-  onSetDivision: (
-    beatIndex: number,
-    instrument: Instrument,
-    division: number,
-  ) => void;
-  onSetGroupDivision: (
-    beatIndex: number,
-    instrument: Instrument,
-    groupIndex: number,
-    division: number,
-  ) => void;
-  onSplitBeat: (
-    beatIndex: number,
-    instrument: Instrument,
-    count: number,
-  ) => void;
-  onToggleSlot: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    groupIndex?: number,
-  ) => void;
-  onToggleArticulation: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    articulation: Articulation,
-    groupIndex?: number,
-  ) => void;
-  onSetSticking: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    sticking: "R" | "L" | null,
-    groupIndex?: number,
-  ) => void;
+  barResolution: Resolution;
+  onChangeResolution: (r: Resolution) => void;
+  onSetRepeat: (hint: RepeatHint | null) => void;
+  onInsertAfter: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <header className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.14em] text-stone-400 uppercase">
+            Bar {barIndex + 1} / {totalBars}
+          </div>
+          <div className="mt-0.5 font-mono text-xs text-stone-600">
+            {bar.repeatPrevious
+              ? `repeat${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
+              : `${bar.beats.length} beats`}
+          </div>
+        </div>
+
+        <ChipGroup>
+          <Chip active={!bar.repeatPrevious} onClick={() => onSetRepeat(null)}>
+            Pattern
+          </Chip>
+          <Chip
+            active={bar.repeatPrevious && bar.repeatHint === "plain"}
+            onClick={() => onSetRepeat("plain")}
+          >
+            %
+          </Chip>
+          <Chip
+            active={bar.repeatPrevious && bar.repeatHint === "dot"}
+            onClick={() => onSetRepeat("dot")}
+          >
+            %.
+          </Chip>
+          <Chip
+            active={bar.repeatPrevious && bar.repeatHint === "dash"}
+            onClick={() => onSetRepeat("dash")}
+          >
+            %-
+          </Chip>
+          <Chip
+            active={bar.repeatPrevious && bar.repeatHint === "comma"}
+            onClick={() => onSetRepeat("comma")}
+          >
+            %,
+          </Chip>
+        </ChipGroup>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <ChipGroup>
+          {RESOLUTIONS.map((r) => (
+            <Chip
+              key={r.label}
+              active={
+                barResolution.kind === r.kind &&
+                barResolution.slotsPerBeat === r.slotsPerBeat
+              }
+              onClick={() => onChangeResolution(r)}
+            >
+              {r.label}
+            </Chip>
+          ))}
+        </ChipGroup>
+
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={onInsertAfter}
+            className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
+          >
+            + Insert
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-600 hover:text-white"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </header>
+  );
 }
 
-function Grid({
+/* ------------------------------------------------------------------ */
+/* Step grid                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Per-beat column plan. If any lane in this beat uses groups, we render the
+ * beat as its groups (each group is a sub-cell column). Otherwise the beat
+ * expands into `barResolution.slotsPerBeat` equally-spaced step cells.
+ */
+interface BeatPlan {
+  beatIndex: number;
+  columns: BeatColumn[];
+  /** True if *any* lane in this beat has been split into groups. */
+  split: boolean;
+}
+
+type BeatColumn =
+  | {
+      kind: "slot";
+      beatIndex: number;
+      slotIndex: number;
+      slotsPerBeat: number;
+      tuplet?: number; // when this beat uses a triplet resolution
+    }
+  | {
+      kind: "group-slot";
+      beatIndex: number;
+      groupIndex: number;
+      slotIndex: number;
+      slotsInGroup: number;
+      tuplet?: number;
+    };
+
+function buildBeatPlans(
+  bar: Bar,
+  beatsPerBar: number,
+  barResolution: Resolution,
+): BeatPlan[] {
+  return Array.from({ length: beatsPerBar }, (_, beatIndex) => {
+    const beat = bar.beats[beatIndex];
+    // Does any lane in this beat have groups? If yes, render as groups.
+    const lanesWithGroups = beat?.lanes.filter(
+      (l) => l.groups && l.groups.length > 1,
+    );
+    if (lanesWithGroups && lanesWithGroups.length > 0) {
+      // Pick the first lane's group structure as the beat's column template.
+      // (All lanes that are split in this beat share the same split count via
+      //  the current UI, which only splits a single lane at a time.)
+      const template = lanesWithGroups[0]!.groups!;
+      const columns: BeatColumn[] = [];
+      template.forEach((group, groupIndex) => {
+        for (let slotIndex = 0; slotIndex < group.division; slotIndex += 1) {
+          columns.push({
+            kind: "group-slot",
+            beatIndex,
+            groupIndex,
+            slotIndex,
+            slotsInGroup: group.division,
+            tuplet: group.tuplet,
+          });
+        }
+      });
+      return { beatIndex, columns, split: true };
+    }
+
+    // Single-group beat → use the bar-wide resolution.
+    const slotsPerBeat = barResolution.slotsPerBeat;
+    const tuplet =
+      barResolution.kind === "triplet" ? slotsPerBeat : undefined;
+    const columns: BeatColumn[] = Array.from(
+      { length: slotsPerBeat },
+      (_, slotIndex) => ({
+        kind: "slot",
+        beatIndex,
+        slotIndex,
+        slotsPerBeat,
+        tuplet,
+      }),
+    );
+    return { beatIndex, columns, split: false };
+  });
+}
+
+function StepGrid({
   bar,
   beatsPerBar,
-  beatResolutions,
-  onSetBeatResolution,
-  selectedInstrument,
-  pendingArticulations,
-  pendingSticking,
+  barResolution,
+  presentInstruments,
+  availableInstruments,
+  onAddInstrument,
   onSetDivision,
   onSetGroupDivision,
   onSplitBeat,
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
-}: GridProps) {
-  // Instruments shown as rows: at least the selected one; plus all already
-  // used in this bar so the user always sees existing content.
-  const lanesInBar = new Set<Instrument>();
-  bar.beats.forEach((b) =>
-    b.lanes.forEach((l) => lanesInBar.add(l.instrument)),
-  );
-  lanesInBar.add(selectedInstrument);
-  const rowInstruments = PAD_INSTRUMENTS.filter((i) => lanesInBar.has(i));
-
-  return (
-    <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
-      <div className="flex min-w-max border-b border-stone-200 bg-stone-50">
-        <div className="w-[90px] shrink-0 border-r border-stone-200 px-2 py-1.5 text-[10px] font-bold tracking-wide text-stone-400 uppercase">
-          Beat / Grid
-        </div>
-        {Array.from({ length: beatsPerBar }, (_, beatIndex) => {
-          const selectedLane = bar.beats[beatIndex]?.lanes.find(
-            (l) => l.instrument === selectedInstrument,
-          );
-          const groupCount = selectedLane?.groups?.length ?? 1;
-          return (
-            <BeatHeaderCell
-              key={beatIndex}
-              beatIndex={beatIndex}
-              resolution={beatResolutions[beatIndex]}
-              groupCount={groupCount}
-              onSetResolution={(r) => onSetBeatResolution(beatIndex, r)}
-              onSplit={(count) =>
-                onSplitBeat(beatIndex, selectedInstrument, count)
-              }
-            />
-          );
-        })}
-      </div>
-
-      {rowInstruments.map((instrument) => (
-        <LaneRow
-          key={instrument}
-          bar={bar}
-          beatsPerBar={beatsPerBar}
-          beatResolutions={beatResolutions}
-          instrument={instrument}
-          selected={instrument === selectedInstrument}
-          pendingArticulations={pendingArticulations}
-          pendingSticking={pendingSticking}
-          onSetDivision={onSetDivision}
-          onSetGroupDivision={onSetGroupDivision}
-          onToggleSlot={onToggleSlot}
-          onToggleArticulation={onToggleArticulation}
-          onSetSticking={onSetSticking}
-        />
-      ))}
-    </div>
-  );
-}
-
-function BeatHeaderCell({
-  beatIndex,
-  resolution,
-  groupCount,
-  onSetResolution,
-  onSplit,
-}: {
-  beatIndex: number;
-  resolution: Resolution;
-  groupCount: number;
-  onSetResolution: (r: Resolution) => void;
-  onSplit: (count: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const isSplit = groupCount > 1;
-
-  return (
-    <div
-      className={cn(
-        "relative flex flex-1 flex-col items-center gap-1 border-r border-stone-200 px-1 py-1 last:border-r-0",
-        beatIndex === 0 && "border-l-2 border-l-stone-400",
-      )}
-      style={{ minWidth: `${Math.max(150, resolution.slotsPerBeat * 40)}px` }}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        title="Click to split / merge this beat"
-        className={cn(
-          "rounded px-2 py-0.5 text-[10px] font-bold tracking-wide transition",
-          isSplit
-            ? "bg-amber-100 text-stone-900"
-            : "text-stone-500 hover:bg-stone-200",
-        )}
-      >
-        Beat {beatIndex + 1}
-        {isSplit ? ` · ${groupCount} groups` : ""}
-      </button>
-      {!isSplit && (
-        <div className="flex flex-wrap justify-center gap-0.5">
-          {RESOLUTIONS.map((r) => {
-            const active =
-              resolution.kind === r.value.kind &&
-              resolution.slotsPerBeat === r.value.slotsPerBeat;
-            return (
-              <button
-                key={r.label}
-                type="button"
-                onClick={() => onSetResolution(r.value)}
-                className={cn(
-                  "rounded border px-1.5 py-0.5 text-[9px] font-bold transition",
-                  active
-                    ? "border-stone-900 bg-stone-900 text-white"
-                    : "border-stone-200 bg-white text-stone-500 hover:border-stone-500",
-                )}
-              >
-                {r.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {open && (
-        <div className="absolute top-full left-1/2 z-10 mt-1 -translate-x-1/2 rounded-lg border border-stone-200 bg-white p-2 shadow-lg">
-          <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
-            Split selected lane
-          </div>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => {
-                  onSplit(n);
-                  setOpen(false);
-                }}
-                className={cn(
-                  "rounded border px-2 py-0.5 text-[10px] font-bold",
-                  groupCount === n
-                    ? "border-stone-900 bg-stone-900 text-white"
-                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
-                )}
-              >
-                {n === 1 ? "Merge" : `Split ${n}`}
-              </button>
-            ))}
-          </div>
-          <div className="mt-1 text-[9px] text-stone-400">
-            Affects the currently selected instrument in this beat only.
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LaneRow({
-  bar,
-  beatsPerBar,
-  beatResolutions,
-  instrument,
-  selected,
-  pendingArticulations,
-  pendingSticking,
-  onSetDivision,
-  onSetGroupDivision,
-  onToggleSlot,
-  onToggleArticulation,
-  onSetSticking,
 }: {
   bar: Bar;
   beatsPerBar: number;
-  beatResolutions: Resolution[];
-  instrument: Instrument;
-  selected: boolean;
-  pendingArticulations: Set<Articulation>;
-  pendingSticking: "R" | "L" | null;
-  onSetDivision: (
-    beatIndex: number,
-    instrument: Instrument,
-    division: number,
-  ) => void;
-  onSetGroupDivision: (
-    beatIndex: number,
-    instrument: Instrument,
-    groupIndex: number,
-    division: number,
-  ) => void;
-  onToggleSlot: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    groupIndex?: number,
-  ) => void;
-  onToggleArticulation: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    articulation: Articulation,
-    groupIndex?: number,
-  ) => void;
-  onSetSticking: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    sticking: "R" | "L" | null,
-    groupIndex?: number,
-  ) => void;
+  barResolution: Resolution;
+  presentInstruments: Instrument[];
+  availableInstruments: Instrument[];
+  onAddInstrument: (i: Instrument) => void;
+  onSetDivision: Props["onSetDivision"];
+  onSetGroupDivision: Props["onSetGroupDivision"];
+  onSplitBeat: Props["onSplitBeat"];
+  onToggleSlot: Props["onToggleSlot"];
+  onToggleArticulation: Props["onToggleArticulation"];
+  onSetSticking: Props["onSetSticking"];
 }) {
-  return (
-    <div className="flex min-w-max border-b border-stone-200 last:border-b-0">
-      <div
-        className={cn(
-          "w-[90px] shrink-0 border-r border-stone-200 px-2 py-2 text-[11px] font-bold",
-          selected ? "bg-amber-50 text-stone-900" : "bg-white text-stone-600",
-        )}
-      >
-        {instrumentLabels[instrument]}
-      </div>
-      {Array.from({ length: beatsPerBar }, (_, beatIndex) => {
-        const laneInBeat = bar.beats[beatIndex]?.lanes.find(
-          (l) => l.instrument === instrument,
-        );
-        const resolution = beatResolutions[beatIndex];
-        const slotsPerBeat = resolution.slotsPerBeat;
-        const hasGroups = !!laneInBeat?.groups && laneInBeat.groups.length > 1;
-
-        return (
-          <div
-            key={beatIndex}
-            className={cn(
-              "flex flex-1 border-r border-stone-200 last:border-r-0",
-              beatIndex === 0 && "border-l-2 border-l-stone-400",
-            )}
-            style={{
-              minWidth: `${Math.max(150, (hasGroups ? laneInBeat!.groups!.length * 60 : slotsPerBeat * 40))}px`,
-            }}
-          >
-            {hasGroups
-              ? laneInBeat!.groups!.map((group, groupIndex) => (
-                  <GroupCellGroup
-                    key={groupIndex}
-                    bar={bar}
-                    beatIndex={beatIndex}
-                    groupIndex={groupIndex}
-                    group={group}
-                    instrument={instrument}
-                    pendingArticulations={pendingArticulations}
-                    pendingSticking={pendingSticking}
-                    onSetGroupDivision={onSetGroupDivision}
-                    onToggleSlot={onToggleSlot}
-                    onToggleArticulation={onToggleArticulation}
-                    onSetSticking={onSetSticking}
-                  />
-                ))
-              : Array.from({ length: slotsPerBeat }, (_, displaySlot) => (
-                  <GridCell
-                    key={displaySlot}
-                    bar={bar}
-                    beatIndex={beatIndex}
-                    slotsPerBeat={slotsPerBeat}
-                    displaySlot={displaySlot}
-                    instrument={instrument}
-                    isBeatStart={displaySlot === 0}
-                    pendingArticulations={pendingArticulations}
-                    pendingSticking={pendingSticking}
-                    onSetDivision={onSetDivision}
-                    onToggleSlot={onToggleSlot}
-                    onToggleArticulation={onToggleArticulation}
-                    onSetSticking={onSetSticking}
-                  />
-                ))}
-          </div>
-        );
-      })}
-    </div>
+  const plans = useMemo(
+    () => buildBeatPlans(bar, beatsPerBar, barResolution),
+    [bar, beatsPerBar, barResolution],
   );
-}
 
-/**
- * Renders one group of a split beat: a mini resolution picker on top of a
- * small row of slot buttons. Groups are divided visually by a dashed border.
- */
-function GroupCellGroup({
-  bar,
-  beatIndex,
-  groupIndex,
-  group,
-  instrument,
-  pendingArticulations,
-  pendingSticking,
-  onSetGroupDivision,
-  onToggleSlot,
-  onToggleArticulation,
-  onSetSticking,
-}: {
-  bar: Bar;
-  beatIndex: number;
-  groupIndex: number;
-  group: import("../notation/types").LaneGroup;
-  instrument: Instrument;
-  pendingArticulations: Set<Articulation>;
-  pendingSticking: "R" | "L" | null;
-  onSetGroupDivision: (
-    beatIndex: number,
-    instrument: Instrument,
-    groupIndex: number,
-    division: number,
-  ) => void;
-  onToggleSlot: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    groupIndex?: number,
-  ) => void;
-  onToggleArticulation: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    articulation: Articulation,
-    groupIndex?: number,
-  ) => void;
-  onSetSticking: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    sticking: "R" | "L" | null,
-    groupIndex?: number,
-  ) => void;
-}) {
+  // Total columns across all beats (for stable layout width).
+  const totalColumns = plans.reduce((a, p) => a + p.columns.length, 0);
+
   return (
-    <div
-      className={cn(
-        "flex flex-1 flex-col border-r border-dashed border-amber-400 px-0.5 py-1 last:border-r-0",
-      )}
-    >
-      <div className="mb-0.5 flex flex-wrap justify-center gap-0.5">
-        {[1, 2, 3, 4].map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() =>
-              onSetGroupDivision(beatIndex, instrument, groupIndex, d)
-            }
-            className={cn(
-              "rounded px-1 text-[8px] font-bold",
-              group.division === d
-                ? "bg-amber-500 text-white"
-                : "bg-stone-100 text-stone-500 hover:bg-stone-200",
-            )}
-          >
-            {d}
-          </button>
-        ))}
-      </div>
-      <div className="flex flex-1 gap-0.5">
-        {group.slots.map((hit, slotIndex) => (
-          <GroupSlotButton
-            key={slotIndex}
+    <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+      <div
+        className="grid min-w-max"
+        style={{
+          gridTemplateColumns: `minmax(100px, 112px) repeat(${totalColumns}, minmax(28px, 44px))`,
+        }}
+      >
+        {/* Row 1: beat header row */}
+        <div className="sticky left-0 z-10 border-r border-b border-stone-200 bg-stone-50 px-2 py-2 text-[10px] font-bold tracking-wide text-stone-500 uppercase">
+          Beat
+        </div>
+        {plans.flatMap((plan) =>
+          plan.columns.map((col, i) => (
+            <BeatHeaderCell
+              key={`bh-${plan.beatIndex}-${i}`}
+              plan={plan}
+              column={col}
+              localIndex={i}
+              onSplit={(count) => {
+                // Split *each* currently used instrument so the beat layout
+                // is consistent across all lanes.
+                presentInstruments.forEach((inst) =>
+                  onSplitBeat(plan.beatIndex, inst, count),
+                );
+              }}
+              onChangeGroupDivision={(groupIndex, d) => {
+                presentInstruments.forEach((inst) =>
+                  onSetGroupDivision(plan.beatIndex, inst, groupIndex, d),
+                );
+              }}
+            />
+          )),
+        )}
+
+        {/* Instrument rows */}
+        {presentInstruments.map((instrument) => (
+          <InstrumentRow
+            key={instrument}
             bar={bar}
-            beatIndex={beatIndex}
-            groupIndex={groupIndex}
-            slotIndex={slotIndex}
             instrument={instrument}
-            hit={hit}
-            pendingArticulations={pendingArticulations}
-            pendingSticking={pendingSticking}
+            plans={plans}
+            onSetDivision={onSetDivision}
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
           />
         ))}
+
+        {/* Add instrument row */}
+        <div className="sticky left-0 z-10 border-r border-t border-stone-200 bg-white px-2 py-2">
+          <AddInstrumentMenu
+            options={availableInstruments}
+            onPick={onAddInstrument}
+          />
+        </div>
+        <div
+          className="border-t border-stone-200"
+          style={{ gridColumn: `span ${totalColumns}` }}
+        />
       </div>
     </div>
   );
 }
 
-function GroupSlotButton({
-  bar,
-  beatIndex,
-  groupIndex,
-  slotIndex,
-  instrument,
-  hit,
-  pendingArticulations,
-  pendingSticking,
-  onToggleSlot,
-  onToggleArticulation,
-  onSetSticking,
+/* ------------------------------------------------------------------ */
+/* Beat header cell                                                    */
+/* ------------------------------------------------------------------ */
+
+function BeatHeaderCell({
+  plan,
+  column,
+  localIndex,
+  onSplit,
+  onChangeGroupDivision,
 }: {
-  bar: Bar;
-  beatIndex: number;
-  groupIndex: number;
-  slotIndex: number;
-  instrument: Instrument;
-  hit: Hit | null;
-  pendingArticulations: Set<Articulation>;
-  pendingSticking: "R" | "L" | null;
-  onToggleSlot: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    groupIndex?: number,
-  ) => void;
-  onToggleArticulation: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    articulation: Articulation,
-    groupIndex?: number,
-  ) => void;
-  onSetSticking: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    sticking: "R" | "L" | null,
-    groupIndex?: number,
-  ) => void;
+  plan: BeatPlan;
+  column: BeatColumn;
+  localIndex: number;
+  onSplit: (count: number) => void;
+  onChangeGroupDivision: (groupIndex: number, d: number) => void;
 }) {
-  void bar; // placeholder for hover context
+  const [open, setOpen] = useState(false);
+
+  // Only render a label on the first column of the beat (for un-split beats)
+  // or the first column of each group (for split beats).
+  const showLabel =
+    column.kind === "slot"
+      ? column.slotIndex === 0
+      : column.slotIndex === 0;
+
+  const beatNumber = plan.beatIndex + 1;
+  const groupLabel =
+    column.kind === "group-slot" ? `${column.groupIndex + 1}` : "";
+
   return (
-    <button
-      type="button"
-      onClick={() => {
-        onToggleSlot(beatIndex, instrument, slotIndex, groupIndex);
-        pendingArticulations.forEach((art) =>
-          onToggleArticulation(
-            beatIndex,
-            instrument,
-            slotIndex,
-            art,
-            groupIndex,
-          ),
-        );
-        if (pendingSticking !== null) {
-          onSetSticking(
-            beatIndex,
-            instrument,
-            slotIndex,
-            pendingSticking,
-            groupIndex,
-          );
-        }
-      }}
+    <div
       className={cn(
-        "flex flex-1 items-center justify-center rounded border text-[11px] transition",
-        hit
-          ? "border-stone-900 bg-stone-900 text-amber-100"
-          : "border-stone-200 bg-white text-stone-300 hover:bg-stone-100",
+        "relative border-b border-stone-200 bg-stone-50 text-center",
+        // Thick left border at start of beat
+        localIndex === 0 && "border-l-2 border-l-stone-400",
       )}
-      title={hit ? describeHit(hit) : "empty"}
     >
-      {hit ? renderHitBadge(hit) : ""}
-    </button>
+      {showLabel ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            "block w-full truncate px-1 py-1.5 text-[10px] font-bold tracking-wide transition",
+            plan.split
+              ? "bg-amber-100 text-stone-900"
+              : "text-stone-500 hover:bg-stone-200",
+          )}
+          title="Click for split / merge menu"
+        >
+          {plan.split ? `${beatNumber}.${groupLabel}` : beatNumber}
+        </button>
+      ) : (
+        <div className="py-1.5 text-[10px] text-stone-300">·</div>
+      )}
+
+      {open && showLabel && (
+        <BeatHeaderPopover
+          plan={plan}
+          column={column}
+          onClose={() => setOpen(false)}
+          onSplit={(n) => {
+            onSplit(n);
+            setOpen(false);
+          }}
+          onChangeGroupDivision={(gi, d) => {
+            onChangeGroupDivision(gi, d);
+          }}
+        />
+      )}
+    </div>
   );
 }
 
-function GridCell({
+function BeatHeaderPopover({
+  plan,
+  column,
+  onClose,
+  onSplit,
+  onChangeGroupDivision,
+}: {
+  plan: BeatPlan;
+  column: BeatColumn;
+  onClose: () => void;
+  onSplit: (n: number) => void;
+  onChangeGroupDivision: (groupIndex: number, d: number) => void;
+}) {
+  // The popover lives directly below the beat label. Close on backdrop click.
+  return (
+    <>
+      <button
+        aria-label="close"
+        onClick={onClose}
+        className="fixed inset-0 z-20 cursor-default"
+        tabIndex={-1}
+      />
+      <div className="absolute top-full left-1/2 z-30 mt-1 w-max -translate-x-1/2 rounded-lg border border-stone-200 bg-white p-2 text-left shadow-xl">
+        <div className="mb-1.5 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
+          Beat {plan.beatIndex + 1} · {plan.split ? "split" : "no split"}
+        </div>
+        <div className="mb-2 flex gap-1">
+          {[1, 2, 3, 4].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onSplit(n)}
+              className={cn(
+                "rounded border px-2 py-0.5 text-[10px] font-bold",
+                plan.columns.length /
+                  (plan.split && column.kind === "group-slot"
+                    ? column.slotsInGroup
+                    : 1) ===
+                  n
+                  ? "border-stone-900 bg-stone-900 text-white"
+                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+              )}
+            >
+              {n === 1 ? "Merge" : `Split ${n}`}
+            </button>
+          ))}
+        </div>
+        {plan.split && column.kind === "group-slot" && (
+          <div>
+            <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
+              Sub-group {column.groupIndex + 1} division
+            </div>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => onChangeGroupDivision(column.groupIndex, d)}
+                  className={cn(
+                    "rounded border px-2 py-0.5 text-[10px] font-bold",
+                    column.slotsInGroup === d
+                      ? "border-stone-900 bg-stone-900 text-white"
+                      : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+                  )}
+                >
+                  /{d}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Instrument row                                                      */
+/* ------------------------------------------------------------------ */
+
+function InstrumentRow({
   bar,
-  beatIndex,
-  slotsPerBeat,
-  displaySlot,
   instrument,
-  isBeatStart,
-  pendingArticulations,
-  pendingSticking,
+  plans,
   onSetDivision,
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
 }: {
   bar: Bar;
-  beatIndex: number;
-  slotsPerBeat: number;
-  displaySlot: number;
   instrument: Instrument;
-  isBeatStart: boolean;
-  pendingArticulations: Set<Articulation>;
-  pendingSticking: "R" | "L" | null;
-  onSetDivision: (
-    beatIndex: number,
-    instrument: Instrument,
-    division: number,
-  ) => void;
-  onToggleSlot: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-  ) => void;
-  onToggleArticulation: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    articulation: Articulation,
-  ) => void;
-  onSetSticking: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    sticking: "R" | "L" | null,
-  ) => void;
+  plans: BeatPlan[];
+  onSetDivision: Props["onSetDivision"];
+  onToggleSlot: Props["onToggleSlot"];
+  onToggleArticulation: Props["onToggleArticulation"];
+  onSetSticking: Props["onSetSticking"];
 }) {
-  const lane = bar.beats[beatIndex]?.lanes.find(
-    (l) => l.instrument === instrument,
+  return (
+    <>
+      <div className="sticky left-0 z-10 flex items-center border-r border-b border-stone-200 bg-white px-2 py-2">
+        <div className="text-[11px] font-bold text-stone-700">
+          {instrumentLabels[instrument]}
+          <span className="ml-1 font-mono text-[9px] font-normal text-stone-400">
+            {canonicalAlias[instrument]}
+          </span>
+        </div>
+      </div>
+      {plans.flatMap((plan) =>
+        plan.columns.map((col, i) => (
+          <StepCell
+            key={`${instrument}-${plan.beatIndex}-${i}`}
+            bar={bar}
+            instrument={instrument}
+            column={col}
+            localIndex={i}
+            onSetDivision={onSetDivision}
+            onToggleSlot={onToggleSlot}
+            onToggleArticulation={onToggleArticulation}
+            onSetSticking={onSetSticking}
+          />
+        )),
+      )}
+    </>
   );
-  const hit = resolveHitAt(lane, slotsPerBeat, displaySlot);
+}
+
+/* ------------------------------------------------------------------ */
+/* Step cell                                                           */
+/* ------------------------------------------------------------------ */
+
+function StepCell({
+  bar,
+  instrument,
+  column,
+  localIndex,
+  onSetDivision,
+  onToggleSlot,
+  onToggleArticulation,
+  onSetSticking,
+}: {
+  bar: Bar;
+  instrument: Instrument;
+  column: BeatColumn;
+  localIndex: number;
+  onSetDivision: Props["onSetDivision"];
+  onToggleSlot: Props["onToggleSlot"];
+  onToggleArticulation: Props["onToggleArticulation"];
+  onSetSticking: Props["onSetSticking"];
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const hit = resolveHitForCell(bar, instrument, column);
+
+  const handleClick = () => {
+    if (column.kind === "slot") {
+      handleWholeBeatCellClick({
+        bar,
+        instrument,
+        column,
+        hit,
+        onSetDivision,
+        onToggleSlot,
+        onToggleArticulation,
+      });
+    } else {
+      handleGroupSlotCellClick({
+        instrument,
+        column,
+        hit,
+        onToggleSlot,
+        onToggleArticulation,
+      });
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuOpen(true);
+  };
+
+  // Visual cues
+  const isBeatStart =
+    column.kind === "slot"
+      ? column.slotIndex === 0
+      : column.slotIndex === 0 && column.groupIndex === 0;
+  const isGroupStart =
+    column.kind === "group-slot" && column.slotIndex === 0;
 
   return (
     <button
       type="button"
-      onClick={() =>
-        handleClick({
-          bar,
-          beatIndex,
-          slotsPerBeat,
-          displaySlot,
-          instrument,
-          pendingArticulations,
-          pendingSticking,
-          onSetDivision,
-          onToggleSlot,
-          onToggleArticulation,
-          onSetSticking,
-        })
-      }
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      title={hit ? describeHit(hit) : "Click to fill · Right-click for more"}
       className={cn(
-        "group relative aspect-square min-h-[34px] border-r border-stone-200 text-[10px] transition last:border-r-0",
-        isBeatStart && "border-l-2 border-l-stone-400",
+        "relative flex aspect-square items-center justify-center border-b border-stone-200 text-sm transition select-none",
+        localIndex === 0 && "border-l-2 border-l-stone-400",
+        isBeatStart && !isGroupStart && "border-l-2 border-l-stone-400",
+        isGroupStart && "border-l border-dashed border-amber-500",
         hit
-          ? "bg-stone-900 text-amber-100 hover:bg-stone-800"
-          : "bg-white text-stone-300 hover:bg-stone-100",
+          ? hitBgClass(hit)
+          : "bg-white text-stone-200 hover:bg-stone-100",
       )}
-      title={hit ? describeHit(hit) : "empty"}
     >
       {hit ? renderHitBadge(hit) : null}
+
+      {menuOpen && (
+        <StepContextMenu
+          hit={hit}
+          onClose={() => setMenuOpen(false)}
+          onToggle={() => {
+            handleClick();
+            setMenuOpen(false);
+          }}
+          onToggleArticulation={(art) => {
+            const { slotIndex, groupIndex } = slotAddressFromColumn(column);
+            if (!hit) {
+              // Need to activate first; then articulate.
+              handleClick();
+            }
+            onToggleArticulation(
+              column.beatIndex,
+              instrument,
+              slotIndex,
+              art,
+              groupIndex,
+            );
+          }}
+          onSetSticking={(s) => {
+            const { slotIndex, groupIndex } = slotAddressFromColumn(column);
+            if (!hit) handleClick();
+            onSetSticking(
+              column.beatIndex,
+              instrument,
+              slotIndex,
+              s,
+              groupIndex,
+            );
+          }}
+        />
+      )}
     </button>
   );
 }
 
-/**
- * Given a lane with its own (possibly different) division, find the hit that
- * covers the given display slot of slotsPerBeat grid.
- */
-function resolveHitAt(
-  lane: Bar["beats"][number]["lanes"][number] | undefined,
-  slotsPerBeat: number,
-  displaySlot: number,
+function StepContextMenu({
+  hit,
+  onClose,
+  onToggle,
+  onToggleArticulation,
+  onSetSticking,
+}: {
+  hit: Hit | null;
+  onClose: () => void;
+  onToggle: () => void;
+  onToggleArticulation: (art: Articulation) => void;
+  onSetSticking: (s: "R" | "L" | null) => void;
+}) {
+  return (
+    <>
+      <button
+        aria-label="close"
+        onClick={onClose}
+        className="fixed inset-0 z-20 cursor-default"
+        tabIndex={-1}
+      />
+      <div className="absolute top-full left-1/2 z-30 mt-1 w-max -translate-x-1/2 rounded-lg border border-stone-200 bg-white p-2 text-left shadow-xl">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="mb-1 block w-full rounded border border-stone-200 px-2 py-1 text-[10px] font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
+        >
+          {hit ? "Remove hit" : "Add hit"}
+        </button>
+        <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
+          Articulations
+        </div>
+        <div className="mb-2 flex gap-1">
+          {(
+            [
+              { label: ">", value: "accent" },
+              { label: "()", value: "ghost" },
+              { label: "f", value: "flam" },
+              { label: "~", value: "roll" },
+            ] as const
+          ).map(({ label, value }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onToggleArticulation(value)}
+              className={cn(
+                "rounded border px-2 py-0.5 text-[10px] font-bold",
+                hit?.articulations.includes(value)
+                  ? "border-amber-500 bg-amber-100 text-stone-900"
+                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
+          Sticking
+        </div>
+        <div className="flex gap-1">
+          {(["R", "L", null] as const).map((s) => (
+            <button
+              key={s ?? "none"}
+              type="button"
+              onClick={() => onSetSticking(s)}
+              className={cn(
+                "rounded border px-2 py-0.5 text-[10px] font-bold",
+                hit?.sticking === s ||
+                  (s === null && !hit?.sticking)
+                  ? "border-amber-500 bg-amber-100 text-stone-900"
+                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+              )}
+            >
+              {s ?? "—"}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Add instrument menu                                                 */
+/* ------------------------------------------------------------------ */
+
+function AddInstrumentMenu({
+  options,
+  onPick,
+}: {
+  options: Instrument[];
+  onPick: (i: Instrument) => void;
+}) {
+  if (!options.length)
+    return (
+      <div className="text-[10px] text-stone-300">All instruments added</div>
+    );
+  return (
+    <select
+      className="w-full rounded border border-stone-200 bg-white px-1 py-0.5 text-[10px] font-bold text-stone-600"
+      value=""
+      onChange={(e) => {
+        if (e.target.value) onPick(e.target.value as Instrument);
+        e.currentTarget.value = "";
+      }}
+    >
+      <option value="" disabled>
+        + Add instrument…
+      </option>
+      {options.map((i) => (
+        <option key={i} value={i}>
+          {instrumentLabels[i]} ({canonicalAlias[i]})
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Small UI primitives                                                 */
+/* ------------------------------------------------------------------ */
+
+function ChipGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex flex-wrap items-center gap-0.5 rounded-full border border-stone-200 bg-stone-50 p-0.5">
+      {children}
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full px-2.5 py-0.5 text-[11px] font-bold transition",
+        active
+          ? "bg-stone-900 text-white shadow-sm"
+          : "text-stone-600 hover:bg-stone-200",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Logic helpers                                                       */
+/* ------------------------------------------------------------------ */
+
+function inferBarResolution(bar: Bar): Resolution | null {
+  let maxBinary = 0;
+  let maxTriplet = 0;
+  bar.beats.forEach((beat) =>
+    beat.lanes.forEach((lane) => {
+      const groups: Array<LaneGroup | Omit<LaneGroup, "ratio">> =
+        lane.groups ?? [
+          {
+            ratio: 1,
+            division: lane.division,
+            tuplet: lane.tuplet,
+            slots: lane.slots,
+          },
+        ];
+      groups.forEach((g) => {
+        const isTriplet =
+          g.division === 3 || g.division === 6 || !!g.tuplet;
+        if (isTriplet) {
+          maxTriplet = Math.max(maxTriplet, g.division);
+        } else {
+          maxBinary = Math.max(maxBinary, g.division);
+        }
+      });
+    }),
+  );
+  if (maxTriplet && !maxBinary) {
+    return (
+      RESOLUTIONS.find(
+        (r) =>
+          r.kind === "triplet" && r.slotsPerBeat === (maxTriplet === 6 ? 6 : 3),
+      ) ?? null
+    );
+  }
+  if (maxBinary >= 8) return RESOLUTIONS.find((r) => r.slotsPerBeat === 8)!;
+  if (maxBinary >= 4) return RESOLUTIONS.find((r) => r.slotsPerBeat === 4)!;
+  if (maxBinary >= 2) return RESOLUTIONS.find((r) => r.slotsPerBeat === 2)!;
+  return null;
+}
+
+function resolveHitForCell(
+  bar: Bar,
+  instrument: Instrument,
+  column: BeatColumn,
 ): Hit | null {
+  const beat = bar.beats[column.beatIndex];
+  if (!beat) return null;
+  const lane = beat.lanes.find((l) => l.instrument === instrument);
   if (!lane) return null;
-  // Triplet displays only pair with triplet lanes, binary with binary.
-  const isTripletDisplay = slotsPerBeat === 3 || slotsPerBeat === 6;
-  const isTripletLane =
-    lane.division === 3 || lane.division === 6 || !!lane.tuplet;
-  if (isTripletDisplay !== isTripletLane) return null;
-  const laneSlot = Math.floor((displaySlot * lane.division) / slotsPerBeat);
+
+  if (column.kind === "group-slot") {
+    if (!lane.groups) return null;
+    const g = lane.groups[column.groupIndex];
+    if (!g) return null;
+    // Map lane's group division → displayed group slot count.
+    // When display division > lane division, show hit only on cells that
+    // coincide with lane slots.
+    const laneSlot = Math.floor(
+      (column.slotIndex * g.division) / column.slotsInGroup,
+    );
+    if (laneSlot >= g.slots.length) return null;
+    return g.slots[laneSlot] ?? null;
+  }
+
+  // Whole-beat slot.
+  if (lane.groups) return null; // mismatch — lane is split but col isn't
+  const laneSlot = Math.floor(
+    (column.slotIndex * lane.division) / column.slotsPerBeat,
+  );
   if (laneSlot >= lane.slots.length) return null;
   return lane.slots[laneSlot] ?? null;
 }
 
-function handleClick(args: {
+function handleWholeBeatCellClick(args: {
   bar: Bar;
-  beatIndex: number;
-  slotsPerBeat: number;
-  displaySlot: number;
   instrument: Instrument;
-  pendingArticulations: Set<Articulation>;
-  pendingSticking: "R" | "L" | null;
-  onSetDivision: (
-    beatIndex: number,
-    instrument: Instrument,
-    division: number,
-  ) => void;
-  onToggleSlot: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-  ) => void;
-  onToggleArticulation: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    articulation: Articulation,
-  ) => void;
-  onSetSticking: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    sticking: "R" | "L" | null,
-  ) => void;
+  column: Extract<BeatColumn, { kind: "slot" }>;
+  hit: Hit | null;
+  onSetDivision: Props["onSetDivision"];
+  onToggleSlot: Props["onToggleSlot"];
+  onToggleArticulation: Props["onToggleArticulation"];
 }) {
-  const {
-    bar,
-    beatIndex,
-    slotsPerBeat,
-    displaySlot,
-    instrument,
-    pendingArticulations,
-    pendingSticking,
-    onSetDivision,
-    onToggleSlot,
-    onToggleArticulation,
-    onSetSticking,
-  } = args;
+  const { bar, instrument, column, hit, onSetDivision, onToggleSlot, onToggleArticulation } = args;
+  const { beatIndex, slotIndex, slotsPerBeat, tuplet } = column;
+  const beat = bar.beats[beatIndex];
+  const lane = beat?.lanes.find((l) => l.instrument === instrument);
 
-  const lane = bar.beats[beatIndex]?.lanes.find(
-    (l) => l.instrument === instrument,
-  );
-  const isTripletDisplay = slotsPerBeat === 3 || slotsPerBeat === 6;
-  const isTripletLane = lane
-    ? lane.division === 3 || lane.division === 6 || !!lane.tuplet
-    : false;
+  // If lane is currently on a different kind (binary vs triplet), reset it.
+  const needsReset =
+    !lane ||
+    lane.groups ||
+    lane.division !== slotsPerBeat ||
+    (tuplet ? !lane.tuplet : !!lane.tuplet);
 
-  // Case 1: no lane yet → create one at display resolution.
-  if (!lane) {
+  if (needsReset) {
     onSetDivision(beatIndex, instrument, slotsPerBeat);
-    onToggleSlot(beatIndex, instrument, displaySlot);
-    applyPendingModifiers({
-      beatIndex,
-      instrument,
-      slotIndex: displaySlot,
-      pendingArticulations,
-      pendingSticking,
-      onToggleArticulation,
-      onSetSticking,
-    });
+    onToggleSlot(beatIndex, instrument, slotIndex);
     return;
   }
 
-  // Case 2: lane kind (binary vs triplet) differs from grid → reset to match.
-  if (isTripletDisplay !== isTripletLane) {
-    onSetDivision(beatIndex, instrument, slotsPerBeat);
-    onToggleSlot(beatIndex, instrument, displaySlot);
-    applyPendingModifiers({
-      beatIndex,
-      instrument,
-      slotIndex: displaySlot,
-      pendingArticulations,
-      pendingSticking,
-      onToggleArticulation,
-      onSetSticking,
-    });
+  // Cycle: off → on → accent → ghost → off
+  if (!hit) {
+    onToggleSlot(beatIndex, instrument, slotIndex);
     return;
   }
+  const isAccent = hit.articulations.includes("accent");
+  const isGhost = hit.articulations.includes("ghost");
 
-  // Case 3: need to upgrade lane division to fit the click position.
-  if (slotsPerBeat > lane.division && slotsPerBeat % lane.division === 0) {
-    onSetDivision(beatIndex, instrument, slotsPerBeat);
-    onToggleSlot(beatIndex, instrument, displaySlot);
-    applyPendingModifiers({
-      beatIndex,
-      instrument,
-      slotIndex: displaySlot,
-      pendingArticulations,
-      pendingSticking,
-      onToggleArticulation,
-      onSetSticking,
-    });
+  if (!isAccent && !isGhost) {
+    onToggleArticulation(beatIndex, instrument, slotIndex, "accent");
     return;
   }
-
-  // Case 4: display is coarser than lane division → map back to lane slot.
-  const laneSlot = Math.floor((displaySlot * lane.division) / slotsPerBeat);
-  onToggleSlot(beatIndex, instrument, laneSlot);
-  applyPendingModifiers({
-    beatIndex,
-    instrument,
-    slotIndex: laneSlot,
-    pendingArticulations,
-    pendingSticking,
-    onToggleArticulation,
-    onSetSticking,
-  });
+  if (isAccent && !isGhost) {
+    // Remove accent, add ghost.
+    onToggleArticulation(beatIndex, instrument, slotIndex, "accent");
+    onToggleArticulation(beatIndex, instrument, slotIndex, "ghost");
+    return;
+  }
+  // Off.
+  if (isGhost) onToggleArticulation(beatIndex, instrument, slotIndex, "ghost");
+  onToggleSlot(beatIndex, instrument, slotIndex);
 }
 
-function applyPendingModifiers(args: {
-  beatIndex: number;
+function handleGroupSlotCellClick(args: {
   instrument: Instrument;
-  slotIndex: number;
-  pendingArticulations: Set<Articulation>;
-  pendingSticking: "R" | "L" | null;
-  onToggleArticulation: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    articulation: Articulation,
-  ) => void;
-  onSetSticking: (
-    beatIndex: number,
-    instrument: Instrument,
-    slotIndex: number,
-    sticking: "R" | "L" | null,
-  ) => void;
+  column: Extract<BeatColumn, { kind: "group-slot" }>;
+  hit: Hit | null;
+  onToggleSlot: Props["onToggleSlot"];
+  onToggleArticulation: Props["onToggleArticulation"];
 }) {
-  const {
-    beatIndex,
-    instrument,
-    slotIndex,
-    pendingArticulations,
-    pendingSticking,
-    onToggleArticulation,
-    onSetSticking,
-  } = args;
-  pendingArticulations.forEach((art) =>
-    onToggleArticulation(beatIndex, instrument, slotIndex, art),
-  );
-  if (pendingSticking !== null) {
-    onSetSticking(beatIndex, instrument, slotIndex, pendingSticking);
+  const { instrument, column, hit, onToggleSlot, onToggleArticulation } = args;
+  const { beatIndex, groupIndex, slotIndex } = column;
+  if (!hit) {
+    onToggleSlot(beatIndex, instrument, slotIndex, groupIndex);
+    return;
   }
+  const isAccent = hit.articulations.includes("accent");
+  const isGhost = hit.articulations.includes("ghost");
+  if (!isAccent && !isGhost) {
+    onToggleArticulation(beatIndex, instrument, slotIndex, "accent", groupIndex);
+    return;
+  }
+  if (isAccent && !isGhost) {
+    onToggleArticulation(beatIndex, instrument, slotIndex, "accent", groupIndex);
+    onToggleArticulation(beatIndex, instrument, slotIndex, "ghost", groupIndex);
+    return;
+  }
+  if (isGhost) onToggleArticulation(beatIndex, instrument, slotIndex, "ghost", groupIndex);
+  onToggleSlot(beatIndex, instrument, slotIndex, groupIndex);
+}
+
+function slotAddressFromColumn(column: BeatColumn): {
+  slotIndex: number;
+  groupIndex?: number;
+} {
+  if (column.kind === "slot") return { slotIndex: column.slotIndex };
+  return { slotIndex: column.slotIndex, groupIndex: column.groupIndex };
+}
+
+/* ------------------------------------------------------------------ */
+/* Hit visuals                                                         */
+/* ------------------------------------------------------------------ */
+
+function hitBgClass(hit: Hit): string {
+  if (hit.articulations.includes("accent"))
+    return "bg-amber-500 text-white shadow-sm";
+  if (hit.articulations.includes("ghost"))
+    return "bg-stone-400 text-white";
+  return "bg-stone-900 text-amber-100";
+}
+
+function renderHitBadge(hit: Hit): React.ReactNode {
+  const icon = hit.articulations.includes("ghost")
+    ? "()"
+    : hit.articulations.includes("accent")
+      ? ">"
+      : "●";
+  const subs: string[] = [];
+  if (hit.articulations.includes("roll")) subs.push("~");
+  if (hit.articulations.includes("flam")) subs.push("f");
+  if (hit.sticking) subs.push(hit.sticking);
+  return (
+    <span className="pointer-events-none flex flex-col items-center justify-center">
+      <span className="font-bold leading-none">{icon}</span>
+      {subs.length ? (
+        <span className="text-[8px] font-bold opacity-80">
+          {subs.join("")}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function describeHit(hit: Hit): string {
@@ -1157,23 +1153,4 @@ function describeHit(hit: Hit): string {
   if (hit.articulations.length) parts.push(hit.articulations.join("+"));
   if (hit.sticking) parts.push(hit.sticking);
   return parts.join(" · ");
-}
-
-function renderHitBadge(hit: Hit): React.ReactNode {
-  const badges: string[] = [];
-  if (hit.articulations.includes("ghost")) badges.push("()");
-  if (hit.articulations.includes("accent")) badges.push(">");
-  if (hit.articulations.includes("roll")) badges.push("~");
-  if (hit.articulations.includes("flam")) badges.push("f");
-  if (hit.sticking) badges.push(hit.sticking);
-  return (
-    <span className="pointer-events-none flex flex-col items-center">
-      <span>●</span>
-      {badges.length ? (
-        <span className="text-[8px] font-bold text-amber-200/80">
-          {badges.join("")}
-        </span>
-      ) : null}
-    </span>
-  );
 }
