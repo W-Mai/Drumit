@@ -19,9 +19,8 @@ import {
   setSticking,
   toggleArticulation,
   toggleSlot,
-  updateBar,
 } from "./notation/edit";
-import { BarEditor } from "./components/BarEditor";
+import { PadEditor } from "./components/PadEditor";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
 
@@ -184,16 +183,11 @@ export default function App() {
                 className="block h-[64vh] w-full resize-y rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 outline-none"
               />
             ) : selectedBarData && clampedSelectedBar !== null ? (
-              <BarEditor
+              <PadEditor
                 bar={selectedBarData}
                 barIndex={clampedSelectedBar}
                 totalBars={totalBars}
                 beatsPerBar={score.meter.beats}
-                onChange={(mut) =>
-                  applyScoreUpdate((s) =>
-                    updateBar(s, clampedSelectedBar, mut),
-                  )
-                }
                 onSetRepeat={(hint) =>
                   applyScoreUpdate((s) =>
                     setBarRepeatPrevious(s, clampedSelectedBar, hint),
