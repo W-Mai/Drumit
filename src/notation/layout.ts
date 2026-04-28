@@ -230,7 +230,11 @@ function layoutBar(
       groups.forEach((groupData) => {
         const groupWidth = beatWidth * groupData.ratio;
         const tickXs = evenTicks(groupX, groupWidth, groupData.division);
-        const beamDepth = beamDepthForGroup(groupData);
+        // Rests under a beam don't get an underline in handwritten jianpu
+        // style: the beam only spans consecutive hit notes. If this group
+        // has no hits at all, drop the beam entirely.
+        const hasAnyHit = groupData.slots.some((s) => s !== null);
+        const beamDepth = hasAnyHit ? beamDepthForGroup(groupData) : 0;
         const beamSegments =
           beamDepth > 0
             ? [
