@@ -238,26 +238,39 @@ function evenTicks(beatX: number, beatWidth: number, division: number): number[]
   );
 }
 
-/** Number of underline stripes under the beat group (8th/16th/32nd). */
+/**
+ * Number of underline stripes under the beat group (8th = 1 stripe,
+ * 16th = 2 stripes, 32nd = 3 stripes). In jianpu-style drum notation every
+ * note shorter than a quarter gets an underline even if it stands alone, so
+ * we look at *effective subdivision per beat* (division / ratio) rather than
+ * division alone.
+ */
 function beamDepthForGroup(group: {
   division: number;
   tuplet?: number;
   ratio: number;
 }): number {
-  if (group.division <= 1) return 0;
-  // When a group only occupies part of the beat (ratio < 1) one extra
-  // underline is implied (half-beat 8th → 16th etc.). We scale by 1/ratio.
-  const durationScale = group.ratio > 0 ? Math.round(1 / group.ratio) : 1;
-  if (group.tuplet) {
-    if (group.tuplet === 3 || group.tuplet === 5 || group.tuplet === 7) {
-      // Triplet across half beat = already 16th-triplet → 2 beams.
-      return durationScale >= 2 ? 2 : 1;
-    }
-    if (group.tuplet === 6) return durationScale >= 2 ? 3 : 2;
-    return 1;
-  }
+  // Effective subdivision across a full beat: a half-beat group with
+  // division=1 behaves like an 8th note (effective = 2).
+  const durationScale = group.ratio > 0 ? 1 / group.ratio : 1;
   const effective = group.division * durationScale;
-  if (effective >= 8) return 3;
-  if (effective >= 4) return 2;
-  return 1;
+
+  if (group.tuplet) {
+    // A triplet lives under one beam when it spans a quarter-note (effective
+    // subdivision ~3), adds another beam when compressed to a half-beat
+    // (effective ~6 → 16th triplet), and so on.
+    const base =
+      group.tuplet === 6 || group.tuplet === 5 || group.tuplet === 7 ? 2 : 1;
+    // Each doubling of effective subdivision over the "normal" range adds a
+    // beam. Normal span for a 3-tuplet is effective≈3, for 6-tuplet ≈6.
+    const normal = group.tuplet === 6 ? 6 : 3;
+    if (effective >= normal * 4) return base + 2;
+    if (effective >= normal * 2) return base + 1;
+    return base;
+  }
+
+  if (effective >= 8) return 3; // 32nds
+  if (effective >= 4) return 2; // 16ths
+  if (effective >= 2) return 1; // 8ths
+  return 0; // quarter or longer: no beam
 }
