@@ -9,10 +9,10 @@ import type {
   Diagnostic,
   Hit,
   Instrument,
+  LaneBeat,
   ParseResult,
   Score,
   Section,
-  Slot,
 } from "./types";
 
 const HEADER_RE = /^([a-zA-Z][\w-]*)\s*:\s*(.+)$/;
@@ -200,12 +200,7 @@ function parseBar(
 
   const beats: Beat[] = [];
   for (let beatIndex = 0; beatIndex < beatCount; beatIndex += 1) {
-    const parsed = buildBeat(lanes, beatIndex, lineNumber, diagnostics);
-    beats.push({
-      division: parsed.slots.length,
-      slots: parsed.slots,
-      tuplet: parsed.tuplet,
-    });
+    beats.push(buildBeat(lanes, beatIndex, lineNumber, diagnostics));
   }
 
   bar.beats = beats;
@@ -220,60 +215,60 @@ function splitBeats(raw: string): string[] {
     .filter(Boolean);
 }
 
-interface ParsedBeat {
-  slots: Slot[];
-  tuplet?: number;
-}
-
 function buildBeat(
   lanes: Array<{ instrument: Instrument; beats: string[] }>,
   beatIndex: number,
   lineNumber: number,
   diagnostics: Diagnostic[],
-): ParsedBeat {
-  const tuplets = new Set<number>();
-  const beatTokenLists = lanes.map((lane) => {
+): Beat {
+  const beatTuplets = new Set<number>();
+  const laneBeats: LaneBeat[] = [];
+
+  lanes.forEach((lane) => {
     const beatBody = lane.beats[beatIndex] ?? "";
-    const { tuplet, body } = extractTuplet(beatBody);
-    if (tuplet) tuplets.add(tuplet);
-    return { instrument: lane.instrument, tokens: tokenizeBeat(body) };
-  });
+    const { tuplet: explicitTuplet, body } = extractTuplet(beatBody);
+    if (explicitTuplet) beatTuplets.add(explicitTuplet);
+    const tokens = tokenizeBeat(body);
+    if (tokens.length === 0) return;
 
-  const division = Math.max(1, ...beatTokenLists.map((lane) => lane.tokens.length));
-
-  beatTokenLists.forEach((lane) => {
-    if (lane.tokens.length === 0 || lane.tokens.length === division) return;
-    diagnostics.push(
-      warn(
-        lineNumber,
-        `Beat ${beatIndex + 1} on ${lane.instrument} has ${lane.tokens.length} tokens; beat uses ${division} slots.`,
-      ),
+    const slots = tokens.map((token) =>
+      parseToken(token, lane.instrument, lineNumber, diagnostics),
     );
-  });
 
-  const slots: Slot[] = Array.from({ length: division }, () => ({ hits: [] }));
+    // Auto-detect triplet / tuplet divisions for standalone lanes. If the user
+    // didn't write (3) but the token count is 3/6/5/7 we mark it as tuplet so
+    // the renderer draws the bracket and lane keeps its own even spacing.
+    const division = slots.length;
+    const autoTuplet = detectTuplet(division, explicitTuplet);
 
-  beatTokenLists.forEach((lane) => {
-    const laneDivision = lane.tokens.length || division;
-    lane.tokens.forEach((token, slotIndex) => {
-      const scaledIndex = Math.round((slotIndex * division) / laneDivision);
-      const targetIndex = Math.min(division - 1, scaledIndex);
-      const hit = parseToken(token, lane.instrument, lineNumber, diagnostics);
-      if (hit) slots[targetIndex].hits.push(hit);
+    laneBeats.push({
+      instrument: lane.instrument,
+      division,
+      tuplet: autoTuplet,
+      slots,
     });
   });
 
-  if (tuplets.size > 1) {
+  const tuplet = beatTuplets.size === 1 ? [...beatTuplets][0] : undefined;
+  if (beatTuplets.size > 1) {
     diagnostics.push(
       warn(
         lineNumber,
-        `Beat ${beatIndex + 1} has inconsistent tuplet markers across lanes; using the first.`,
+        `Beat ${beatIndex + 1} has inconsistent tuplet markers across lanes; using none at beat level.`,
       ),
     );
   }
-  const tuplet = tuplets.size === 1 ? [...tuplets][0] : undefined;
 
-  return { slots, tuplet };
+  return { lanes: laneBeats, tuplet };
+}
+
+function detectTuplet(division: number, explicit?: number): number | undefined {
+  if (explicit) return explicit;
+  // Even subdivisions (2/4/8/16) are not tuplets.
+  if (division === 3 || division === 6 || division === 5 || division === 7) {
+    return division === 6 ? 6 : division;
+  }
+  return undefined;
 }
 
 /** Extract a leading `(3)` / `(5)` etc. tuplet marker, returning the remaining body. */

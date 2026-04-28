@@ -33,12 +33,26 @@ export interface Slot {
   hits: Hit[];
 }
 
-export interface Beat {
-  /** Subdivision per beat: 1, 2, 3, 4, 6, 8 */
+/**
+ * Per-lane content within a single beat. Each lane decides its own division
+ * (2, 3, 4, 6, 8, ...) so two instruments can play different subdivisions on
+ * the same beat (e.g. hi-hat in 16ths against a snare triplet).
+ */
+export interface LaneBeat {
+  instrument: Instrument;
+  /** Number of slots in this lane for the beat (== tokens.length, or 1). */
   division: number;
-  slots: Slot[];
-  /** When set, this beat is a tuplet (e.g. 3 = triplet, 5 = quintuplet). */
+  /** When set, this lane is a tuplet (3 = triplet, 5 = quintuplet, ...). */
   tuplet?: number;
+  /** Hits indexed by slot (null = rest / empty slot). */
+  slots: Array<Hit | null>;
+}
+
+export interface Beat {
+  /** Explicit tuplet marker that applies to all lanes (e.g. (3) prefix). */
+  tuplet?: number;
+  /** Per-lane subdivision and hits. */
+  lanes: LaneBeat[];
 }
 
 export interface Meter {

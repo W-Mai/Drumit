@@ -1,11 +1,34 @@
 import { instrumentCategory } from "./instruments";
-import type { Bar, Beat, Hit, InstrumentCategory, Score } from "./types";
+import type { Bar, Hit, InstrumentCategory, LaneBeat, Score } from "./types";
 
 export interface LaidOutHit {
   x: number;
   y: number;
   hit: Hit;
   category: InstrumentCategory;
+}
+
+export interface LaidOutLane {
+  instrument: string;
+  category: InstrumentCategory;
+  division: number;
+  tuplet?: number;
+  /** Center x of each slot. */
+  tickXs: number[];
+  /** Y of the underline beam group (under the hit row). */
+  beamY: number;
+  /** 1 = 8th (single underline), 2 = 16th (two lines), 3 = 32nd. */
+  beamDepth: number;
+  /** Beam segments span; empty when division <= 1 (no underline). */
+  beamSegments: { x1: number; x2: number }[];
+}
+
+export interface LaidOutBeat {
+  index: number;
+  x: number;
+  width: number;
+  lanes: LaidOutLane[];
+  tuplet?: number;
 }
 
 export interface LaidOutBar {
@@ -20,16 +43,6 @@ export interface LaidOutBar {
   hits: LaidOutHit[];
   repeatPrevious: boolean;
   repeatCount: number;
-}
-
-export interface LaidOutBeat {
-  index: number;
-  x: number;
-  division: number;
-  beamY: number;
-  beamSegments: { x1: number; x2: number; depth: number }[];
-  tickXs: number[];
-  tuplet?: number;
 }
 
 export interface LaidOutLayout {
@@ -132,36 +145,46 @@ function layoutBar(
 
   bar.beats.forEach((beat, beatIndex) => {
     const beatX = innerLeft + beatIndex * beatWidth;
-    const division = Math.max(1, beat.division);
-    const tickXs = Array.from(
-      { length: division },
-      (_, i) => beatX + (i + 0.5) * (beatWidth / division),
-    );
-    const beamSegments = computeBeams(beat, beatX, beatWidth);
-    const beamY = drumY + 18;
+    const laidLanes: LaidOutLane[] = [];
 
-    beats.push({
-      index: beatIndex,
-      x: beatX,
-      division,
-      beamY,
-      beamSegments,
-      tickXs,
-      tuplet: beat.tuplet,
-    });
+    beat.lanes.forEach((lane) => {
+      const category = instrumentCategory[lane.instrument];
+      const rowY = category === "cymbal" ? cymbalY : drumY;
+      const tickXs = evenTicks(beatX, beatWidth, lane.division);
+      const beamDepth = beamDepthFor(lane);
+      const beamSegments =
+        lane.division > 1
+          ? [{ x1: beatX + 4, x2: beatX + beatWidth - 4 }]
+          : [];
 
-    beat.slots.forEach((slot, slotIndex) => {
-      const slotX = tickXs[slotIndex];
-      slot.hits.forEach((hit) => {
-        const category = instrumentCategory[hit.instrument];
-        const baseY = category === "cymbal" ? cymbalY : drumY;
+      laidLanes.push({
+        instrument: lane.instrument,
+        category,
+        division: lane.division,
+        tuplet: lane.tuplet,
+        tickXs,
+        beamY: rowY + 12,
+        beamDepth,
+        beamSegments,
+      });
+
+      lane.slots.forEach((hit, slotIndex) => {
+        if (!hit) return;
         hits.push({
-          x: slotX,
-          y: baseY + verticalOffsetFor(hit.instrument, category),
+          x: tickXs[slotIndex],
+          y: rowY,
           hit,
           category,
         });
       });
+    });
+
+    beats.push({
+      index: beatIndex,
+      x: beatX,
+      width: beatWidth,
+      lanes: laidLanes,
+      tuplet: beat.tuplet,
     });
   });
 
@@ -180,47 +203,24 @@ function layoutBar(
   };
 }
 
-/**
- * Within the compressed "cymbal" or "drum" row, nudge hits up/down by
- * instrument so coincident hits don't literally stack on top of each other.
- */
-function verticalOffsetFor(
-  instrument: import("./types").Instrument,
-  category: import("./types").InstrumentCategory,
-): number {
-  if (category === "cymbal") {
-    if (instrument === "crash") return -6;
-    if (instrument === "ride") return -2;
-    if (instrument === "hihatOpen") return 2;
-    if (instrument === "hihatHalfOpen") return 1;
-    return 0; // hihatClosed
-  }
-  // drums: smaller toms sit high, kick sits low
-  switch (instrument) {
-    case "tomHigh":
-      return -10;
-    case "tomMid":
-      return -4;
-    case "snare":
-      return 0;
-    case "floorTom":
-      return 4;
-    case "kick":
-      return 8;
-    default:
-      return 0;
-  }
+function evenTicks(beatX: number, beatWidth: number, division: number): number[] {
+  const n = Math.max(1, division);
+  return Array.from(
+    { length: n },
+    (_, i) => beatX + (i + 0.5) * (beatWidth / n),
+  );
 }
 
-function computeBeams(
-  beat: Beat,
-  beatX: number,
-  beatWidth: number,
-): { x1: number; x2: number; depth: number }[] {
-  const division = Math.max(1, beat.division);
-  if (division <= 1) return [];
-  const depth = division >= 8 ? 3 : division >= 4 ? 2 : 1;
-  const x1 = beatX + 4;
-  const x2 = beatX + beatWidth - 4;
-  return Array.from({ length: depth }, (_, i) => ({ x1, x2, depth: i + 1 }));
+/** Number of underline stripes under the beat group (8th/16th/32nd). */
+function beamDepthFor(lane: LaneBeat): number {
+  if (lane.division <= 1) return 0;
+  // Tuplets: triplet/sextuplet/quintuplet render with one underline plus bracket.
+  if (lane.tuplet) {
+    if (lane.tuplet === 3 || lane.tuplet === 5 || lane.tuplet === 7) return 1;
+    if (lane.tuplet === 6) return 2;
+    return 1;
+  }
+  if (lane.division >= 8) return 3;
+  if (lane.division >= 4) return 2;
+  return 1;
 }

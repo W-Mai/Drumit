@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { parseDrumtab } from "../src/notation/parser";
+import type { Instrument } from "../src/notation/types";
+
+function laneOf(
+  bar: ReturnType<typeof parseDrumtab>["score"]["sections"][number]["bars"][number],
+  beatIndex: number,
+  instrument: Instrument,
+) {
+  return bar.beats[beatIndex].lanes.find((l) => l.instrument === instrument);
+}
 
 describe("parseDrumtab", () => {
   it("parses a 4/4 bar with slash-separated beats", () => {
@@ -9,8 +18,9 @@ describe("parseDrumtab", () => {
     expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
     const bar = score.sections[0].bars[0];
     expect(bar.beats).toHaveLength(4);
-    expect(bar.beats[0].slots[0].hits).toHaveLength(2); // hh + bd
-    expect(bar.beats[1].slots[0].hits).toHaveLength(2); // hh + sn
+    expect(laneOf(bar, 0, "hihatClosed")?.slots[0]).not.toBeNull();
+    expect(laneOf(bar, 0, "kick")?.slots[0]).not.toBeNull();
+    expect(laneOf(bar, 1, "snare")?.slots[0]).not.toBeNull();
   });
 
   it("supports packed 16th-note beats", () => {
@@ -18,8 +28,9 @@ describe("parseDrumtab", () => {
       `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx |`,
     );
     const bar = score.sections[0].bars[0];
-    expect(bar.beats[0].division).toBe(4);
-    expect(bar.beats[0].slots).toHaveLength(4);
+    const hh = laneOf(bar, 0, "hihatClosed");
+    expect(hh?.division).toBe(4);
+    expect(hh?.slots).toHaveLength(4);
   });
 
   it("marks repeat previous bars", () => {
@@ -38,15 +49,29 @@ describe("parseDrumtab", () => {
     expect(bar.beats).toHaveLength(2);
   });
 
-  it("parses triplet marker (3) on a beat", () => {
+  it("parses explicit triplet marker (3) on a beat", () => {
     const { score, diagnostics } = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / xxxx / xxxx / xxxx |`,
     );
     expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
     const bar = score.sections[0].bars[0];
     expect(bar.beats[0].tuplet).toBe(3);
-    expect(bar.beats[0].slots).toHaveLength(3);
-    expect(bar.beats[1].tuplet).toBeUndefined();
+    const sn0 = laneOf(bar, 0, "snare");
+    expect(sn0?.division).toBe(3);
+    expect(sn0?.tuplet).toBe(3);
+  });
+
+  it("auto-detects triplets from 3-token beats per lane", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx  sn: - / - / - / xxx |`,
+    );
+    const bar = score.sections[0].bars[0];
+    const hh3 = laneOf(bar, 3, "hihatClosed");
+    const sn3 = laneOf(bar, 3, "snare");
+    expect(hh3?.division).toBe(4);
+    expect(hh3?.tuplet).toBeUndefined();
+    expect(sn3?.division).toBe(3);
+    expect(sn3?.tuplet).toBe(3);
   });
 
   it("parses standalone R/L sticking tokens", () => {
@@ -54,7 +79,18 @@ describe("parseDrumtab", () => {
       `title: T\nmeter: 4/4\n[A]\n| sn: R / L / R / L |`,
     );
     const bar = score.sections[0].bars[0];
-    expect(bar.beats[0].slots[0].hits[0].sticking).toBe("R");
-    expect(bar.beats[1].slots[0].hits[0].sticking).toBe("L");
+    expect(laneOf(bar, 0, "snare")?.slots[0]?.sticking).toBe("R");
+    expect(laneOf(bar, 1, "snare")?.slots[0]?.sticking).toBe("L");
+  });
+
+  it("lets lanes have different subdivisions on the same beat", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx  sn: - / - / - / xxx |`,
+    );
+    const bar = score.sections[0].bars[0];
+    const hhBeat3 = laneOf(bar, 3, "hihatClosed");
+    const snBeat3 = laneOf(bar, 3, "snare");
+    expect(hhBeat3?.division).toBe(4);
+    expect(snBeat3?.division).toBe(3);
   });
 });
