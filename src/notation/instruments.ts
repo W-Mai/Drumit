@@ -9,10 +9,19 @@ export const instrumentAliases: Record<string, Instrument> = {
   hh: "hihatClosed",
   hho: "hihatOpen",
   hhh: "hihatHalfOpen",
+  hhf: "hihatFoot",
+  pedal: "hihatFoot",
   ride: "ride",
   rd: "ride",
-  crash: "crash",
-  cr: "crash",
+  "ride-bell": "rideBell",
+  rb: "rideBell",
+  // backwards compat: "crash" / "cr" still point to a crash (left by default).
+  crash: "crashLeft",
+  cr: "crashLeft",
+  cr1: "crashLeft",
+  crl: "crashLeft",
+  cr2: "crashRight",
+  crr: "crashRight",
   tom1: "tomHigh",
   t1: "tomHigh",
   tom2: "tomMid",
@@ -27,8 +36,11 @@ export const instrumentCategory: Record<Instrument, InstrumentCategory> = {
   hihatClosed: "cymbal",
   hihatOpen: "cymbal",
   hihatHalfOpen: "cymbal",
+  hihatFoot: "cymbal",
   ride: "cymbal",
-  crash: "cymbal",
+  rideBell: "cymbal",
+  crashLeft: "cymbal",
+  crashRight: "cymbal",
   tomHigh: "drum",
   tomMid: "drum",
   floorTom: "drum",
@@ -40,8 +52,11 @@ export const instrumentLabels: Record<Instrument, string> = {
   hihatClosed: "Hi-Hat",
   hihatOpen: "HH Open",
   hihatHalfOpen: "HH Half",
+  hihatFoot: "HH Foot",
   ride: "Ride",
-  crash: "Crash",
+  rideBell: "Ride Bell",
+  crashLeft: "Crash L",
+  crashRight: "Crash R",
   tomHigh: "Tom 1",
   tomMid: "Tom 2",
   floorTom: "Floor",
@@ -57,26 +72,34 @@ export const instrumentLabels: Record<Instrument, string> = {
  *   toms/floor = o   -> open
  */
 export function defaultHeadFor(instrument: Instrument): Head {
-  // In this shorthand the source token is semantic ("hit" / "rest"); the
-  // visual head is decided entirely by the instrument to match the PDF:
+  // Visual head is decided entirely by the instrument to match the PDF
+  // conventions on page 1 of the handwritten 架子鼓入门教材:
   //   kick       -> ● solid
   //   snare      -> × (x head)
-  //   hi-hat     -> ∂ (partial)
-  //   hi-hat open-> ○ (open circle)
-  //   ride/crash -> × (x head)
-  //   toms       -> ○ (open circle)
+  //   hi-hat     -> ∂ partial
+  //   hi-hat open-> ○ open
+  //   hi-hat foot-> × (pedal, played with foot)
+  //   ride       -> ○ open (ride bow)
+  //   ride bell  -> × (bell / edge accent)
+  //   crash      -> | over × (stickX)  -- splash / crash pair
+  //   tom 1/2    -> ● solid (different sizes)
+  //   floor tom  -> \ slash
   switch (instrument) {
     case "kick":
       return "solid";
     case "snare":
-    case "ride":
-    case "crash":
+    case "hihatFoot":
+    case "rideBell":
       return "x";
     case "hihatClosed":
     case "hihatHalfOpen":
       return "partial";
     case "hihatOpen":
+    case "ride":
       return "open";
+    case "crashLeft":
+    case "crashRight":
+      return "stickX";
     case "tomHigh":
     case "tomMid":
       return "solid";
@@ -99,6 +122,9 @@ export const instrumentSizeScale: Record<Instrument, number> = {
   hihatClosed: 1.0,
   hihatHalfOpen: 1.0,
   hihatOpen: 1.0,
+  hihatFoot: 1.0,
   ride: 1.0,
-  crash: 1.0,
+  rideBell: 1.0,
+  crashLeft: 1.0,
+  crashRight: 1.0,
 };

@@ -4,8 +4,11 @@ export type Instrument =
   | "hihatClosed"
   | "hihatOpen"
   | "hihatHalfOpen"
+  | "hihatFoot"
   | "ride"
-  | "crash"
+  | "rideBell"
+  | "crashLeft"
+  | "crashRight"
   | "tomHigh"
   | "tomMid"
   | "floorTom";
@@ -20,7 +23,13 @@ export type Articulation =
   | "rimshot"
   | "choke";
 
-export type Head = "solid" | "x" | "partial" | "open" | "slash";
+export type Head =
+  | "solid"       // ●  e.g. kick, toms
+  | "x"           // ×  snare, ride bell
+  | "partial"     // ∂  hi-hat (closed / half-open)
+  | "open"        // ○  ride, hi-hat open, (unused) tom variants
+  | "slash"       // \\ floor tom
+  | "stickX";     // |  above, × below — crash / splash
 
 export interface Hit {
   instrument: Instrument;

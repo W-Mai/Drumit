@@ -287,5 +287,30 @@ function HitHead({
       />
     );
   }
+  if (hit.head === "stickX") {
+    // Vertical stem above, × head below — crash / splash convention:
+    //   |
+    //   ×
+    const stemH = size * 1.8;
+    return (
+      <g>
+        <line
+          x1={x}
+          y1={y - size - stemH}
+          x2={x}
+          y2={y - size + 1}
+          className="stroke-stone-900"
+          strokeWidth={1.6}
+          strokeLinecap="round"
+        />
+        <path
+          d={`M ${x - size} ${y - size} L ${x + size} ${y + size} M ${x + size} ${y - size} L ${x - size} ${y + size}`}
+          className="fill-none stroke-stone-900"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+        />
+      </g>
+    );
+  }
   return <circle cx={x} cy={y} r={size} className="fill-stone-900" />;
 }
