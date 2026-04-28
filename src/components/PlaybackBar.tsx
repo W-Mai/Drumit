@@ -7,8 +7,8 @@ import {
 import type { PlaybackEngine } from "../playback/engine";
 import { SynthEngine } from "../playback/synthEngine";
 import { MidiEngine } from "../playback/midiEngine";
-import { cn } from "../lib/utils";
 import { useHotkeys } from "../lib/useHotkeys";
+import { Badge, Button, Field, Select, TextInput } from "./ui";
 
 type EngineKind = "synth" | "midi";
 
@@ -171,17 +171,9 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs">
       <div className="flex items-center gap-1">
-        <button
-          type="button"
+        <Button
           onClick={playing ? handlePause : handlePlay}
-          className={cn(
-            "rounded-full px-3 py-1 font-bold transition",
-            playing
-              ? "bg-amber-500 text-white hover:bg-amber-600"
-              : paused
-                ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                : "bg-emerald-500 text-white hover:bg-emerald-600",
-          )}
+          variant={playing ? "accent" : "success"}
         >
           {playing
             ? "❚❚ Pause"
@@ -190,41 +182,31 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
               : typeof startBar === "number" && startBar > 0
                 ? `▶ Play @${startBar + 1}`
                 : "▶ Play"}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
           onClick={handleStop}
           disabled={playState === "idle"}
-          className={cn(
-            "rounded-full px-3 py-1 font-bold transition",
-            playState === "idle"
-              ? "cursor-not-allowed bg-stone-100 text-stone-400"
-              : "bg-stone-900 text-white hover:bg-stone-700",
-          )}
+          variant="primary"
         >
           ■ Stop
-        </button>
+        </Button>
       </div>
 
-      <label className="flex items-center gap-1 text-stone-600">
-        Engine:
-        <select
+      <Field label="Engine:">
+        <Select
           value={engineKind}
           onChange={(e) => setEngineKind(e.target.value as EngineKind)}
-          className="rounded border border-stone-200 bg-white px-2 py-0.5 font-bold"
         >
           <option value="synth">Synth (internal)</option>
           {midiAvailable ? <option value="midi">Web MIDI</option> : null}
-        </select>
-      </label>
+        </Select>
+      </Field>
 
       {engineKind === "midi" ? (
-        <label className="flex items-center gap-1 text-stone-600">
-          Port:
-          <select
+        <Field label="Port:">
+          <Select
             value={selectedOutput}
             onChange={(e) => setSelectedOutput(e.target.value)}
-            className="rounded border border-stone-200 bg-white px-2 py-0.5 font-bold"
           >
             {midiOutputs.length === 0 ? (
               <option value="">(no ports)</option>
@@ -235,13 +217,12 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
                 </option>
               ))
             )}
-          </select>
-        </label>
+          </Select>
+        </Field>
       ) : null}
 
-      <label className="flex items-center gap-1 text-stone-600">
-        Tempo:
-        <input
+      <Field label="Tempo:">
+        <TextInput
           type="number"
           min={40}
           max={300}
@@ -249,25 +230,23 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
           onChange={(e) =>
             setTempoOverride(Number.parseInt(e.target.value, 10) || 0)
           }
-          className="w-16 rounded border border-stone-200 bg-white px-2 py-0.5 text-right font-bold"
+          className="w-16 text-right"
         />
-        bpm
-      </label>
+        <span>bpm</span>
+      </Field>
 
-      <label className="flex items-center gap-1 text-stone-600">
+      <Field label={null}>
         <input
           type="checkbox"
           checked={metronome}
           onChange={(e) => setMetronome(e.target.checked)}
         />
-        Click
-      </label>
+        <span>Click</span>
+      </Field>
 
-      <label
-        className={cn(
-          "flex items-center gap-1",
-          typeof startBar === "number" ? "text-stone-600" : "text-stone-300",
-        )}
+      <Field
+        label={null}
+        disabled={typeof startBar !== "number"}
         title={
           typeof startBar === "number"
             ? `Loop bar ${startBar + 1}`
@@ -280,18 +259,14 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
           disabled={typeof startBar !== "number"}
           onChange={(e) => setLoopEnabled(e.target.checked)}
         />
-        Loop bar
-      </label>
+        <span>Loop bar</span>
+      </Field>
 
       <span className="ml-auto text-[10px] text-stone-400 tabular-nums">
         {playState}
       </span>
 
-      {error ? (
-        <span className="rounded bg-red-50 px-2 py-0.5 font-bold text-red-700">
-          {error}
-        </span>
-      ) : null}
+      {error ? <Badge tone="danger">{error}</Badge> : null}
 
       {!midiAvailable && engineKind === "midi" ? (
         <span className="text-stone-500">

@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { cn } from "../lib/utils";
+import { Button } from "./ui";
 
 export interface DocumentSummary {
   id: string;
@@ -48,22 +49,16 @@ export function DocumentList({
           Documents
         </h3>
         <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={onCreate}
-            title="New document"
-            className="rounded-full border border-stone-200 bg-white px-2 py-0.5 text-[11px] font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
-          >
+          <Button size="xs" onClick={onCreate} title="New document">
             + New
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="xs"
             onClick={() => fileInput.current?.click()}
             title="Import .drumtab file"
-            className="rounded-full border border-stone-200 bg-white px-2 py-0.5 text-[11px] font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
           >
             ↑ Import
-          </button>
+          </Button>
           <input
             ref={fileInput}
             type="file"

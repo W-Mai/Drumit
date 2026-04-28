@@ -1,11 +1,25 @@
 @import "tailwindcss";
 
 @theme {
+  /* Typography */
   --font-sans:
     Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, monospace;
+  --font-display: Georgia, "Times New Roman", serif;
+
+  /* Brand / semantic colors — re-exported so tools like prettier-plugin-tailwind pick them up. */
   --color-brand: #b55a25;
   --color-ink: #201913;
+  --color-accent: #f59e0b; /* amber-500 */
+  --color-accent-soft: #fde68a; /* amber-200 */
+  --color-success: #10b981; /* emerald-500 */
+  --color-danger: #ef4444; /* red-500 */
+
+  /* Spacing tokens (extend Tailwind's scale). */
+  --spacing-gap-xs: 0.25rem;
+  --spacing-gap-sm: 0.5rem;
+  --spacing-gap-md: 0.75rem;
+  --spacing-gap-lg: 1rem;
 }
 
 html,

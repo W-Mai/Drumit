@@ -33,6 +33,7 @@ import {
   type DocumentRecord,
 } from "./lib/storage";
 import { DocumentList } from "./components/DocumentList";
+import { Badge, Button, Panel, PanelHeader, Select } from "./components/ui";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
 
@@ -359,9 +360,9 @@ export default function App() {
               Source
             </ModeTab>
           </div>
-          <select
-            className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
+          <Select
             value=""
+            className="rounded-full"
             onChange={(e) => {
               const found = samples.find((s) => s.label === e.target.value);
               if (found) loadSample(found.src);
@@ -376,9 +377,9 @@ export default function App() {
                 {s.label}
               </option>
             ))}
-          </select>
-          <button
-            type="button"
+          </Select>
+          <Button
+            variant="danger"
             onClick={() => {
               if (
                 window.confirm(
@@ -400,11 +401,10 @@ export default function App() {
                 setSelectedBar(0);
               }
             }}
-            className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-500 hover:border-red-400 hover:text-red-600"
             title="Clear saved data and reset"
           >
             Reset
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -437,18 +437,15 @@ export default function App() {
           onStop={() => setPlayCursor(null)}
         />
 
-        <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
-          <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
-            <h2 className="text-sm font-extrabold">Preview</h2>
-            <div className="flex gap-2">
-              <ToggleButton
-                active={showLabels}
-                onClick={() => setShowLabels((v) => !v)}
-              >
-                {showLabels ? "Hide labels" : "Show labels"}
-              </ToggleButton>
-            </div>
-          </div>
+        <Panel>
+          <PanelHeader title="Preview">
+            <Button
+              variant={showLabels ? "primary" : "secondary"}
+              onClick={() => setShowLabels((v) => !v)}
+            >
+              {showLabels ? "Hide labels" : "Show labels"}
+            </Button>
+          </PanelHeader>
           <div className="max-h-[58vh] min-h-[320px] overflow-auto bg-stone-100/40 p-4">
             {hasErrors ? (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
@@ -464,15 +461,12 @@ export default function App() {
               />
             )}
           </div>
-        </article>
+        </Panel>
 
-        <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
-          <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
-            <h2 className="text-sm font-extrabold">
-              {mode === "visual" ? "Bar editor" : "Source"}
-            </h2>
+        <Panel>
+          <PanelHeader title={mode === "visual" ? "Bar editor" : "Source"}>
             <Diagnostics diagnostics={diagnostics} />
-          </div>
+          </PanelHeader>
 
           <div className="max-h-[70vh] overflow-auto p-4">
             {mode === "source" ? (
@@ -568,7 +562,7 @@ export default function App() {
               </div>
             )}
           </div>
-        </article>
+        </Panel>
       </section>
       </div>
     </div>
@@ -600,31 +594,6 @@ function ModeTab({
   );
 }
 
-function ToggleButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs font-bold transition",
-        active
-          ? "border-stone-900 bg-stone-900 text-white"
-          : "border-stone-200 bg-white text-stone-700 hover:bg-stone-900 hover:text-white",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Diagnostics({
   diagnostics,
 }: {
@@ -632,27 +601,15 @@ function Diagnostics({
 }) {
   const errors = diagnostics.filter((d) => d.level === "error").length;
   const warnings = diagnostics.filter((d) => d.level === "warning").length;
-  if (errors === 0 && warnings === 0)
-    return (
-      <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-        OK
-      </span>
-    );
+  if (errors === 0 && warnings === 0) return <Badge tone="success">OK</Badge>;
+  const title = diagnostics
+    .map((d) => `${d.level}@${d.line}: ${d.message}`)
+    .join("\n");
   return (
-    <span
-      className={cn(
-        "rounded px-2 py-0.5 text-[10px] font-bold",
-        errors > 0
-          ? "bg-red-50 text-red-700"
-          : "bg-amber-50 text-amber-800",
-      )}
-      title={diagnostics
-        .map((d) => `${d.level}@${d.line}: ${d.message}`)
-        .join("\n")}
-    >
+    <Badge tone={errors > 0 ? "danger" : "warning"} title={title}>
       {errors > 0 ? `${errors} error${errors > 1 ? "s" : ""}` : ""}
       {errors > 0 && warnings > 0 ? " · " : ""}
       {warnings > 0 ? `${warnings} warn` : ""}
-    </span>
+    </Badge>
   );
 }
