@@ -3,27 +3,45 @@ import type { PlaybackEngine } from "./engine";
 import { gmDrumMap, DEFAULT_NOTE_DURATION_S } from "../notation/midi";
 
 /**
- * Web MIDI output engine. Sends noteOn/noteOff messages to the selected
- * MIDI output port on channel 10 (standard percussion channel).
+ * Web MIDI output engine with precise look-ahead scheduling.
  *
- * Unlike Web Audio, Web MIDI's `send(msg, futureTime)` schedules the message
- * in the underlying MIDI subsystem and CANNOT be cancelled. If we queued
- * three seconds of future events and the user hits Stop, those events would
- * still play. To make Stop actually stop, we dispatch every message through
- * a local `setTimeout` so Stop can clear the timers before they fire.
+ * Rationale:
+ *   - `output.send(msg)` fires immediately on the MIDI clock — jittery.
+ *   - `output.send(msg, timestamp)` fires at the MIDI subsystem's precise
+ *     scheduled time. But once queued it can't be cancelled.
+ *
+ * We use look-ahead scheduling: every 25 ms we enqueue every pending
+ * message whose timestamp falls inside the next 100 ms window, straight
+ * into the MIDI subsystem with a precise `timestamp`. Stop() drops any
+ * message not yet inside the window. Users hear at most ~100 ms of
+ * tail after Stop, but timing during playback is rock-solid.
  */
+
+const LOOKAHEAD_MS = 100;
+const TICK_MS = 25;
+
+interface PendingMsg {
+  /** Absolute `performance.now()` timestamp in ms. */
+  timestamp: number;
+  message: [number, number, number];
+  /** MIDI note (for active tracking on note-on). */
+  note?: number;
+  kind: "on" | "off" | "cc";
+}
+
 export class MidiEngine implements PlaybackEngine {
   readonly kind = "midi" as const;
   readonly name: string;
 
   private access: MIDIAccess | null = null;
   private output: MIDIOutput | null = null;
-  private readonly channel = 9; // 0-indexed, 9 = MIDI channel 10
+  private readonly channel = 9; // MIDI channel 10
 
-  /** Pending dispatch timers, cleared on stop(). */
-  private timers = new Set<ReturnType<typeof setTimeout>>();
-  /** Notes currently sounding, so Stop can release them. */
+  private pending: PendingMsg[] = [];
+  /** MIDI notes that have been handed to the MIDI subsystem as note-on
+   *  but whose note-off hasn't been released. */
   private active = new Set<number>();
+  private schedulerTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(outputName: string | null = null) {
     this.name = outputName ? `MIDI: ${outputName}` : "Web MIDI";
@@ -49,64 +67,63 @@ export class MidiEngine implements PlaybackEngine {
   }
 
   scheduleEvent(event: PlaybackEvent, whenSeconds: number): void {
-    const output = this.output;
-    if (!output) return;
+    if (!this.output) return;
     const note = gmDrumMap[event.hit.instrument];
     if (note === undefined) return;
 
-    const onDelayMs = Math.max(0, whenSeconds * 1000);
-    const duration = (event.duration || DEFAULT_NOTE_DURATION_S) * 1000;
-    const offDelayMs = onDelayMs + duration;
+    const base = performance.now();
+    const onAt = base + Math.max(0, whenSeconds * 1000);
+    const offAt =
+      onAt + (event.duration || DEFAULT_NOTE_DURATION_S) * 1000;
     const statusOn = 0x90 | this.channel;
     const statusOff = 0x80 | this.channel;
 
-    const onTimer = setTimeout(() => {
-      this.timers.delete(onTimer);
-      try {
-        output.send([statusOn, note, event.velocity]);
-        this.active.add(note);
-      } catch {
-        // output may have been closed
-      }
-    }, onDelayMs);
-    this.timers.add(onTimer);
+    this.pending.push({
+      timestamp: onAt,
+      message: [statusOn, note, event.velocity],
+      note,
+      kind: "on",
+    });
+    this.pending.push({
+      timestamp: offAt,
+      message: [statusOff, note, 0],
+      note,
+      kind: "off",
+    });
 
-    const offTimer = setTimeout(() => {
-      this.timers.delete(offTimer);
-      try {
-        output.send([statusOff, note, 0]);
-        this.active.delete(note);
-      } catch {
-        // ignore
-      }
-    }, offDelayMs);
-    this.timers.add(offTimer);
+    this.ensureScheduler();
   }
 
   stop(): void {
-    // Cancel every pending dispatch.
-    for (const t of this.timers) clearTimeout(t);
-    this.timers.clear();
+    // Drop anything still in the look-ahead queue.
+    this.pending = [];
 
-    // Release everything currently sounding on this channel.
+    if (this.schedulerTimer !== null) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+
     const output = this.output;
     if (!output) return;
+
+    // Release every note that has been enqueued into the MIDI subsystem
+    // but not yet released.
+    const now = performance.now();
     const statusOff = 0x80 | this.channel;
     for (const note of this.active) {
       try {
-        output.send([statusOff, note, 0]);
+        output.send([statusOff, note, 0], now);
       } catch {
         // ignore
       }
     }
     this.active.clear();
 
-    // Broadcast "All Notes Off" (CC 123) and "All Sound Off" (CC 120) for
-    // good measure — some soft synths ignore stray noteOffs.
+    // CC123 / CC120 for good measure — some soft synths ignore stray noteOffs.
     const cc = 0xb0 | this.channel;
     try {
-      output.send([cc, 123, 0]);
-      output.send([cc, 120, 0]);
+      output.send([cc, 123, 0], now);
+      output.send([cc, 120, 0], now);
     } catch {
       // ignore
     }
@@ -116,5 +133,48 @@ export class MidiEngine implements PlaybackEngine {
     this.stop();
     this.output = null;
     this.access = null;
+  }
+
+  private ensureScheduler(): void {
+    if (this.schedulerTimer !== null) return;
+    this.schedulerTimer = setInterval(() => this.tick(), TICK_MS);
+    // Also run immediately so the first event doesn't wait up to 25 ms.
+    this.tick();
+  }
+
+  private tick(): void {
+    const output = this.output;
+    if (!output) return;
+    if (this.pending.length === 0) {
+      if (this.schedulerTimer !== null) {
+        clearInterval(this.schedulerTimer);
+        this.schedulerTimer = null;
+      }
+      return;
+    }
+    const horizon = performance.now() + LOOKAHEAD_MS;
+    const next: PendingMsg[] = [];
+    for (const msg of this.pending) {
+      if (msg.timestamp <= horizon) {
+        // Hand to MIDI subsystem with precise scheduled time.
+        try {
+          output.send(msg.message, msg.timestamp);
+          if (msg.kind === "on" && msg.note !== undefined) {
+            this.active.add(msg.note);
+          } else if (msg.kind === "off" && msg.note !== undefined) {
+            // Note: the note-off will actually fire at msg.timestamp, but
+            // we can't know when that happens. Remove from active list
+            // when we enqueue it — slightly inaccurate but safe: stop()
+            // will broadcast CC120 anyway.
+            this.active.delete(msg.note);
+          }
+        } catch {
+          // ignore send errors (port closed)
+        }
+      } else {
+        next.push(msg);
+      }
+    }
+    this.pending = next;
   }
 }
