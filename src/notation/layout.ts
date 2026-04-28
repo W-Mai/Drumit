@@ -172,7 +172,7 @@ function layoutBar(
         const tickXs = evenTicks(groupX, groupWidth, group.division);
         const beamDepth = beamDepthForGroup(group);
         const beamSegments =
-          group.division > 1
+          beamDepth > 0
             ? [
                 {
                   x1: groupX + 3,
