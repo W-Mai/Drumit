@@ -23,6 +23,7 @@ import {
   toggleSlot,
 } from "./notation/edit";
 import { PadEditor } from "./components/PadEditor";
+import { PlaybackBar } from "./components/PlaybackBar";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
 
@@ -164,6 +165,11 @@ export default function App() {
       </header>
 
       <section className="flex flex-col gap-5">
+        <PlaybackBar
+          score={score}
+          startBar={clampedSelectedBar ?? 0}
+        />
+
         <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5">
           <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
             <h2 className="text-sm font-extrabold">Preview</h2>
