@@ -15,6 +15,7 @@ import type {
 } from "../notation/types";
 import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
+import { Button, Chip, ChipGroup } from "./ui";
 
 /* ------------------------------------------------------------------ */
 /* Props                                                               */
@@ -378,20 +379,10 @@ function BarHeader({
         </ChipGroup>
 
         <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={onInsertAfter}
-            className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
-          >
-            + Insert
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-600 hover:text-white"
-          >
+          <Button onClick={onInsertAfter}>+ Insert</Button>
+          <Button variant="danger" onClick={onDelete}>
             Delete
-          </button>
+          </Button>
         </div>
       </div>
     </header>
@@ -1086,39 +1077,6 @@ function AddInstrumentMenu({
 /* ------------------------------------------------------------------ */
 /* Small UI primitives                                                 */
 /* ------------------------------------------------------------------ */
-
-function ChipGroup({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="inline-flex flex-wrap items-center gap-0.5 rounded-full border border-stone-200 bg-stone-50 p-0.5">
-      {children}
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full px-2.5 py-0.5 text-[11px] font-bold transition",
-        active
-          ? "bg-stone-900 text-white shadow-sm"
-          : "text-stone-600 hover:bg-stone-200",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
