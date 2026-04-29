@@ -547,55 +547,36 @@ export function Rest({
     );
   }
   if (duration === "q") {
+    // Unicode musical symbol U+1D13D (QUARTER REST). Text rendering gives
+    // the correct three-stroke squiggle shape without hand-drawing all
+    // the curves; every modern OS font (incl. fallback) ships it.
     const midY = staffY + stepToY(0);
-    const d = [
-      `M ${x - STAFF_SPACE * 0.4} ${midY - STAFF_SPACE * 1.0}`,
-      `L ${x + STAFF_SPACE * 0.25} ${midY - STAFF_SPACE * 0.35}`,
-      `L ${x - STAFF_SPACE * 0.25} ${midY + STAFF_SPACE * 0.35}`,
-      `L ${x + STAFF_SPACE * 0.45} ${midY + STAFF_SPACE * 1.0}`,
-    ].join(" ");
     return (
-      <path
-        d={d}
-        className="fill-none stroke-stone-900"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <text
+        x={x}
+        y={midY + STAFF_SPACE * 1.2}
+        textAnchor="middle"
+        className="fill-stone-900"
+        style={{ fontSize: STAFF_SPACE * 3.2 }}
+      >
+        𝄽
+      </text>
     );
   }
-  // 8 / 16 / 32: stem + stacked flags
-  const topY = staffY + stepToY(-2);
-  const botY = staffY + stepToY(1);
-  const flagCount = duration === "8" ? 1 : duration === "16" ? 2 : 3;
-  const flags: ReactNode[] = [];
-  for (let i = 0; i < flagCount; i += 1) {
-    const fy = topY + i * STAFF_SPACE * 0.9;
-    flags.push(
-      <g key={i}>
-        <circle cx={x} cy={fy} r={STAFF_SPACE * 0.18} className="fill-stone-900" />
-        <path
-          d={`M ${x} ${fy} Q ${x + STAFF_SPACE * 0.5} ${fy + STAFF_SPACE * 0.4} ${x + STAFF_SPACE * 0.7} ${fy + STAFF_SPACE * 1}`}
-          className="fill-none stroke-stone-900"
-          strokeWidth={1.6}
-          strokeLinecap="round"
-        />
-      </g>,
-    );
-  }
+  // 8th / 16th / 32nd rests via SMuFL-compatible Unicode glyphs.
+  const midY = staffY + stepToY(0);
+  const glyph =
+    duration === "8" ? "𝄾" : duration === "16" ? "𝄿" : "𝅀";
   return (
-    <g>
-      <line
-        x1={x}
-        x2={x + STAFF_SPACE * 0.4}
-        y1={botY}
-        y2={topY}
-        className="stroke-stone-900"
-        strokeWidth={1.4}
-        strokeLinecap="round"
-      />
-      {flags}
-    </g>
+    <text
+      x={x}
+      y={midY + STAFF_SPACE * 1.2}
+      textAnchor="middle"
+      className="fill-stone-900"
+      style={{ fontSize: STAFF_SPACE * 3.2 }}
+    >
+      {glyph}
+    </text>
   );
 }
 

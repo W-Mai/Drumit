@@ -280,22 +280,12 @@ describe("StaffView (S10: auto-wrap systems)", () => {
 
 describe("StaffView (S7: rests on empty beats)", () => {
   it("draws a quarter rest on a beat with no hits", () => {
-    // Three beats of kicks, a silent beat 3, another kick on beat 4.
     const { score } = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| bd: o / o / - / o |`,
     );
     const svg = renderToStaticMarkup(createElement(StaffView, { score }));
-    // Quarter rest is the only path using the zig-zag pattern
-    // (M ... L ... L ... L ...); other paths (beam ends, flags) don't
-    // chain three Ls. Easiest: just check that the svg has more <path>
-    // elements than a bar with no empty beats.
-    const filled = parseDrumtab(
-      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
-    ).score;
-    const svgFilled = renderToStaticMarkup(createElement(StaffView, { score: filled }));
-    const paths = (svg.match(/<path /g) ?? []).length;
-    const pathsFilled = (svgFilled.match(/<path /g) ?? []).length;
-    expect(paths).toBeGreaterThan(pathsFilled);
+    // Quarter rest is rendered as the SMuFL Unicode glyph 𝄽 inside a <text>.
+    expect(svg).toContain("𝄽");
   });
 });
 
