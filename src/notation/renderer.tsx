@@ -513,32 +513,57 @@ function HitGlyph({ laid }: { laid: LaidOutHit }) {
   const { hit, x, y } = laid;
   const scale = instrumentSizeScale[hit.instrument] ?? 1;
   const size = HIT_BASE_SIZE * scale;
+  const isFlam = hit.articulations.includes("flam");
+  const isGhost = hit.articulations.includes("ghost");
+  const isRoll = hit.articulations.includes("roll");
+  const isChoke = hit.articulations.includes("choke");
+  const isAccent = hit.articulations.includes("accent");
+
   return (
     <g>
-      {hit.articulations.includes("ghost") ? (
+      {/* Flam grace note: a smaller head ~30% size to the upper-left of the
+          main head, with a thin slash connecting them. Drawn first so the
+          main head sits on top if they visually overlap. */}
+      {isFlam ? (
         <>
-          <text
+          <HitHead
+            hit={hit}
             x={x - size * 1.8}
-            y={y + size * 0.8}
-            className="fill-stone-700 text-[11px] font-black"
-            textAnchor="middle"
-          >
-            (
-          </text>
-          <text
-            x={x + size * 1.2}
-            y={y + size * 0.8}
-            className="fill-stone-700 text-[11px] font-black"
-            textAnchor="middle"
-          >
-            )
-          </text>
+            y={y - size * 1.1}
+            size={size * 0.55}
+          />
+          <path
+            d={`M ${x - size * 2.4} ${y + size * 0.4} L ${x - size * 0.8} ${y - size * 1.6}`}
+            className="fill-none stroke-stone-700"
+            strokeWidth={1.1}
+            strokeLinecap="round"
+          />
+        </>
+      ) : null}
+
+      {/* Ghost note: draw rounded-rectangle brackets as paths so they hug
+          the head at a consistent baseline, regardless of font metrics. */}
+      {isGhost ? (
+        <>
+          <path
+            d={`M ${x - size * 1.8} ${y - size * 1.2} q ${-size * 0.6} ${size * 1.2} 0 ${size * 2.4}`}
+            className="fill-none stroke-stone-600"
+            strokeWidth={1.2}
+            strokeLinecap="round"
+          />
+          <path
+            d={`M ${x + size * 1.8} ${y - size * 1.2} q ${size * 0.6} ${size * 1.2} 0 ${size * 2.4}`}
+            className="fill-none stroke-stone-600"
+            strokeWidth={1.2}
+            strokeLinecap="round"
+          />
         </>
       ) : null}
 
       <HitHead hit={hit} x={x} y={y} size={size} />
 
-      {hit.articulations.includes("accent") ? (
+      {/* Accent: wedge `>` above the head. */}
+      {isAccent ? (
         <path
           d={`M ${x - 6} ${y - 14} L ${x + 6} ${y - 10} L ${x - 6} ${y - 6}`}
           className="fill-none stroke-stone-900"
@@ -548,13 +573,48 @@ function HitGlyph({ laid }: { laid: LaidOutHit }) {
         />
       ) : null}
 
-      {hit.articulations.includes("roll") ? (
-        <path
-          d={`M ${x - 8} ${y + 12} q 4 -4 8 0 t 8 0`}
-          className="fill-none stroke-stone-900"
-          strokeWidth={1.4}
-          strokeLinecap="round"
-        />
+      {/* Roll: two parallel tremolo slashes above the head — standard
+          drum-roll notation. If accented, shift up so the `>` sits below
+          the slashes. */}
+      {isRoll
+        ? (() => {
+            const baseY = isAccent ? y - 18 : y - 12;
+            return (
+              <g>
+                <path
+                  d={`M ${x - 4} ${baseY} L ${x + 4} ${baseY - 4}`}
+                  className="fill-none stroke-stone-900"
+                  strokeWidth={1.6}
+                  strokeLinecap="round"
+                />
+                <path
+                  d={`M ${x - 4} ${baseY - 4} L ${x + 4} ${baseY - 8}`}
+                  className="fill-none stroke-stone-900"
+                  strokeWidth={1.6}
+                  strokeLinecap="round"
+                />
+              </g>
+            );
+          })()
+        : null}
+
+      {/* Choke / dampen: a small `+` above the head, standard cymbal
+          choke notation. */}
+      {isChoke ? (
+        <g>
+          <path
+            d={`M ${x - 3.5} ${y - 13} L ${x + 3.5} ${y - 13}`}
+            className="fill-none stroke-stone-900"
+            strokeWidth={1.4}
+            strokeLinecap="round"
+          />
+          <path
+            d={`M ${x} ${y - 16.5} L ${x} ${y - 9.5}`}
+            className="fill-none stroke-stone-900"
+            strokeWidth={1.4}
+            strokeLinecap="round"
+          />
+        </g>
       ) : null}
 
       {hit.sticking ? (

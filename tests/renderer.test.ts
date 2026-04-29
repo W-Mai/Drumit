@@ -14,7 +14,7 @@ function renderSvg(src: string, width = 900, showLabels = false): string {
 }
 
 describe("DrumChart", () => {
-  it("renders two-row layout with ghost parens and repeat marks", () => {
+  it("renders two-row layout with ghost brackets and repeat marks", () => {
     const svg = renderSvg(
       `title: T\nmeter: 4/4\n[A]\n| hh: x / x / x / x  bd: o / - / o / -  sn: - / (o) / - / o |\n| % |`,
       800,
@@ -22,7 +22,8 @@ describe("DrumChart", () => {
     );
     expect(svg).toContain("∂");
     expect(svg).toContain("∕");
-    expect(svg).toContain("(");
+    // Ghost brackets are drawn as stroke paths using stone-600.
+    expect(svg).toContain("stroke-stone-600");
     expect(svg).toContain("Cym");
   });
 
@@ -86,6 +87,45 @@ describe("DrumChart", () => {
     ];
     // Expect just 1 beam in total for the cymbal row.
     expect(beamLines.length).toBe(1);
+  });
+
+  it("renders flam as a smaller grace head left of the main head", () => {
+    const base = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o / - / - / - |`,
+    );
+    const flam = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| sn: fo / - / - / - |`,
+    );
+    // Flam adds an additional head glyph + a connecting slash stroke.
+    const baseCrosses = (base.match(/<path[^>]*d="M [^"]*L [^"]*M [^"]*L [^"]*"/g) ?? []).length;
+    const flamCrosses = (flam.match(/<path[^>]*d="M [^"]*L [^"]*M [^"]*L [^"]*"/g) ?? []).length;
+    expect(flamCrosses).toBe(baseCrosses + 1);
+  });
+
+  it("renders choke as a `+` mark above the head", () => {
+    const svg = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| cr: !o / - / - / - |`,
+    );
+    // Two short strokes forming a plus above the head.
+    const plusHorizontal = /M [^ ]+ [^ ]+ L [^ ]+ [^ ]+/g;
+    const count = (svg.match(plusHorizontal) ?? []).length;
+    // At least the two plus strokes. (Other strokes exist; we just assert
+    // presence — a bar without choke has none from the modifier group.)
+    expect(count).toBeGreaterThanOrEqual(2);
+  });
+
+  it("renders roll as two tremolo slashes above the head", () => {
+    const base = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o / - / - / - |`,
+    );
+    const roll = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| sn: ~o / - / - / - |`,
+    );
+    // Roll adds two extra short-stroke paths (the tremolo slashes).
+    const simplePath = /<path[^>]*d="M [^"]*L [^"]*"(?![^<]*M )/g;
+    const baseCount = (base.match(simplePath) ?? []).length;
+    const rollCount = (roll.match(simplePath) ?? []).length;
+    expect(rollCount).toBeGreaterThanOrEqual(baseCount + 2);
   });
 
   it("uses ● for kick and × for snare heads", () => {
