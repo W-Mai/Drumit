@@ -761,7 +761,12 @@ export default function App() {
                 Fix parse errors to update the preview.
               </div>
             ) : viewMode === "staff" ? (
-              <StaffView score={score} />
+              <StaffView
+                score={score}
+                selectedBarIndex={clampedSelectedBar}
+                onSelectBar={(idx) => setSelectedBar(idx)}
+                playCursor={playCursor}
+              />
             ) : (
               <DrumChart
                 layout={layout}

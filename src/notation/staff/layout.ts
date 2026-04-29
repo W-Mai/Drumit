@@ -163,6 +163,7 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     index: barIndex,
     x,
     width,
+    beats: beatsPerBar,
     notes,
     rests,
     beams,

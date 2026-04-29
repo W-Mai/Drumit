@@ -224,6 +224,38 @@ describe("StaffView (P6: sticking)", () => {
   });
 });
 
+describe("StaffView (I1: selection + playhead)", () => {
+  const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n`;
+
+  it("marks the selected bar with the amber highlight classes", () => {
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(
+      createElement(StaffView, { score, selectedBarIndex: 1 }),
+    );
+    expect(svg).toContain("fill-amber-200/60");
+    expect(svg).toContain("stroke-amber-500");
+  });
+
+  it("marks the playhead bar with emerald highlights + the current beat", () => {
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(
+      createElement(StaffView, {
+        score,
+        playCursor: { barIndex: 0, beatIndex: 2 },
+      }),
+    );
+    expect(svg).toContain("fill-emerald-100/70");
+    expect(svg).toContain("fill-emerald-300/40");
+  });
+
+  it("exposes data-bar-index on each bar group", () => {
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    expect(svg).toContain('data-bar-index="0"');
+    expect(svg).toContain('data-bar-index="1"');
+  });
+});
+
 describe("StaffView (S10: auto-wrap systems)", () => {
   it("emits multiple systems when bar count exceeds a single row", () => {
     const bars = Array.from(

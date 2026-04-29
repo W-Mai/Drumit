@@ -77,6 +77,8 @@ export interface StaffBar {
   index: number;
   x: number;
   width: number;
+  /** Number of beats in the bar (bar-level meter override collapsed down). */
+  beats: number;
   notes: StaffNote[];
   rests: StaffRest[];
   beams: StaffBeam[];

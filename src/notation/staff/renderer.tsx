@@ -34,12 +34,21 @@ import type {
 interface Props {
   score: Score;
   width?: number;
+  selectedBarIndex?: number | null;
+  onSelectBar?: (index: number) => void;
+  playCursor?: { barIndex: number; beatIndex: number } | null;
 }
 
 const SYSTEM_PAD_X = 20;
 const LEDGER_WIDTH = STAFF_SPACE * 0.8;
 
-export function StaffView({ score, width = 980 }: Props) {
+export function StaffView({
+  score,
+  width = 980,
+  selectedBarIndex = null,
+  onSelectBar,
+  playCursor,
+}: Props) {
   const actualWidth = Math.max(400, width);
   const layout = layoutStaff(score, { width: actualWidth });
   const height = layout.height;
@@ -102,31 +111,114 @@ export function StaffView({ score, width = 980 }: Props) {
           ) : (
             <PercussionClef x={clefX} y={system.y} />
           )}
-          <SystemNotes system={system} />
+          <SystemNotes
+            system={system}
+            selectedBarIndex={selectedBarIndex}
+            onSelectBar={onSelectBar}
+            playCursor={playCursor}
+          />
         </g>
       ))}
     </svg>
   );
 }
 
-function SystemNotes({ system }: { system: StaffSystem }) {
+function SystemNotes({
+  system,
+  selectedBarIndex,
+  onSelectBar,
+  playCursor,
+}: {
+  system: StaffSystem;
+  selectedBarIndex: number | null;
+  onSelectBar?: (index: number) => void;
+  playCursor?: { barIndex: number; beatIndex: number } | null;
+}) {
   const staffY = system.y;
   return (
     <>
       {system.bars.map((bar) => (
-        <BarNotes key={bar.index} bar={bar} staffY={staffY} />
+        <BarNotes
+          key={bar.index}
+          bar={bar}
+          staffY={staffY}
+          selected={selectedBarIndex === bar.index}
+          isPlayhead={playCursor?.barIndex === bar.index}
+          playBeatIndex={
+            playCursor?.barIndex === bar.index ? playCursor.beatIndex : undefined
+          }
+          onSelect={onSelectBar ? () => onSelectBar(bar.index) : undefined}
+        />
       ))}
     </>
   );
 }
 
-function BarNotes({ bar, staffY }: { bar: StaffBar; staffY: number }) {
+function BarNotes({
+  bar,
+  staffY,
+  selected,
+  isPlayhead,
+  playBeatIndex,
+  onSelect,
+}: {
+  bar: StaffBar;
+  staffY: number;
+  selected?: boolean;
+  isPlayhead?: boolean;
+  playBeatIndex?: number;
+  onSelect?: () => void;
+}) {
   const beamedNoteIndices = new Set<number>();
   for (const beam of bar.beams) {
     for (let i = beam.start; i <= beam.end; i += 1) beamedNoteIndices.add(i);
   }
+  const barTop = staffY - STAFF_SPACE * 0.5;
+  const barHeight = STAFF_SPACE * 5;
+  const beatWidth = bar.width / bar.beats;
   return (
-    <g>
+    <g
+      onClick={onSelect}
+      style={onSelect ? { cursor: "pointer" } : undefined}
+      data-bar-index={bar.index}
+    >
+      <rect
+        x={bar.x}
+        y={barTop}
+        width={bar.width}
+        height={barHeight}
+        rx={4}
+        data-bar-highlight="true"
+        className={
+          isPlayhead
+            ? "fill-emerald-100/70 stroke-emerald-500"
+            : selected
+              ? "fill-amber-200/60 stroke-amber-500"
+              : "fill-transparent stroke-transparent hover:fill-stone-200/40"
+        }
+        strokeWidth={isPlayhead || selected ? 1.2 : 0}
+      />
+      {isPlayhead && typeof playBeatIndex === "number" ? (
+        <rect
+          x={bar.x + playBeatIndex * beatWidth}
+          y={barTop}
+          width={beatWidth}
+          height={barHeight}
+          className="fill-emerald-300/40"
+        />
+      ) : null}
+      {Array.from({ length: bar.beats }, (_, i) => (
+        <rect
+          key={`beat-overlay-${i}`}
+          x={bar.x + i * beatWidth}
+          y={barTop}
+          width={beatWidth}
+          height={barHeight}
+          className="fill-transparent"
+          data-beat-rect="true"
+          data-beat-index={i}
+        />
+      ))}
       {bar.repeatStart ? (
         <RepeatBarline x={bar.x} staffY={staffY} side="start" />
       ) : null}
