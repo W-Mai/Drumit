@@ -107,6 +107,21 @@ meter: 4/4
   });
 });
 
+describe("StaffView (P2: 1st / 2nd ending)", () => {
+  it("labels a bar with [1.] when it carries ending='1'", () => {
+    const src = `title: T
+meter: 4/4
+[A]
+|: bd: o / o / o / o |
+| bd: o / o / o / o :| [1]
+| bd: o / o / o / o | [2]`;
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    expect(svg).toContain(">1.<");
+    expect(svg).toContain(">2.<");
+  });
+});
+
 describe("StaffView (S10: auto-wrap systems)", () => {
   it("emits multiple systems when bar count exceeds a single row", () => {
     const bars = Array.from(

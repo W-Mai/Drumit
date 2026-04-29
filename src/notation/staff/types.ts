@@ -79,6 +79,8 @@ export interface StaffBar {
   repeatStart: boolean;
   /** When endBarline is 'repeat-end', how many times the section plays. */
   repeatTimes?: number;
+  /** First / second ending bracket above this bar. */
+  ending?: "1" | "2";
 }
 
 export interface StaffSystem {

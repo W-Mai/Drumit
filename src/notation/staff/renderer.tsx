@@ -7,6 +7,7 @@ import {
   stepToY,
 } from "./geometry";
 import {
+  EndingBracket,
   Notehead,
   NoteheadFlags,
   NoteheadStem,
@@ -123,6 +124,14 @@ function BarNotes({ bar, staffY }: { bar: StaffBar; staffY: number }) {
     <g>
       {bar.repeatStart ? (
         <RepeatBarline x={bar.x} staffY={staffY} side="start" />
+      ) : null}
+      {bar.ending ? (
+        <EndingBracket
+          x={bar.x + 4}
+          y={staffY - STAFF_SPACE * 1.8}
+          width={bar.width - 8}
+          label={`${bar.ending}.`}
+        />
       ) : null}
       {bar.endBarline === "repeat-end" ? (
         <RepeatBarline

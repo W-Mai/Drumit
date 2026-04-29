@@ -155,6 +155,7 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     endBarline: bar.repeatEnd ? "repeat-end" : "single",
     repeatStart: !!bar.repeatStart,
     repeatTimes: bar.repeatEnd?.times,
+    ending: bar.ending,
   };
 }
 

@@ -61,6 +61,49 @@ export function PercussionClef({
   );
 }
 
+/** First / second ending bracket above a bar. */
+export function EndingBracket({
+  x,
+  y,
+  width,
+  label,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  label: string;
+}): ReactNode {
+  const tickLen = STAFF_SPACE * 0.8;
+  return (
+    <g>
+      <line
+        x1={x}
+        x2={x + width}
+        y1={y}
+        y2={y}
+        className="stroke-stone-700"
+        strokeWidth={1.2}
+      />
+      <line
+        x1={x}
+        x2={x}
+        y1={y}
+        y2={y + tickLen}
+        className="stroke-stone-700"
+        strokeWidth={1.2}
+      />
+      <text
+        x={x + 4}
+        y={y + STAFF_SPACE * 1.15}
+        className="fill-stone-900 font-bold italic"
+        style={{ fontSize: 11 }}
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
 /**
  * Repeat barline: a thin line + a thick line + two dots on the mid-third
  * of the staff. `side="start"` paints thick-thin with dots on the right,
