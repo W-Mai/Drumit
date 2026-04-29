@@ -11,6 +11,7 @@ import {
   NoteheadFlags,
   NoteheadStem,
   PercussionClef,
+  RepeatBarline,
   Rest,
   StaffLines,
   TimeSignature,
@@ -120,14 +121,26 @@ function BarNotes({ bar, staffY }: { bar: StaffBar; staffY: number }) {
   }
   return (
     <g>
-      <line
-        x1={bar.barlineX}
-        x2={bar.barlineX}
-        y1={staffY}
-        y2={staffY + STAFF_SPACE * 4}
-        className="stroke-stone-900"
-        strokeWidth={1}
-      />
+      {bar.repeatStart ? (
+        <RepeatBarline x={bar.x} staffY={staffY} side="start" />
+      ) : null}
+      {bar.endBarline === "repeat-end" ? (
+        <RepeatBarline
+          x={bar.barlineX}
+          staffY={staffY}
+          side="end"
+          times={bar.repeatTimes}
+        />
+      ) : (
+        <line
+          x1={bar.barlineX}
+          x2={bar.barlineX}
+          y1={staffY}
+          y2={staffY + STAFF_SPACE * 4}
+          className="stroke-stone-900"
+          strokeWidth={1}
+        />
+      )}
       {bar.notes.map((note, i) => (
         <NoteMarker
           key={i}

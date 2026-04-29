@@ -61,6 +61,72 @@ export function PercussionClef({
   );
 }
 
+/**
+ * Repeat barline: a thin line + a thick line + two dots on the mid-third
+ * of the staff. `side="start"` paints thick-thin with dots on the right,
+ * `side="end"` is the mirror (dots-thin-thick).
+ */
+export function RepeatBarline({
+  x,
+  staffY,
+  side,
+  times,
+}: {
+  x: number;
+  staffY: number;
+  side: "start" | "end";
+  times?: number;
+}): ReactNode {
+  const top = staffY;
+  const bottom = staffY + STAFF_SPACE * 4;
+  const thin = 1.2;
+  const thick = 4;
+  const gap = 3;
+  const dotOffset = 6;
+  const dotTopY = staffY + stepToY(-1);
+  const dotBotY = staffY + stepToY(1);
+
+  const isStart = side === "start";
+  const thickX = isStart ? x + thick / 2 : x - thick / 2;
+  const thinX = isStart ? thickX + thick / 2 + gap : thickX - thick / 2 - gap;
+  const dotsX = isStart ? thinX + dotOffset : thinX - dotOffset;
+
+  return (
+    <g>
+      <line
+        x1={thickX}
+        x2={thickX}
+        y1={top}
+        y2={bottom}
+        className="stroke-stone-900"
+        strokeWidth={thick}
+        strokeLinecap="butt"
+      />
+      <line
+        x1={thinX}
+        x2={thinX}
+        y1={top}
+        y2={bottom}
+        className="stroke-stone-900"
+        strokeWidth={thin}
+      />
+      <circle cx={dotsX} cy={dotTopY} r={1.5} className="fill-stone-900" />
+      <circle cx={dotsX} cy={dotBotY} r={1.5} className="fill-stone-900" />
+      {side === "end" && times && times > 2 ? (
+        <text
+          x={x - thick / 2 - gap - dotOffset - 10}
+          y={top - 4}
+          textAnchor="end"
+          className="fill-stone-700 font-bold italic"
+          style={{ fontSize: 11 }}
+        >
+          ×{times}
+        </text>
+      ) : null}
+    </g>
+  );
+}
+
 interface NoteheadProps {
   x: number;
   staffY: number;

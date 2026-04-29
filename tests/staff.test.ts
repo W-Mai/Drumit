@@ -82,6 +82,31 @@ describe("StaffView (S5: stems + flags)", () => {
   });
 });
 
+describe("StaffView (P1: repeat barlines)", () => {
+  it("draws repeat dots when a bar opens with |: ", () => {
+    const src = `title: T
+meter: 4/4
+[A]
+|: bd: o / o / o / o |
+| bd: o / o / o / o |`;
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // Repeat-start emits two dots (circles) that a plain bar doesn't have.
+    const circles = (svg.match(/<circle /g) ?? []).length;
+    expect(circles).toBeGreaterThanOrEqual(2);
+  });
+
+  it("shows ×N when a repeat plays more than twice", () => {
+    const src = `title: T
+meter: 4/4
+[A]
+|: bd: o / o / o / o :| x3`;
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    expect(svg).toContain("×3");
+  });
+});
+
 describe("StaffView (S10: auto-wrap systems)", () => {
   it("emits multiple systems when bar count exceeds a single row", () => {
     const bars = Array.from(

@@ -60,6 +60,8 @@ export interface StaffTupletBracket {
   count: number;
 }
 
+export type BarlineKind = "single" | "repeat-start" | "repeat-end";
+
 export interface StaffBar {
   index: number;
   x: number;
@@ -69,6 +71,14 @@ export interface StaffBar {
   beams: StaffBeam[];
   tuplets: StaffTupletBracket[];
   barlineX: number;
+  /** Visual kind of the right-edge barline of this bar. Repeat-starts are
+   *  painted on the _next_ bar's left edge by the renderer. */
+  endBarline: BarlineKind;
+  /** True if this bar opens a repeated section (paint the start glyph on
+   *  the left edge). */
+  repeatStart: boolean;
+  /** When endBarline is 'repeat-end', how many times the section plays. */
+  repeatTimes?: number;
 }
 
 export interface StaffSystem {
