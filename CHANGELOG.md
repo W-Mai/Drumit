@@ -11,6 +11,29 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.7]
+
+### Fixed
+
+- **Staff view compound-beat rendering** — multi-voice bars like
+  `cr / hh / bd / sn / ft` with in-beat `,` groups no longer produce
+  diagonal beams or mismatched durations.
+  - Bars are now split into **upper (cymbal)** and **lower (drum)**
+    voices; each voice has its own stems, beams, rests, and tuplets
+  - Beams are horizontal by construction — every stem in a beam pins
+    to the same tip Y
+  - Secondary beams appear on 16th / 32nd sub-spans inside a primary
+    run so mixed 8th / 16th rhythms read correctly
+  - Chunkier filled-teardrop flag shapes replace the old S-curve
+    strokes for isolated short notes
+
+### Known limitations (deferred)
+
+- `%` "repeat previous bar" renders as all-rests on staff view; the
+  dedicated repeat-last glyph (like Drumit view's `%`) isn't drawn yet
+- Half-beat rest filling inside a beat isn't attempted — only full
+  empty beats emit a quarter rest
+
 ## [2026.04.29.6]
 
 ### Changed
@@ -249,7 +272,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.6...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.7...HEAD
+[2026.04.29.7]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.6...v2026.04.29.7
 [2026.04.29.6]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.5...v2026.04.29.6
 [2026.04.29.5]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.4...v2026.04.29.5
 [2026.04.29.4]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.3...v2026.04.29.4
