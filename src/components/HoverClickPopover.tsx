@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { FloatingMenu } from "./FloatingMenu";
+import { useIsTouchDevice } from "../lib/useMediaQuery";
 
 interface Props {
   /** Content rendered as the trigger. Receives the state so the consumer
@@ -49,6 +50,10 @@ export function HoverClickPopover({
   const [anchor, setAnchor] = useState<HTMLSpanElement | null>(null);
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Touchscreens don't produce reliable hover events, and synthesizing
+  // hover from touch just causes flicker. In that case we downgrade the
+  // UX to click-only and treat every open as pinned.
+  const isTouch = useIsTouchDevice();
 
   const cancelTimers = useCallback(() => {
     if (openTimer.current !== null) {
@@ -64,6 +69,7 @@ export function HoverClickPopover({
   useEffect(() => cancelTimers, [cancelTimers]);
 
   const handleMouseEnter = useCallback(() => {
+    if (isTouch) return;
     if (closeTimer.current !== null) {
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
@@ -73,9 +79,10 @@ export function HoverClickPopover({
       setOpen(true);
       openTimer.current = null;
     }, openDelay);
-  }, [open, openDelay]);
+  }, [open, openDelay, isTouch]);
 
   const handleMouseLeave = useCallback(() => {
+    if (isTouch) return;
     if (openTimer.current !== null) {
       clearTimeout(openTimer.current);
       openTimer.current = null;
@@ -85,7 +92,7 @@ export function HoverClickPopover({
       setOpen(false);
       closeTimer.current = null;
     }, closeDelay);
-  }, [open, pinned, closeDelay]);
+  }, [open, pinned, closeDelay, isTouch]);
 
   const handleClick = useCallback(() => {
     cancelTimers();

@@ -72,7 +72,7 @@ export function FloatingMenu({
   useEffect(() => {
     if (!open) return;
 
-    function onDocClick(e: MouseEvent) {
+    function onDocClick(e: PointerEvent) {
       if (!menuRef.current) return;
       const target = e.target as Node;
       if (menuRef.current.contains(target)) return;
@@ -104,12 +104,12 @@ export function FloatingMenu({
       setCoords({ left, top });
     }
 
-    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("pointerdown", onDocClick);
     document.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onScroll);
     return () => {
-      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("pointerdown", onDocClick);
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onScroll);
