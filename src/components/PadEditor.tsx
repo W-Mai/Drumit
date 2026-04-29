@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { serializeBar } from "../notation/serialize";
 import { cn } from "../lib/utils";
 import {
@@ -17,6 +17,11 @@ import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
 import { Button, Chip, ChipGroup } from "./ui";
 import { useHotkeys } from "../lib/useHotkeys";
+import {
+  DIGIT_BY_INSTRUMENT,
+  INSTRUMENT_BY_DIGIT,
+} from "../notation/hotkeyMap";
+import { useHotkeyContext } from "./hotkeyContext";
 
 /* ------------------------------------------------------------------ */
 /* Props                                                               */
@@ -254,6 +259,8 @@ export function PadEditor({
     slotIndex: number;
     laneIdx: number;
   }>({ beatIndex: 0, slotIndex: 0, laneIdx: 0 });
+  const { setCurrentInstrument, setAutoAdvance: ctxSetAutoAdvance } =
+    useHotkeyContext();
   const [autoAdvance, setAutoAdvance] = useState(true);
 
   // Keep cursor in valid range when bar/beat/presentInstruments change.
@@ -276,6 +283,15 @@ export function PadEditor({
   }, [cursor, beatsPerBar, bar, presentInstruments, barResolution]);
 
   const currentInstrument = presentInstruments[clampedCursor.laneIdx];
+
+  // Publish current cursor state to the hotkey context so the sidebar
+  // HotkeyPanel can highlight the active instrument and auto-advance state.
+  useEffect(() => {
+    setCurrentInstrument(currentInstrument ?? null);
+  }, [currentInstrument, setCurrentInstrument]);
+  useEffect(() => {
+    ctxSetAutoAdvance(autoAdvance);
+  }, [autoAdvance, ctxSetAutoAdvance]);
 
   // --- Keyboard navigation helpers ---
   function moveCursor(dx: number, dy: number) {
@@ -436,20 +452,6 @@ export function PadEditor({
     );
   }
 
-  // Number keys → instrument shortcut map.
-  const INST_BY_DIGIT: Record<string, Instrument> = {
-    "1": "kick",
-    "2": "snare",
-    "3": "hihatClosed",
-    "4": "hihatOpen",
-    "5": "ride",
-    "6": "crashLeft",
-    "7": "crashRight",
-    "8": "tomHigh",
-    "9": "tomMid",
-    "0": "floorTom",
-  };
-
   useHotkeys(
     [
       // Navigation
@@ -482,7 +484,7 @@ export function PadEditor({
       { key: "Delete", handler: () => clearCursorSlot() },
       { key: "Backspace", handler: () => clearCursorSlot() },
       // Instrument digits
-      ...Object.entries(INST_BY_DIGIT).map(([digit, instrument]) => ({
+      ...Object.entries(INSTRUMENT_BY_DIGIT).map(([digit, instrument]) => ({
         key: digit,
         handler: () => toggleAtCursor(instrument),
       })),
@@ -854,6 +856,14 @@ function InstrumentRow({
             {canonicalAlias[instrument]}
           </span>
         </div>
+        {DIGIT_BY_INSTRUMENT[instrument] ? (
+          <span
+            className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white font-mono text-[10px] font-bold text-stone-700"
+            title={`Press ${DIGIT_BY_INSTRUMENT[instrument]} to toggle this instrument at the cursor`}
+          >
+            {DIGIT_BY_INSTRUMENT[instrument]}
+          </span>
+        ) : null}
       </div>
       {Array.from({ length: beatsPerBar }, (_, beatIndex) => {
         const lane = bar.beats[beatIndex]?.lanes.find(
@@ -1417,23 +1427,31 @@ function AddInstrumentMenu({
             Add instrument
           </div>
           <div className="grid grid-cols-3 gap-1.5">
-            {options.map((i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  onPick(i);
-                  setOpen(false);
-                }}
-                className="flex flex-col items-center gap-1 rounded-lg border border-stone-200 bg-white p-2 text-[10px] font-bold text-stone-700 transition hover:border-stone-900 hover:bg-stone-900 hover:text-amber-100"
-                title={`${instrumentLabels[i]} (${canonicalAlias[i]})`}
-              >
-                <InstrumentIcon instrument={i} className="size-6" />
-                <span className="truncate text-center leading-tight">
-                  {instrumentLabels[i]}
-                </span>
-              </button>
-            ))}
+            {options.map((i) => {
+              const digit = DIGIT_BY_INSTRUMENT[i];
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    onPick(i);
+                    setOpen(false);
+                  }}
+                  className="group relative flex flex-col items-center gap-1 rounded-lg border border-stone-200 bg-white p-2 text-[10px] font-bold text-stone-700 transition hover:border-stone-900 hover:bg-stone-900 hover:text-amber-100"
+                  title={`${instrumentLabels[i]} (${canonicalAlias[i]})${digit ? ` — press ${digit}` : ""}`}
+                >
+                  {digit ? (
+                    <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-sm bg-stone-100 font-mono text-[9px] text-stone-700 group-hover:bg-stone-700 group-hover:text-amber-100">
+                      {digit}
+                    </span>
+                  ) : null}
+                  <InstrumentIcon instrument={i} className="size-6" />
+                  <span className="truncate text-center leading-tight">
+                    {instrumentLabels[i]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </FloatingMenu>
@@ -1631,7 +1649,7 @@ function CursorStatusBar({
         Tab: Auto-advance {autoAdvance ? "ON" : "OFF"}
       </button>
       <span className="text-stone-400">
-        {"← → slot · ↑ ↓ lane · Home/End · ⌘←/→ bar · 1-9 inst · Del clear · >/g/f/r/! mods · ⇧R/⇧L stick · ⌥+digit div"}
+        Shortcuts in the Shortcuts panel →
       </span>
     </div>
   );

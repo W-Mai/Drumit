@@ -33,6 +33,8 @@ import {
   type DocumentRecord,
 } from "./lib/storage";
 import { DocumentList } from "./components/DocumentList";
+import { HotkeyPanel } from "./components/HotkeyPanel";
+import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { Badge, Button, Panel, PanelHeader, Select } from "./components/ui";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
@@ -357,6 +359,7 @@ export default function App() {
   }
 
   return (
+    <HotkeyContextProvider>
     <div className="mx-auto w-full max-w-[1600px] p-6">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-6">
         <div>
@@ -424,8 +427,8 @@ export default function App() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <div className="hidden lg:block">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="hidden flex-col gap-3 lg:flex">
           <DocumentList
             documents={documents.map((d) => ({
               id: d.id,
@@ -441,6 +444,7 @@ export default function App() {
             onExport={handleExportDoc}
             onImport={handleImportDoc}
           />
+          <HotkeyPanel />
         </div>
 
       <section className="flex flex-col gap-5">
@@ -592,6 +596,7 @@ export default function App() {
       </section>
       </div>
     </div>
+    </HotkeyContextProvider>
   );
 }
 
