@@ -17,7 +17,22 @@ import type {
 
 const HEADER_RE = /^([a-zA-Z][\w-]*)\s*:\s*(.+)$/;
 const SECTION_RE = /^\[([^\]]+)\]$/;
-const BAR_RE = /^\|(.+)\|\s*(.*)$/;
+/**
+ * A bar line. Start barline may be `|` (normal) or `|:` (repeat-start).
+ * End barline may be `|` (normal) or `:|` (repeat-end). After the closing
+ * barline, an optional suffix carries `x3` / `[1]` / repeat-end counts.
+ *
+ * Anchored at end: `(:?\|)\s*(.*)$` matches the LAST `:|` / `|` in the line,
+ * so inline `| meter: 2/4 | ...` still works and the closing `:|` isn't
+ * accidentally swallowed by the body.
+ */
+const BAR_RE = /^(\|:?)([\s\S]*?)(:?\|)\s*([^|]*)$/;
+/**
+ * Navigation directives that stand alone on their own line and attach
+ * to the most recently seen bar. Example: `@coda`, `@segno`, `@fine`,
+ * `@to-coda`, `@dc`, `@dc al fine`, `@ds al coda`.
+ */
+const NAV_RE = /^@\s*(segno|coda|to-coda|fine|dc|ds)(?:\s+al\s+(fine|coda))?\s*$/i;
 
 export function parseDrumtab(source: string): ParseResult {
   const diagnostics: Diagnostic[] = [];
@@ -51,14 +66,38 @@ export function parseDrumtab(source: string): ParseResult {
       return;
     }
 
+    const navMatch = line.match(NAV_RE);
+    if (navMatch) {
+      if (!currentSection || currentSection.bars.length === 0) {
+        diagnostics.push(
+          warn(lineNumber, `Navigation marker '${navMatch[0]}' needs a preceding bar.`),
+        );
+        return;
+      }
+      const kind = navMatch[1].toLowerCase();
+      const target = navMatch[2]?.toLowerCase();
+      const lastBar = currentSection.bars[currentSection.bars.length - 1];
+      lastBar.navigation = buildNavigation(kind, target);
+      return;
+    }
+
     const bar = line.match(BAR_RE);
     if (bar) {
       if (!currentSection) {
         currentSection = { label: "Main", bars: [] };
         score.sections.push(currentSection);
       }
+      const [, openMark, body, closeMark, suffix] = bar;
       currentSection.bars.push(
-        parseBar(bar[1].trim(), bar[2].trim(), score.meter.beats, lineNumber, diagnostics),
+        parseBar(
+          body.trim(),
+          suffix.trim(),
+          openMark === "|:",
+          closeMark === ":|",
+          score.meter.beats,
+          lineNumber,
+          diagnostics,
+        ),
       );
       return;
     }
@@ -124,16 +163,23 @@ function parseMeter(
 function parseBar(
   body: string,
   suffix: string,
+  repeatStart: boolean,
+  repeatEndMark: boolean,
   expectedBeats: number,
   lineNumber: number,
   diagnostics: Diagnostic[],
 ): Bar {
-  const repeatCount = parseRepeatCount(suffix);
+  // `x3` in the suffix either means "repeat this single bar 3 times" (no
+  // `:|` barline) or "play the repeat section a total of 3 times" (with
+  // a `:|` closing bar). Same number, different field.
+  const xCount = parseRepeatCount(suffix);
   const bar: Bar = {
     beats: [],
-    repeatCount,
+    repeatCount: repeatEndMark ? 1 : xCount,
     repeatPrevious: false,
     ending: parseEnding(suffix) ?? undefined,
+    repeatStart: repeatStart || undefined,
+    repeatEnd: repeatEndMark ? { times: Math.max(2, xCount) } : undefined,
     meter: undefined,
     source: body,
   };
@@ -448,6 +494,33 @@ function parseRepeatCount(suffix: string): number {
 function parseEnding(suffix: string): "1" | "2" | null {
   const match = suffix.match(/ending\s*([12])/i) || suffix.match(/\[([12])\]/);
   return match ? ((match[1] as "1" | "2")) : null;
+}
+
+function buildNavigation(
+  kind: string,
+  target?: string,
+): import("./types").NavigationMarker | undefined {
+  switch (kind) {
+    case "segno":
+      return { kind: "segno" };
+    case "coda":
+      return { kind: "coda" };
+    case "to-coda":
+      return { kind: "toCoda" };
+    case "fine":
+      return { kind: "fine" };
+    case "dc":
+      return {
+        kind: "dc",
+        target: target === "fine" || target === "coda" ? target : undefined,
+      };
+    case "ds":
+      return {
+        kind: "ds",
+        target: target === "fine" || target === "coda" ? target : undefined,
+      };
+  }
+  return undefined;
 }
 
 function stripComment(line: string): string {

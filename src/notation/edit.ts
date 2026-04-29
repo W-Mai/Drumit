@@ -262,6 +262,36 @@ export function toggleArticulation(
   });
 }
 
+export function toggleBarRepeatStart(
+  score: Score,
+  globalIndex: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    bar.repeatStart = !bar.repeatStart ? true : undefined;
+  });
+}
+
+export function toggleBarRepeatEnd(
+  score: Score,
+  globalIndex: number,
+  times = 2,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    bar.repeatEnd = bar.repeatEnd ? undefined : { times };
+  });
+}
+
+export function cycleBarEnding(
+  score: Score,
+  globalIndex: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    if (!bar.ending) bar.ending = "1";
+    else if (bar.ending === "1") bar.ending = "2";
+    else bar.ending = undefined;
+  });
+}
+
 /**
  * Remove a single instrument's lane from a specific beat. After this call
  * the beat contains no LaneBeat for that instrument, so the UI will fall

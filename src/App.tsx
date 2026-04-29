@@ -12,9 +12,12 @@ import { layoutScore } from "./notation/layout";
 import { DrumChart } from "./notation/renderer";
 import { validateScore } from "./notation/validate";
 import {
+  cycleBarEnding,
   deleteBar,
   insertBarAfter,
   setBarRepeatPrevious,
+  toggleBarRepeatEnd,
+  toggleBarRepeatStart,
   setGroupDivision,
   setLaneDivision,
   setSticking,
@@ -519,6 +522,21 @@ export default function App() {
                 onSetRepeat={(hint) =>
                   applyScoreUpdate((s) =>
                     setBarRepeatPrevious(s, clampedSelectedBar, hint),
+                  )
+                }
+                onToggleRepeatStart={() =>
+                  applyScoreUpdate((s) =>
+                    toggleBarRepeatStart(s, clampedSelectedBar),
+                  )
+                }
+                onToggleRepeatEnd={() =>
+                  applyScoreUpdate((s) =>
+                    toggleBarRepeatEnd(s, clampedSelectedBar),
+                  )
+                }
+                onCycleEnding={() =>
+                  applyScoreUpdate((s) =>
+                    cycleBarEnding(s, clampedSelectedBar),
                   )
                 }
                 onInsertAfter={() => {

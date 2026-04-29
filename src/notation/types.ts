@@ -112,8 +112,32 @@ export interface Bar {
    */
   repeatHint?: RepeatHint;
   ending?: "1" | "2";
+  /** This bar opens a repeated section (`|:`). */
+  repeatStart?: boolean;
+  /** This bar closes a repeated section (`:|`). The stored `times` is how
+   *  many times the enclosed span is played total (min 2). */
+  repeatEnd?: { times: number };
+  /** Navigation directive anchored to this bar (rendered as text marker). */
+  navigation?: NavigationMarker;
   source: string;
 }
+
+/**
+ * Navigation / jump directives attached to a bar.
+ *   - segno:   𝄋 — a saved jump target for D.S.
+ *   - coda:    𝄌 — saved target for "to Coda" jump.
+ *   - toCoda:  "To Coda" marker (jump to Coda on relevant pass)
+ *   - fine:    "Fine" — end the piece here on D.C./D.S. al Fine
+ *   - dc:      D.C. (al Fine / al Coda) — jump to the beginning
+ *   - ds:      D.S. (al Fine / al Coda) — jump to the Segno
+ */
+export type NavigationMarker =
+  | { kind: "segno" }
+  | { kind: "coda" }
+  | { kind: "toCoda" }
+  | { kind: "fine" }
+  | { kind: "dc"; target?: "fine" | "coda" }
+  | { kind: "ds"; target?: "fine" | "coda" };
 
 export interface Section {
   label: string;

@@ -22,6 +22,8 @@ export function serializeScore(score: Score): string {
     lines.push(`[${section.label}]`);
     section.bars.forEach((bar) => {
       lines.push(serializeBar(bar));
+      const nav = serializeNavigation(bar);
+      if (nav) lines.push(nav);
     });
   });
 
@@ -29,10 +31,12 @@ export function serializeScore(score: Score): string {
 }
 
 export function serializeBar(bar: Bar): string {
+  const openMark = bar.repeatStart ? "|:" : "|";
+  const closeMark = bar.repeatEnd ? ":|" : "|";
   const suffix = barSuffix(bar);
 
   if (bar.repeatPrevious) {
-    return `| ${repeatSymbol(bar.repeatHint)} |${suffix}`;
+    return `${openMark} ${repeatSymbol(bar.repeatHint)} ${closeMark}${suffix}`;
   }
 
   let body = "";
@@ -48,14 +52,37 @@ export function serializeBar(bar: Bar): string {
   });
 
   body += laneStrings.join("  ");
-  return `| ${body} |${suffix}`;
+  return `${openMark} ${body} ${closeMark}${suffix}`;
 }
 
 function barSuffix(bar: Bar): string {
   const parts: string[] = [];
-  if (bar.repeatCount > 1) parts.push(` x${bar.repeatCount}`);
+  if (bar.repeatEnd && bar.repeatEnd.times > 2) {
+    parts.push(` x${bar.repeatEnd.times}`);
+  } else if (!bar.repeatEnd && bar.repeatCount > 1) {
+    parts.push(` x${bar.repeatCount}`);
+  }
   if (bar.ending) parts.push(` [${bar.ending}]`);
   return parts.join("");
+}
+
+function serializeNavigation(bar: Bar): string | null {
+  const n = bar.navigation;
+  if (!n) return null;
+  switch (n.kind) {
+    case "segno":
+      return "@segno";
+    case "coda":
+      return "@coda";
+    case "toCoda":
+      return "@to-coda";
+    case "fine":
+      return "@fine";
+    case "dc":
+      return n.target ? `@dc al ${n.target}` : "@dc";
+    case "ds":
+      return n.target ? `@ds al ${n.target}` : "@ds";
+  }
 }
 
 function repeatSymbol(hint?: RepeatHint): string {

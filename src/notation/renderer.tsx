@@ -3,6 +3,31 @@ import type { LaidOutBar, LaidOutHit, LaidOutLayout, RowGroup } from "./layout";
 import type { Hit } from "./types";
 import { instrumentSizeScale } from "./instruments";
 
+function navigationLabel(nav: import("./types").NavigationMarker): string {
+  switch (nav.kind) {
+    case "segno":
+      return "𝄋";
+    case "coda":
+      return "𝄌";
+    case "toCoda":
+      return "To Coda";
+    case "fine":
+      return "Fine";
+    case "dc":
+      return nav.target === "fine"
+        ? "D.C. al Fine"
+        : nav.target === "coda"
+          ? "D.C. al Coda"
+          : "D.C.";
+    case "ds":
+      return nav.target === "fine"
+        ? "D.S. al Fine"
+        : nav.target === "coda"
+          ? "D.S. al Coda"
+          : "D.S.";
+  }
+}
+
 function rowGroupLabel(g: RowGroup): string {
   switch (g) {
     case "cymbals":
@@ -203,22 +228,142 @@ function BarView({
           ))
         : null}
 
-      <line
-        x1={x}
-        x2={x}
-        y1={barlineTop}
-        y2={barlineBottom}
-        className="stroke-stone-400"
-        strokeWidth={1.2}
-      />
-      <line
-        x1={x + width}
-        x2={x + width}
-        y1={barlineTop}
-        y2={barlineBottom}
-        className="stroke-stone-400"
-        strokeWidth={1.2}
-      />
+      {/* Opening barline. `|:` draws a thick bar + a thin one + two dots. */}
+      {bar.repeatStart ? (
+        <>
+          <line
+            x1={x - 4}
+            x2={x - 4}
+            y1={barlineTop}
+            y2={barlineBottom}
+            className="stroke-stone-700"
+            strokeWidth={3}
+          />
+          <line
+            x1={x}
+            x2={x}
+            y1={barlineTop}
+            y2={barlineBottom}
+            className="stroke-stone-700"
+            strokeWidth={1}
+          />
+          <circle
+            cx={x + 5}
+            cy={(barlineTop + barlineBottom) / 2 - 5}
+            r={2}
+            className="fill-stone-700"
+          />
+          <circle
+            cx={x + 5}
+            cy={(barlineTop + barlineBottom) / 2 + 5}
+            r={2}
+            className="fill-stone-700"
+          />
+        </>
+      ) : (
+        <line
+          x1={x}
+          x2={x}
+          y1={barlineTop}
+          y2={barlineBottom}
+          className="stroke-stone-400"
+          strokeWidth={1.2}
+        />
+      )}
+
+      {/* Closing barline. `:|` mirrors `|:`. */}
+      {bar.repeatEnd ? (
+        <>
+          <circle
+            cx={x + width - 5}
+            cy={(barlineTop + barlineBottom) / 2 - 5}
+            r={2}
+            className="fill-stone-700"
+          />
+          <circle
+            cx={x + width - 5}
+            cy={(barlineTop + barlineBottom) / 2 + 5}
+            r={2}
+            className="fill-stone-700"
+          />
+          <line
+            x1={x + width}
+            x2={x + width}
+            y1={barlineTop}
+            y2={barlineBottom}
+            className="stroke-stone-700"
+            strokeWidth={1}
+          />
+          <line
+            x1={x + width + 4}
+            x2={x + width + 4}
+            y1={barlineTop}
+            y2={barlineBottom}
+            className="stroke-stone-700"
+            strokeWidth={3}
+          />
+          {bar.repeatEnd.times > 2 ? (
+            <text
+              x={x + width - 4}
+              y={barlineTop - 6}
+              textAnchor="end"
+              className="fill-stone-700 text-[10px] font-extrabold"
+            >
+              ×{bar.repeatEnd.times}
+            </text>
+          ) : null}
+        </>
+      ) : (
+        <line
+          x1={x + width}
+          x2={x + width}
+          y1={barlineTop}
+          y2={barlineBottom}
+          className="stroke-stone-400"
+          strokeWidth={1.2}
+        />
+      )}
+
+      {/* First / second ending bracket */}
+      {bar.ending ? (
+        <>
+          <line
+            x1={x}
+            x2={x + width}
+            y1={barlineTop - 14}
+            y2={barlineTop - 14}
+            className="stroke-stone-700"
+            strokeWidth={1}
+          />
+          <line
+            x1={x}
+            x2={x}
+            y1={barlineTop - 14}
+            y2={barlineTop - 6}
+            className="stroke-stone-700"
+            strokeWidth={1}
+          />
+          <text
+            x={x + 5}
+            y={barlineTop - 6}
+            className="fill-stone-700 text-[10px] font-extrabold"
+          >
+            {bar.ending}.
+          </text>
+        </>
+      ) : null}
+
+      {/* Navigation marker (Segno / Coda / To Coda / Fine / D.C. / D.S.) */}
+      {bar.navigation ? (
+        <text
+          x={x + width / 2}
+          y={barlineTop - 18}
+          textAnchor="middle"
+          className="fill-stone-700 text-[10px] font-bold italic"
+        >
+          {navigationLabel(bar.navigation)}
+        </text>
+      ) : null}
 
       {bar.repeatPrevious ? (
         <text

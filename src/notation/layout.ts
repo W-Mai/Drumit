@@ -80,6 +80,10 @@ export interface LaidOutBar {
   hits: LaidOutHit[];
   repeatPrevious: boolean;
   repeatCount: number;
+  repeatStart?: boolean;
+  repeatEnd?: { times: number };
+  ending?: "1" | "2";
+  navigation?: import("./types").NavigationMarker;
 }
 
 export interface LaidOutLayout {
@@ -332,6 +336,10 @@ function layoutBar(
     hits,
     repeatPrevious: bar.repeatPrevious,
     repeatCount: bar.repeatCount,
+    repeatStart: bar.repeatStart,
+    repeatEnd: bar.repeatEnd,
+    ending: bar.ending,
+    navigation: bar.navigation,
   };
 }
 

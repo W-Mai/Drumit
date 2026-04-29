@@ -25,18 +25,21 @@ export function Chip({
   disabled,
   children,
   className,
+  title,
 }: {
   active?: boolean;
   onClick?: () => void;
   disabled?: boolean;
   children: React.ReactNode;
   className?: string;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={title}
       className={cn(
         "rounded-full px-2.5 py-0.5 text-[11px] font-bold transition",
         active

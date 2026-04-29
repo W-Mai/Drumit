@@ -33,6 +33,9 @@ interface Props {
   totalBars: number;
   beatsPerBar: number;
   onSetRepeat: (hint: RepeatHint | null) => void;
+  onToggleRepeatStart: () => void;
+  onToggleRepeatEnd: () => void;
+  onCycleEnding: () => void;
   onInsertAfter: () => void;
   onDelete: () => void;
   onSetDivision: (
@@ -227,6 +230,9 @@ export function PadEditor({
   totalBars,
   beatsPerBar,
   onSetRepeat,
+  onToggleRepeatStart,
+  onToggleRepeatEnd,
+  onCycleEnding,
   onInsertAfter,
   onDelete,
   onSetDivision,
@@ -562,6 +568,9 @@ export function PadEditor({
         barResolution={barResolution}
         onChangeResolution={setBarResolution}
         onSetRepeat={onSetRepeat}
+        onToggleRepeatStart={onToggleRepeatStart}
+        onToggleRepeatEnd={onToggleRepeatEnd}
+        onCycleEnding={onCycleEnding}
         onInsertAfter={onInsertAfter}
         onDelete={onDelete}
       />
@@ -627,6 +636,9 @@ function BarHeader({
   barResolution,
   onChangeResolution,
   onSetRepeat,
+  onToggleRepeatStart,
+  onToggleRepeatEnd,
+  onCycleEnding,
   onInsertAfter,
   onDelete,
 }: {
@@ -636,6 +648,9 @@ function BarHeader({
   barResolution: Resolution;
   onChangeResolution: (r: Resolution) => void;
   onSetRepeat: (hint: RepeatHint | null) => void;
+  onToggleRepeatStart: () => void;
+  onToggleRepeatEnd: () => void;
+  onCycleEnding: () => void;
   onInsertAfter: () => void;
   onDelete: () => void;
 }) {
@@ -658,28 +673,34 @@ function BarHeader({
             Pattern
           </Chip>
           <Chip
-            active={bar.repeatPrevious && bar.repeatHint === "plain"}
+            active={bar.repeatPrevious}
             onClick={() => onSetRepeat("plain")}
           >
             %
           </Chip>
+        </ChipGroup>
+
+        <ChipGroup>
           <Chip
-            active={bar.repeatPrevious && bar.repeatHint === "dot"}
-            onClick={() => onSetRepeat("dot")}
+            active={!!bar.repeatStart}
+            onClick={onToggleRepeatStart}
+            title="Mark this bar as the start of a repeat section (|:)"
           >
-            %.
+            |:
           </Chip>
           <Chip
-            active={bar.repeatPrevious && bar.repeatHint === "dash"}
-            onClick={() => onSetRepeat("dash")}
+            active={!!bar.repeatEnd}
+            onClick={onToggleRepeatEnd}
+            title="Mark this bar as the end of a repeat section (:|)"
           >
-            %-
+            :|
           </Chip>
           <Chip
-            active={bar.repeatPrevious && bar.repeatHint === "comma"}
-            onClick={() => onSetRepeat("comma")}
+            active={!!bar.ending}
+            onClick={onCycleEnding}
+            title="Cycle: no ending → [1.] → [2.] → none"
           >
-            %,
+            {bar.ending ? `[${bar.ending}.]` : "[1./2.]"}
           </Chip>
         </ChipGroup>
       </div>
