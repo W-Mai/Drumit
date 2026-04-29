@@ -262,6 +262,24 @@ export function toggleArticulation(
   });
 }
 
+/**
+ * Remove a single instrument's lane from a specific beat. After this call
+ * the beat contains no LaneBeat for that instrument, so the UI will fall
+ * back to its "empty-lane default" (bar-level resolution template).
+ */
+export function clearLaneBeat(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex];
+    if (!beat) return;
+    beat.lanes = beat.lanes.filter((l) => l.instrument !== instrument);
+  });
+}
+
 export function setSticking(
   score: Score,
   globalIndex: number,
