@@ -220,21 +220,31 @@ function BarView({
       </text>
 
       {showLabels && isRowStart
-        ? rowGroups.flatMap((g) => {
-            const ry = rowY[g];
-            if (ry === undefined) return [];
-            return [
+        ? (() => {
+            // Group labels share a y coordinate when layout packed multiple
+            // row groups onto the same visual row (e.g. snare + kick when
+            // they never collide). Collapse each y into a single label so
+            // "Snare" and "Kick" don't overlap as "SKaicke".
+            const byY = new Map<number, RowGroup[]>();
+            for (const g of rowGroups) {
+              const ry = rowY[g];
+              if (ry === undefined) continue;
+              const list = byY.get(ry);
+              if (list) list.push(g);
+              else byY.set(ry, [g]);
+            }
+            return [...byY.entries()].map(([ry, groups]) => (
               <text
-                key={g}
+                key={groups.join("+")}
                 x={x - 6}
                 y={ry + 4}
                 textAnchor="end"
                 className="fill-stone-400 text-[9px] font-semibold"
               >
-                {rowGroupLabel(g)}
-              </text>,
-            ];
-          })
+                {groups.map(rowGroupLabel).join(" / ")}
+              </text>
+            ));
+          })()
         : null}
 
       {/* Opening barline. `|:` draws a thick bar + a thin one + two dots. */}

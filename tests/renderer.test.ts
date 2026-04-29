@@ -35,14 +35,27 @@ describe("DrumChart", () => {
     ).join("\n");
     const src = `title: T\nmeter: 4/4\n[A]\n${bars}`;
     const svg = renderSvg(src, 2400, true);
-    // Exactly one of each label regardless of bar count, since they all
-    // land on the same row.
+    // Cymbal label appears once. Snare+Kick share a row (they don't
+    // collide), so they render as a combined "Snare / Kick" label —
+    // also once.
     const cymbalCount = (svg.match(/>Cymbal</g) ?? []).length;
-    const snareCount = (svg.match(/>Snare</g) ?? []).length;
-    const kickCount = (svg.match(/>Kick</g) ?? []).length;
+    const combinedCount = (svg.match(/>Snare \/ Kick</g) ?? []).length;
     expect(cymbalCount).toBe(1);
-    expect(snareCount).toBe(1);
-    expect(kickCount).toBe(1);
+    expect(combinedCount).toBe(1);
+  });
+
+  it("showLabels merges row groups that share a y coordinate", () => {
+    // Snare and kick never collide in this pattern, so layout packs them
+    // onto the same row — labels must be combined.
+    const svg = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| hh: x / x / x / x  bd: o / - / o / -  sn: - / o / - / o |`,
+      2400,
+      true,
+    );
+    expect(svg).toContain(">Snare / Kick<");
+    // No standalone Snare or Kick text should remain.
+    expect(svg).not.toMatch(/>Snare</);
+    expect(svg).not.toMatch(/>Kick</);
   });
 
   it("every <text> and <circle> and <line> in the output has numeric coords", () => {
