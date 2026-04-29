@@ -361,24 +361,41 @@ function mergeBeams(
   // Step 1: per-row merged beams.
   type RowBeam = {
     rowGroup: RowGroup;
-    rowAnchorY: number; // beam Y of the first lane of this row
+    rowAnchorY: number;
     depth: number;
     x1: number;
     x2: number;
+    /** Tuplet number contributing to this depth level (for cross-row match). */
+    tuplet: number; // 0 = not a tuplet
   };
   const perRowBeams: RowBeam[] = [];
   for (const [rowGroup, lanes] of byRow) {
     const rowAnchorY = lanes[0].beamY;
     const maxDepth = lanes.reduce((m, l) => Math.max(m, l.beamDepth), 0);
     for (let depth = 1; depth <= maxDepth; depth += 1) {
-      const spans = lanes
-        .filter((l) => l.beamDepth >= depth)
+      const contributingLanes = lanes.filter((l) => l.beamDepth >= depth);
+      const spans = contributingLanes
         .flatMap((l) => l.beamSegments)
         .sort((a, b) => a.x1 - b.x1);
       if (!spans.length) continue;
+      // Tuplet flag: 0 if all lanes at this depth are non-tuplet, else the
+      // single shared tuplet number (mixed → mark as -1 to block merging).
+      let tupletFlag = 0;
+      for (const l of contributingLanes) {
+        const t = l.tuplet ?? 0;
+        if (tupletFlag === 0) tupletFlag = t;
+        else if (t !== tupletFlag) tupletFlag = -1;
+      }
       const merged = mergeSpans(spans, 10);
       merged.forEach((s) =>
-        perRowBeams.push({ rowGroup, rowAnchorY, depth, x1: s.x1, x2: s.x2 }),
+        perRowBeams.push({
+          rowGroup,
+          rowAnchorY,
+          depth,
+          x1: s.x1,
+          x2: s.x2,
+          tuplet: tupletFlag,
+        }),
       );
     }
   }
@@ -403,6 +420,11 @@ function mergeBeams(
       if (bi.depth !== bj.depth) continue;
       if (Math.abs(bi.x1 - bj.x1) > EPS) continue;
       if (Math.abs(bi.x2 - bj.x2) > EPS) continue;
+      // Different tuplet values mean different rhythmic meaning — don't
+      // collapse a 3-tuplet beam with a non-tuplet or 6-tuplet beam.
+      if (bi.tuplet !== bj.tuplet) continue;
+      // Mixed-tuplet rows (-1) never merge.
+      if (bi.tuplet === -1 || bj.tuplet === -1) continue;
       matches.push(j);
     }
     if (matches.length === 1) {
