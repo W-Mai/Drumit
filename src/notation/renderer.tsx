@@ -245,7 +245,9 @@ function BarView({
               if (!existing) tupletByRow.set(t.rowGroup, t);
             }
 
-            // Choose the host beam per rowGroup: the one with the max depth.
+            // The bottom-most beam for each row becomes the "host" where
+            // the tuplet number is drawn. Every beam on that row leaves a
+            // notch around the number so the digit sits clearly.
             const hostBeamIdx = new Map<string, number>();
             beat.beams.forEach((b, i) => {
               const cur = hostBeamIdx.get(b.rowGroup);
@@ -254,14 +256,16 @@ function BarView({
               }
             });
 
-            const GAP_HALF = 5; // px — half width of the notch around the number
+            const GAP_HALF = 5.5; // px — half width of the notch around the number
+            const rowsWithTuplet = new Set(tupletByRow.keys());
 
             return (
               <Fragment key={`beat-${bar.index}-${beat.index}`}>
                 {beat.beams.map((b, i) => {
                   const t = tupletByRow.get(b.rowGroup);
                   const isHost = hostBeamIdx.get(b.rowGroup) === i;
-                  if (!t || !isHost) {
+                  const rowHasTuplet = rowsWithTuplet.has(b.rowGroup);
+                  if (!rowHasTuplet || !t) {
                     return (
                       <line
                         key={`beam-${i}`}
@@ -274,7 +278,9 @@ function BarView({
                       />
                     );
                   }
-                  // Split into two segments around the number.
+                  // Notch around the number so every beam on this row
+                  // clears the digit (especially for sextuplet with two
+                  // stacked beams).
                   const left = Math.min(t.x - GAP_HALF, b.x2);
                   const right = Math.max(t.x + GAP_HALF, b.x1);
                   return (
@@ -299,23 +305,23 @@ function BarView({
                           strokeWidth={1}
                         />
                       ) : null}
-                      <text
-                        x={t.x}
-                        y={b.y + 3}
-                        textAnchor="middle"
-                        className="fill-stone-700 text-[9px] font-extrabold"
-                      >
-                        {t.number}
-                      </text>
+                      {/* Only the host beam carries the number itself. */}
+                      {isHost ? (
+                        <text
+                          x={t.x}
+                          y={b.y + 3}
+                          textAnchor="middle"
+                          className="fill-stone-700 text-[9px] font-extrabold"
+                        >
+                          {t.number}
+                        </text>
+                      ) : null}
                     </Fragment>
                   );
                 })}
-                {/* Tuplets without a host beam fallback (rare — e.g. a single-note tuplet). */}
+                {/* Tuplets without any beam on their row get the fallback label. */}
                 {beat.tuplets
-                  .filter((t) => {
-                    const idx = hostBeamIdx.get(t.rowGroup);
-                    return idx === undefined;
-                  })
+                  .filter((t) => hostBeamIdx.get(t.rowGroup) === undefined)
                   .map((t, li) => (
                     <text
                       key={`tuplet-fallback-${li}`}
