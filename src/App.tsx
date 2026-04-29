@@ -246,10 +246,24 @@ export default function App() {
     }
   }
 
+  // Chain of pending updates within the same tick. Multiple synchronous
+  // calls to applyScoreUpdate accumulate on top of the last pending result
+  // so a sequence like `setDivision(4); toggleSlot(2);` sees the post-
+  // division score, not the stale closure one.
+  const pendingScoreRef = useRef<Score | null>(null);
   function applyScoreUpdate(update: (s: Score) => Score) {
-    const next = update(score);
-    writeActiveDocSource(serializeScore(next));
-    setTextDraft(null);
+    const base = pendingScoreRef.current ?? score;
+    const next = update(base);
+    pendingScoreRef.current = next;
+    // Flush at the end of the current task so React batches state writes.
+    queueMicrotask(() => {
+      if (pendingScoreRef.current) {
+        const flushed = pendingScoreRef.current;
+        pendingScoreRef.current = null;
+        writeActiveDocSource(serializeScore(flushed));
+        setTextDraft(null);
+      }
+    });
   }
 
   // Document manager actions.
