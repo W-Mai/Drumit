@@ -75,7 +75,6 @@ interface Props {
     sticking: "R" | "L" | null,
     groupIndex?: number,
   ) => void;
-  onClearLaneBeat: (beatIndex: number, instrument: Instrument) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -235,7 +234,6 @@ export function PadEditor({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
-  onClearLaneBeat,
   onNextBar,
   onPrevBar,
 }: Props) {
@@ -601,7 +599,6 @@ export function PadEditor({
           onToggleSlot={onToggleSlot}
           onToggleArticulation={onToggleArticulation}
           onSetSticking={onSetSticking}
-          onClearLaneBeat={onClearLaneBeat}
         />
         </>
       )}
@@ -731,7 +728,6 @@ function StepGrid({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
-  onClearLaneBeat,
 }: {
   bar: Bar;
   beatsPerBar: number;
@@ -746,7 +742,6 @@ function StepGrid({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
-  onClearLaneBeat: Props["onClearLaneBeat"];
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
@@ -790,7 +785,6 @@ function StepGrid({
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
-            onClearLaneBeat={onClearLaneBeat}
           />
         ))}
 
@@ -828,7 +822,6 @@ function InstrumentRow({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
-  onClearLaneBeat,
 }: {
   bar: Bar;
   beatsPerBar: number;
@@ -843,7 +836,6 @@ function InstrumentRow({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
-  onClearLaneBeat: Props["onClearLaneBeat"];
 }) {
   return (
     <>
@@ -899,7 +891,7 @@ function InstrumentRow({
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
-            onClearLaneBeat={onClearLaneBeat}
+            barResolution={barResolution}
           />
         );
       })}
@@ -916,6 +908,7 @@ function LaneBeatCell({
   bar,
   instrument,
   isFirstBeat,
+  barResolution,
   cursorBeatMatch,
   cursorLaneMatch,
   cursorSlotIndex,
@@ -925,12 +918,12 @@ function LaneBeatCell({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
-  onClearLaneBeat,
 }: {
   plan: LaneBeatPlan;
   bar: Bar;
   instrument: Instrument;
   isFirstBeat: boolean;
+  barResolution: Resolution;
   /** True if the edit cursor is in this beat. */
   cursorBeatMatch?: boolean;
   /** True if the edit cursor is on this lane. */
@@ -943,7 +936,6 @@ function LaneBeatCell({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
-  onClearLaneBeat: Props["onClearLaneBeat"];
 }) {
   return (
     <div
@@ -992,10 +984,10 @@ function LaneBeatCell({
       <LaneSettingsButton
         plan={plan}
         instrument={instrument}
+        barResolution={barResolution}
         onSetDivision={onSetDivision}
         onSetGroupDivision={onSetGroupDivision}
         onSplitBeat={onSplitBeat}
-        onClearLaneBeat={onClearLaneBeat}
       />
     </div>
   );
@@ -1214,17 +1206,17 @@ function StepContextMenuContent({
 function LaneSettingsButton({
   plan,
   instrument,
+  barResolution,
   onSetDivision,
   onSetGroupDivision,
   onSplitBeat,
-  onClearLaneBeat,
 }: {
   plan: LaneBeatPlan;
   instrument: Instrument;
+  barResolution: Resolution;
   onSetDivision: Props["onSetDivision"];
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
-  onClearLaneBeat: Props["onClearLaneBeat"];
 }) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
@@ -1265,10 +1257,10 @@ function LaneSettingsButton({
         <LaneSettingsPopover
           plan={plan}
           instrument={instrument}
+          barResolution={barResolution}
           onSetDivision={onSetDivision}
           onSetGroupDivision={onSetGroupDivision}
           onSplitBeat={onSplitBeat}
-          onClearLaneBeat={onClearLaneBeat}
           onClose={() => setOpen(false)}
         />
       </FloatingMenu>
@@ -1279,18 +1271,18 @@ function LaneSettingsButton({
 function LaneSettingsPopover({
   plan,
   instrument,
+  barResolution,
   onSetDivision,
   onSetGroupDivision,
   onSplitBeat,
-  onClearLaneBeat,
   onClose,
 }: {
   plan: LaneBeatPlan;
   instrument: Instrument;
+  barResolution: Resolution;
   onSetDivision: Props["onSetDivision"];
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
-  onClearLaneBeat: Props["onClearLaneBeat"];
   onClose: () => void;
 }) {
   const groupCount = countGroups(plan);
@@ -1404,13 +1396,18 @@ function LaneSettingsPopover({
           <button
             type="button"
             onClick={() => {
-              onClearLaneBeat(plan.beatIndex, instrument);
+              // Reset: force lane.division to match the bar-level resolution.
+              // Hits already on aligned slot indices are preserved by the
+              // growLane/shrink logic in edit.ts; extra slots get added or
+              // trimmed accordingly.
+              const barSlots = barResolution.slotsPerBeat;
+              onSetDivision(plan.beatIndex, instrument, barSlots);
               onClose();
             }}
-            className="w-full rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-bold text-stone-600 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
-            title="Drop this lane's customization for this beat and follow the bar-level grid again"
+            className="w-full rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-bold text-stone-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700"
+            title={`Re-align this lane's beat to the bar-level grid (currently ${barResolution.label})`}
           >
-            ↺ Reset to bar grid
+            ↺ Reset to {barResolution.label}
           </button>
         </div>
       ) : null}

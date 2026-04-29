@@ -12,7 +12,6 @@ import { layoutScore } from "./notation/layout";
 import { DrumChart } from "./notation/renderer";
 import { validateScore } from "./notation/validate";
 import {
-  clearLaneBeat,
   deleteBar,
   insertBarAfter,
   setBarRepeatPrevious,
@@ -588,11 +587,6 @@ export default function App() {
                       st,
                       gi,
                     ),
-                  )
-                }
-                onClearLaneBeat={(bi, inst) =>
-                  applyScoreUpdate((s) =>
-                    clearLaneBeat(s, clampedSelectedBar, bi, inst),
                   )
                 }
                 onPrevBar={() =>
