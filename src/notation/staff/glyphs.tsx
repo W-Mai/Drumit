@@ -37,6 +37,7 @@ export function PercussionClef({
 }): ReactNode {
   const top = y + STAFF_SPACE * 1;
   const bottom = y + STAFF_SPACE * 3;
+  const spacing = STAFF_SPACE * 0.55;
   return (
     <g>
       <line
@@ -45,17 +46,17 @@ export function PercussionClef({
         y1={top}
         y2={bottom}
         className="stroke-stone-900"
-        strokeWidth={2.5}
-        strokeLinecap="round"
+        strokeWidth={4}
+        strokeLinecap="butt"
       />
       <line
-        x1={x + 4}
-        x2={x + 4}
+        x1={x + spacing}
+        x2={x + spacing}
         y1={top}
         y2={bottom}
         className="stroke-stone-900"
-        strokeWidth={2.5}
-        strokeLinecap="round"
+        strokeWidth={4}
+        strokeLinecap="butt"
       />
     </g>
   );
@@ -217,8 +218,8 @@ export function GhostParens({
   x: number;
   y: number;
 }): ReactNode {
-  const dx = STAFF_SPACE * 0.9;
-  const dy = STAFF_SPACE * 0.7;
+  const dx = STAFF_SPACE * 0.68;
+  const dy = STAFF_SPACE * 0.5;
   return (
     <g>
       <path

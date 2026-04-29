@@ -7,7 +7,7 @@ export function stepToY(step: number): number {
   return 2 * STAFF_SPACE + (step * STAFF_SPACE) / 2;
 }
 
-export const PERCUSSION_CLEF_WIDTH = 14;
+export const PERCUSSION_CLEF_WIDTH = 12;
 export const TIME_SIG_WIDTH = 14;
 
 /** Number of flags for a given duration (8 / 16 / 32 → 1 / 2 / 3). */

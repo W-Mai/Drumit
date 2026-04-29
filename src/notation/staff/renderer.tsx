@@ -304,12 +304,13 @@ function VoicePaint({
         tipYs.push(staffY + stepToY(bottomStep) + STEM_LENGTH_SCREEN);
       }
     }
-    // Anchor on the closest-to-staff tip (min on stem-down so the beam
-    // doesn't plunge; max on stem-up so it doesn't sky-rocket). This
-    // keeps beams hugging the staff instead of being dragged far out
-    // by a single low kick or high crash in the run.
+    // Horizontal beam constrained so every stem in the run reaches
+    // at least the default stem length. Stem-up notes have their tips
+    // ABOVE the staff, so beam-y is the MINIMUM (highest point); stem-down
+    // the opposite. This guarantees MIN_STEM_LENGTH per stem even if
+    // one note's default tip is far from the others.
     const beamY =
-      direction === "up" ? Math.max(...tipYs) : Math.min(...tipYs);
+      direction === "up" ? Math.min(...tipYs) : Math.max(...tipYs);
     for (let i = beam.start; i <= beam.end; i += 1) stemTipY.set(i, beamY);
   }
   return (
