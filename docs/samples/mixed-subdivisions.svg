@@ -1,0 +1,26 @@
+<svg viewBox="0 0 900 218" class="h-auto w-full" role="img" aria-label="Drum chart" xmlns="http://www.w3.org/2000/svg"><title>Mixed in-beat subdivisions &amp; voice stacking</title><style>
+  text { font-family: 'Helvetica Neue', Arial, sans-serif; }
+  .fill-stone-50 { fill: #fafaf9; }
+  .fill-stone-400 { fill: #a8a29e; }
+  .fill-stone-500 { fill: #78716c; }
+  .fill-stone-700 { fill: #44403c; }
+  .fill-stone-900 { fill: #1c1917; }
+  .fill-amber-100 { fill: #fef3c7; }
+  .fill-emerald-300\/40 { fill: #6ee7b780; }
+  .fill-none { fill: none; }
+  .fill-transparent { fill: transparent; }
+  .stroke-stone-300 { stroke: #d6d3d1; }
+  .stroke-stone-400 { stroke: #a8a29e; }
+  .stroke-stone-600 { stroke: #57534e; }
+  .stroke-stone-700 { stroke: #44403c; }
+  .stroke-stone-900 { stroke: #1c1917; }
+  .stroke-transparent { stroke: transparent; }
+  .font-bold { font-weight: 700; }
+  .font-black { font-weight: 900; }
+  .font-extrabold { font-weight: 800; }
+  .font-semibold { font-weight: 600; }
+  .font-medium { font-weight: 500; }
+  .italic { font-style: italic; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+  .tracking-wider { letter-spacing: 0.05em; }
+</style><rect x="0" y="0" width="900" height="218" rx="16" class="fill-stone-50"></rect><g><text x="24" y="22" class="fill-stone-900 text-[16px] font-bold" style="font-size:16px">Mixed subdivisions</text><text x="876" y="22" text-anchor="end" class="fill-stone-500 text-[11px] font-semibold tabular-nums" style="font-size:11px">4/4   ♩ = 100</text><line x1="24" x2="876" y1="44" y2="44" class="stroke-stone-300" stroke-width="1"></line></g><g><rect x="20" y="48" width="44" height="20" rx="6" class="fill-stone-900"></rect><text x="30" y="62" class="fill-amber-100 text-[12px] font-extrabold tracking-wider" style="font-size:12px">A</text></g><g><rect x="8" y="74" width="215" height="90" rx="8" class="fill-transparent stroke-transparent hover:fill-stone-200/40" stroke-width="0"></rect><text x="16" y="82" class="fill-stone-500 text-[10px] font-semibold" style="font-size:10px">1</text><line x1="16" x2="16" y1="80" y2="144" class="stroke-stone-400" stroke-width="1.2"></line><line x1="215" x2="215" y1="80" y2="144" class="stroke-stone-400" stroke-width="1.2"></line><line x1="31" x2="68.75" y1="132" y2="132" class="stroke-stone-700" stroke-width="1"></line><line x1="74.75" x2="112.5" y1="132" y2="132" class="stroke-stone-700" stroke-width="1"></line><line x1="96.625" x2="112.5" y1="135" y2="135" class="stroke-stone-700" stroke-width="1"></line><line x1="96.625" x2="112.5" y1="132" y2="132" class="stroke-stone-700" stroke-width="1"></line><line x1="118.5" x2="156.25" y1="132" y2="132" class="stroke-stone-700" stroke-width="1"></line><line x1="118.5" x2="134.375" y1="135" y2="135" class="stroke-stone-700" stroke-width="1"></line><line x1="162.25" x2="200" y1="132" y2="132" class="stroke-stone-700" stroke-width="1"></line><g><text x="38.9375" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><text x="60.8125" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><circle cx="38.9375" cy="120" r="5.3999999999999995" class="fill-stone-900"></circle></g><g><text x="82.6875" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><text x="99.09375" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><circle cx="110.03125" cy="120" r="5.3999999999999995" class="fill-stone-900"></circle></g><g><path d="M 78.1875 115.5 L 87.1875 124.5 M 87.1875 115.5 L 78.1875 124.5" class="fill-none stroke-stone-900" stroke-width="1.8" stroke-linecap="round"></path></g><g><text x="120.96875" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><text x="148.3125" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><circle cx="131.90625" cy="120" r="5.3999999999999995" class="fill-stone-900"></circle></g><g><circle cx="148.3125" cy="120" r="5.3999999999999995" class="fill-stone-900"></circle></g><g><text x="170.1875" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><text x="192.0625" y="97.265" text-anchor="middle" class="fill-stone-900 font-bold" style="font-size:15.210000000000003px;font-family:Georgia, serif;dominant-baseline:alphabetic">∂</text></g><g><path d="M 165.6875 115.5 L 174.6875 124.5 M 174.6875 115.5 L 165.6875 124.5" class="fill-none stroke-stone-900" stroke-width="1.8" stroke-linecap="round"></path></g></g></svg>
