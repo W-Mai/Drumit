@@ -41,6 +41,7 @@ import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { Badge, Button, Panel, PanelHeader, Select } from "./components/ui";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
+import { useHistory } from "./lib/useHistory";
 
 type Mode = "source" | "visual";
 
@@ -186,6 +187,33 @@ export default function App() {
           i === null ? 0 : Math.min(totalBars - 1, i + 1),
         ),
     },
+    // Undo / Redo. Cmd+Z / Ctrl+Z for undo; Shift variants for redo.
+    {
+      key: "z",
+      meta: true,
+      description: "Undo",
+      handler: handleUndo,
+    },
+    {
+      key: "z",
+      ctrl: true,
+      description: "Undo",
+      handler: handleUndo,
+    },
+    {
+      key: "z",
+      meta: true,
+      shift: true,
+      description: "Redo",
+      handler: handleRedo,
+    },
+    {
+      key: "z",
+      ctrl: true,
+      shift: true,
+      description: "Redo",
+      handler: handleRedo,
+    },
   ]);
 
   const layout = useMemo(
@@ -210,6 +238,21 @@ export default function App() {
     return null;
   }, [score, clampedSelectedBar]);
 
+  // Per-document undo/redo history. Keyed by document id so switching
+  // between docs preserves each doc's timeline independently.
+  const history = useHistory();
+  // When true, `writeActiveDocSource` should skip pushing a new history
+  // entry — used while applying an undo/redo result to avoid looping.
+  const suppressRecordRef = useRef(false);
+
+  // Seed the baseline snapshot for the active document the first time we
+  // see it (and whenever the user switches to a doc we haven't tracked).
+  useEffect(() => {
+    history.record(activeId, activeDoc.source);
+    // Only seed on doc switch; subsequent edits go through writeActiveDocSource.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
+
   // Write back a new source string into the active document.
   function writeActiveDocSource(source: string) {
     setDocuments((docs) =>
@@ -219,6 +262,38 @@ export default function App() {
           : d,
       ),
     );
+    if (!suppressRecordRef.current) {
+      history.record(activeId, source);
+    }
+  }
+
+  function applyHistorySnapshot(source: string) {
+    suppressRecordRef.current = true;
+    try {
+      // Write directly without routing through writeActiveDocSource's
+      // record path.
+      setDocuments((docs) =>
+        docs.map((d) =>
+          d.id === activeId
+            ? { ...d, source, savedAt: Date.now() }
+            : d,
+        ),
+      );
+      setTextDraft(null);
+      setTextDraftDiagnostics(null);
+    } finally {
+      suppressRecordRef.current = false;
+    }
+  }
+
+  function handleUndo() {
+    const snapshot = history.undo(activeId);
+    if (snapshot !== null) applyHistorySnapshot(snapshot);
+  }
+
+  function handleRedo() {
+    const snapshot = history.redo(activeId);
+    if (snapshot !== null) applyHistorySnapshot(snapshot);
   }
 
   function loadSample(src: string) {
@@ -237,7 +312,15 @@ export default function App() {
       !result.diagnostics.some((d) => d.level === "error") &&
       result.score.sections.length > 0
     ) {
-      writeActiveDocSource(serializeScore(result.score));
+      // While the user is editing raw source, avoid pushing one history
+      // entry per keystroke — the textarea has its own native undo.
+      // We'll commit a single snapshot when switching back to visual.
+      suppressRecordRef.current = true;
+      try {
+        writeActiveDocSource(serializeScore(result.score));
+      } finally {
+        suppressRecordRef.current = false;
+      }
     }
   }
 
@@ -246,6 +329,9 @@ export default function App() {
     if (next !== "source") {
       setTextDraft(null);
       setTextDraftDiagnostics(null);
+      // Commit whatever the active doc ended up with as a single history
+      // entry so undo rolls back the entire source-editing session.
+      history.record(activeId, activeDoc.source);
     }
   }
 

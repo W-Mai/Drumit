@@ -19,6 +19,13 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: "History",
+    items: [
+      { keys: ["⌘Z"], label: "Undo" },
+      { keys: ["⇧⌘Z"], label: "Redo" },
+    ],
+  },
+  {
     title: "Navigation",
     items: [
       { keys: ["←", "→"], label: "Slot / cell" },
