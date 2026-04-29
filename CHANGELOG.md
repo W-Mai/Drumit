@@ -11,6 +11,34 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.4]
+
+Staff view phase 2 — the full-detail pass.
+
+### Added
+
+- **Repeat barlines** on staff: `|:` start + `:|` end glyphs with thick +
+  thin lines and the two mid-staff dots, plus `×N` multiplier above the
+  right-edge glyph for N > 2.
+- **1st / 2nd ending brackets** above their bars (`[1.]` / `[2.]`).
+- **Navigation markers** — D.C. / D.S. (with optional `al Fine` /
+  `al Coda`), `To Coda`, `Fine`, plus the real Segno (𝄋) and Coda (𝄌)
+  glyphs as text labels above the bar.
+- **Articulations** on notes:
+  - Accent — wedge `>` above stem-up / below stem-down
+  - Ghost — rounded parentheses hugging the notehead
+  - Flam — smaller grace notehead with slashed stem to the left
+  - Roll — tremolo slashes across the stem
+  - Choke — `+` above cymbal notes
+- **Sticking** — R / L labels printed below notes with `/R` / `/L`
+  suffixes.
+
+### Changed
+
+- `StaffNote` grew `articulations[]` and optional `sticking` fields;
+  `StaffBar` grew `endBarline`, `repeatStart`, `repeatTimes`, `ending`,
+  `navigationLabel`. All derived from the same AST — no parser changes.
+
 ## [2026.04.29.3]
 
 First pass at standard notation.
@@ -200,7 +228,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.3...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.4...HEAD
+[2026.04.29.4]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.3...v2026.04.29.4
 [2026.04.29.3]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.2...v2026.04.29.3
 [2026.04.29.2]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.1...v2026.04.29.2
 [2026.04.29.1]: https://github.com/W-Mai/Drumit/compare/v2026.04.29...v2026.04.29.1
