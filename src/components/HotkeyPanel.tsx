@@ -61,24 +61,28 @@ const SECTIONS: Section[] = [
   },
 ];
 
+/**
+ * Compact, multi-column shortcut reference used inside the hover/click
+ * popover attached to the Bar editor header. Renders the instrument list
+ * on the left and the remaining sections flowing across two more columns
+ * so the whole cheatsheet fits in a single viewport-friendly card.
+ */
 export function HotkeyPanel() {
   const { currentInstrument } = useHotkeyContext();
   const instruments = Object.entries(INSTRUMENT_BY_DIGIT).map(
     ([digit, instrument]) => ({ digit, instrument }),
   );
   return (
-    <aside className="flex flex-col rounded-2xl border border-stone-200 bg-white">
-      <header className="border-b border-stone-200 px-3 py-2">
+    <div className="flex flex-col gap-2 p-1 text-[11px] text-stone-700">
+      <header className="px-1">
         <h3 className="text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
           Shortcuts
         </h3>
       </header>
-      <div className="flex flex-col gap-3 p-2 text-[11px] text-stone-700">
-        <section>
-          <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
-            Instruments
-          </div>
-          <ul className="grid grid-cols-1 gap-0.5">
+      <div className="grid grid-cols-[auto_1fr_1fr] gap-4 px-1">
+        <section className="min-w-[150px]">
+          <SectionLabel>Instruments</SectionLabel>
+          <ul className="flex flex-col gap-0.5">
             {instruments.map(({ digit, instrument }) => {
               const isCurrent = currentInstrument === instrument;
               return (
@@ -94,36 +98,56 @@ export function HotkeyPanel() {
                     instrument={instrument}
                     className="size-3.5 shrink-0 text-stone-600"
                   />
-                  <span className="truncate">{instrumentLabels[instrument]}</span>
+                  <span className="truncate">
+                    {instrumentLabels[instrument]}
+                  </span>
                 </li>
               );
             })}
           </ul>
         </section>
-        {SECTIONS.map((s) => (
-          <section key={s.title}>
-            <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
-              {s.title}
-            </div>
-            <ul className="flex flex-col gap-0.5">
-              {s.items.map(({ keys, label }) => (
-                <li
-                  key={label}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <span className="truncate">{label}</span>
-                  <span className="flex shrink-0 gap-0.5">
-                    {keys.map((k) => (
-                      <Kbd key={k}>{k}</Kbd>
-                    ))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+        <div className="flex flex-col gap-3">
+          <Section s={SECTIONS[0]} />
+          <Section s={SECTIONS[1]} />
+          <Section s={SECTIONS[2]} />
+        </div>
+        <div className="flex flex-col gap-3">
+          <Section s={SECTIONS[3]} />
+          <Section s={SECTIONS[4]} />
+        </div>
       </div>
-    </aside>
+    </div>
+  );
+}
+
+function Section({ s }: { s: Section }) {
+  return (
+    <section>
+      <SectionLabel>{s.title}</SectionLabel>
+      <ul className="flex flex-col gap-0.5">
+        {s.items.map(({ keys, label }) => (
+          <li
+            key={label}
+            className="flex items-center justify-between gap-2"
+          >
+            <span className="truncate">{label}</span>
+            <span className="flex shrink-0 gap-0.5">
+              {keys.map((k) => (
+                <Kbd key={k}>{k}</Kbd>
+              ))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-1 text-[9px] font-extrabold tracking-wide text-stone-500 uppercase">
+      {children}
+    </div>
   );
 }
 

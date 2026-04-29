@@ -19,6 +19,8 @@ interface Props {
   onExport: (id: string) => void;
   onExportMidi: (id: string) => void;
   onImport: (source: string) => void;
+  /** Optional: show a collapse button in the header when provided. */
+  onCollapse?: () => void;
 }
 
 export function DocumentList({
@@ -32,6 +34,7 @@ export function DocumentList({
   onExport,
   onExportMidi,
   onImport,
+  onCollapse,
 }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -45,12 +48,12 @@ export function DocumentList({
   }
 
   return (
-    <aside className="flex h-full flex-col rounded-2xl border border-stone-200 bg-white">
-      <header className="flex items-center justify-between border-b border-stone-200 px-3 py-2">
+    <aside className="flex h-full min-h-0 flex-1 flex-col rounded-2xl border border-stone-200 bg-white">
+      <header className="flex items-center justify-between gap-1 border-b border-stone-200 px-3 py-2">
         <h3 className="text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
           Documents
         </h3>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
           <Button size="xs" onClick={onCreate} title="New document">
             + New
           </Button>
@@ -61,6 +64,16 @@ export function DocumentList({
           >
             ↑ Import
           </Button>
+          {onCollapse ? (
+            <button
+              type="button"
+              onClick={onCollapse}
+              title="Collapse documents panel"
+              className="ml-0.5 flex size-5 items-center justify-center rounded text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+            >
+              ‹
+            </button>
+          ) : null}
           <input
             ref={fileInput}
             type="file"

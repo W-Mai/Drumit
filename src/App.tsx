@@ -39,6 +39,7 @@ import {
 import { DocumentList } from "./components/DocumentList";
 import { HotkeyPanel } from "./components/HotkeyPanel";
 import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
+import { HoverClickPopover } from "./components/HoverClickPopover";
 import { Badge, Button, Panel, PanelHeader, Select } from "./components/ui";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
@@ -117,6 +118,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>("visual");
   const [selectedBar, setSelectedBar] = useState<number | null>(0);
   const [showLabels, setShowLabels] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const serializedSource = useMemo(() => serializeScore(score), [score]);
   const currentSource = textDraft ?? serializedSource;
@@ -486,28 +488,20 @@ export default function App() {
 
   return (
     <HotkeyContextProvider>
-    <div className="mx-auto w-full max-w-[1600px] p-6">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <p className="text-brand text-xs font-bold tracking-[0.18em] uppercase">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-stone-50">
+      <header className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-5 py-2">
+        <div className="flex items-baseline gap-3">
+          <p className="text-brand text-[11px] font-bold tracking-[0.18em] uppercase">
             Drumit
           </p>
-          <h1 className="text-ink font-serif text-5xl leading-none tracking-tight">
+          <h1 className="text-ink font-serif text-base leading-none font-semibold tracking-tight">
             Drumtab visualizer
           </h1>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="inline-flex rounded-full border border-stone-200 bg-white p-1">
-            <ModeTab active={mode === "visual"} onClick={() => switchMode("visual")}>
-              Visual
-            </ModeTab>
-            <ModeTab active={mode === "source"} onClick={() => switchMode("source")}>
-              Source
-            </ModeTab>
-          </div>
+        <div className="flex items-center gap-2">
           <Select
             value=""
-            className="rounded-full"
+            className="rounded-full text-xs"
             onChange={(e) => {
               const found = samples.find((s) => s.label === e.target.value);
               if (found) loadSample(found.src);
@@ -553,28 +547,41 @@ export default function App() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <div className="hidden flex-col gap-3 lg:flex">
-          <DocumentList
-            documents={documents.map((d) => ({
-              id: d.id,
-              name: d.name,
-              source: d.source,
-            }))}
-            activeId={activeId}
-            onSelect={handleSelectDoc}
-            onCreate={handleCreateDoc}
-            onDuplicate={handleDuplicateDoc}
-            onRename={handleRenameDoc}
-            onDelete={handleDeleteDoc}
-            onExport={handleExportDoc}
-            onExportMidi={handleExportDocMidi}
-            onImport={handleImportDoc}
-          />
-          <HotkeyPanel />
-        </div>
+      <div className="flex min-h-0 flex-1 gap-3 p-3">
+        {sidebarCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed(false)}
+            title="Show documents"
+            className="flex w-8 flex-none items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-500 hover:bg-stone-100"
+          >
+            <span className="[writing-mode:vertical-lr] text-[10px] font-bold tracking-wider uppercase">
+              Documents ›
+            </span>
+          </button>
+        ) : (
+          <div className="flex w-[200px] flex-none flex-col">
+            <DocumentList
+              documents={documents.map((d) => ({
+                id: d.id,
+                name: d.name,
+                source: d.source,
+              }))}
+              activeId={activeId}
+              onSelect={handleSelectDoc}
+              onCreate={handleCreateDoc}
+              onDuplicate={handleDuplicateDoc}
+              onRename={handleRenameDoc}
+              onDelete={handleDeleteDoc}
+              onExport={handleExportDoc}
+              onExportMidi={handleExportDocMidi}
+              onImport={handleImportDoc}
+              onCollapse={() => setSidebarCollapsed(true)}
+            />
+          </div>
+        )}
 
-      <section className="flex flex-col gap-5">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
         <PlaybackBar
           score={score}
           startBar={clampedSelectedBar ?? 0}
@@ -584,7 +591,7 @@ export default function App() {
           onStop={() => setPlayCursor(null)}
         />
 
-        <Panel>
+        <Panel className="flex min-h-0 flex-[55_55_0%] flex-col">
           <PanelHeader title="Preview">
             <Button
               variant={showLabels ? "primary" : "secondary"}
@@ -593,7 +600,7 @@ export default function App() {
               {showLabels ? "Hide labels" : "Show labels"}
             </Button>
           </PanelHeader>
-          <div className="max-h-[58vh] min-h-[320px] overflow-auto bg-stone-100/40 p-4">
+          <div className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-4">
             {hasErrors ? (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
                 Fix parse errors to update the preview.
@@ -610,18 +617,46 @@ export default function App() {
           </div>
         </Panel>
 
-        <Panel>
+        <Panel className="flex min-h-0 flex-[45_45_0%] flex-col">
           <PanelHeader title={mode === "visual" ? "Bar editor" : "Source"}>
+            <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
+              <ModeTab active={mode === "visual"} onClick={() => switchMode("visual")}>
+                Visual
+              </ModeTab>
+              <ModeTab active={mode === "source"} onClick={() => switchMode("source")}>
+                Source
+              </ModeTab>
+            </div>
             <Diagnostics diagnostics={diagnostics} />
+            <HoverClickPopover
+              placement="bottom"
+              className="max-w-[min(780px,calc(100vw-24px))]"
+              trigger={({ open }) => (
+                <span
+                  aria-expanded={open}
+                  title="Keyboard shortcuts"
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-full border text-sm font-bold select-none",
+                    open
+                      ? "border-amber-400 bg-amber-100 text-stone-900"
+                      : "border-stone-200 bg-white text-stone-600 hover:bg-stone-100",
+                  )}
+                >
+                  ?
+                </span>
+              )}
+            >
+              <HotkeyPanel />
+            </HoverClickPopover>
           </PanelHeader>
 
-          <div className="max-h-[70vh] overflow-auto p-4">
+          <div className="min-h-0 flex-1 overflow-auto p-4">
             {mode === "source" ? (
               <textarea
                 value={currentSource}
                 onChange={(event) => handleSourceChange(event.target.value)}
                 spellCheck={false}
-                className="block h-[50vh] w-full resize-y rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 outline-none"
+                className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 outline-none"
               />
             ) : selectedBarData && clampedSelectedBar !== null ? (
               <PadEditor
@@ -756,10 +791,10 @@ function ModeTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full px-4 py-1 text-xs font-bold transition",
+        "rounded-full px-2.5 py-0.5 text-[11px] font-bold transition",
         active
           ? "bg-stone-900 text-white"
-          : "text-stone-600 hover:bg-stone-100",
+          : "text-stone-600 hover:bg-stone-200/70",
       )}
     >
       {children}
