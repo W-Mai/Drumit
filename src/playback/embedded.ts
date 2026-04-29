@@ -48,6 +48,12 @@ export function init(): void {
   const playBtn = document.getElementById("play") as HTMLButtonElement | null;
   const pauseBtn = document.getElementById("pause") as HTMLButtonElement | null;
   const stopBtn = document.getElementById("stop") as HTMLButtonElement | null;
+  const tempoSlider = document.getElementById(
+    "tempo",
+  ) as HTMLInputElement | null;
+  const tempoLabel = document.getElementById(
+    "tempo-value",
+  ) as HTMLElement | null;
   if (!playBtn || !stopBtn) return;
 
   const engine = new SynthEngine();
@@ -55,6 +61,22 @@ export function init(): void {
     engine,
     score: parsed.score,
   });
+
+  if (tempoSlider && tempoLabel) {
+    // Treat the slider's initial value as the authoritative tempo so the
+    // controller matches what the user sees on the page.
+    const initial = Number(tempoSlider.value);
+    if (Number.isFinite(initial) && initial > 0) {
+      controller.setTempo(initial);
+      tempoLabel.textContent = String(initial);
+    }
+    tempoSlider.addEventListener("input", () => {
+      const v = Number(tempoSlider.value);
+      if (!Number.isFinite(v) || v <= 0) return;
+      tempoLabel.textContent = String(v);
+      controller.setTempo(v);
+    });
+  }
 
   // Cache of `<g data-bar-index="N">` elements so highlight lookups are O(1).
   const barGroups = new Map<number, SVGGElement>();

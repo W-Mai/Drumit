@@ -104,7 +104,10 @@ export function wrapSvgInDynamicHtml(
       margin: 0;
     }
     .tempo { font-size: 12px; color: #78716c; }
-    .controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .tempo-control { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #44403c; }
+    .tempo-control input[type="range"] { width: 160px; accent-color: #1c1917; }
+    .tempo-control .value { min-width: 34px; font-variant-numeric: tabular-nums; font-weight: 600; color: #1c1917; }
     button {
       padding: 6px 14px;
       font-size: 13px;
@@ -144,6 +147,12 @@ export function wrapSvgInDynamicHtml(
       <button id="play" class="primary" type="button">▶ Play</button>
       <button id="pause" type="button" disabled>⏸ Pause</button>
       <button id="stop" type="button" disabled>■ Stop</button>
+      <label class="tempo-control">
+        ♩ =
+        <input id="tempo" type="range" min="40" max="260" step="1" value="${bpm}">
+        <span id="tempo-value" class="value">${bpm}</span>
+        BPM
+      </label>
     </div>
     <div class="chart">${svg}</div>
     ${
