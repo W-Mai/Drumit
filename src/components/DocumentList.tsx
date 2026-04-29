@@ -17,6 +17,7 @@ interface Props {
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   onExport: (id: string) => void;
+  onExportMidi: (id: string) => void;
   onImport: (source: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function DocumentList({
   onRename,
   onDelete,
   onExport,
+  onExportMidi,
   onImport,
 }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -83,6 +85,7 @@ export function DocumentList({
             onDuplicate={() => onDuplicate(doc.id)}
             onDelete={() => onDelete(doc.id)}
             onExport={() => onExport(doc.id)}
+            onExportMidi={() => onExportMidi(doc.id)}
           />
         ))}
       </ul>
@@ -98,6 +101,7 @@ function DocumentItem({
   onDuplicate,
   onDelete,
   onExport,
+  onExportMidi,
 }: {
   doc: DocumentSummary;
   active: boolean;
@@ -106,6 +110,7 @@ function DocumentItem({
   onDuplicate: () => void;
   onDelete: () => void;
   onExport: () => void;
+  onExportMidi: () => void;
 }) {
   const titleFromSource =
     doc.source.match(/^\s*title:\s*(.+)$/m)?.[1].trim() ?? "";
@@ -143,6 +148,9 @@ function DocumentItem({
         </IconButton>
         <IconButton title="Export .drumtab" onClick={onExport}>
           ↓
+        </IconButton>
+        <IconButton title="Export .mid" onClick={onExportMidi}>
+          ♪
         </IconButton>
         <IconButton
           title="Delete"

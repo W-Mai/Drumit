@@ -11,6 +11,7 @@ import { serializeScore } from "./notation/serialize";
 import { layoutScore } from "./notation/layout";
 import { DrumChart } from "./notation/renderer";
 import { validateScore } from "./notation/validate";
+import { exportScoreToMidi } from "./notation/midiExport";
 import {
   cycleBarEnding,
   deleteBar,
@@ -442,6 +443,28 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  function handleExportDocMidi(id: string) {
+    const doc = documents.find((d) => d.id === id);
+    if (!doc) return;
+    const parsedDoc = parseDrumtab(doc.source);
+    if (parsedDoc.score.sections.length === 0) {
+      alert("Nothing to export — the document is empty.");
+      return;
+    }
+    const bytes = exportScoreToMidi(parsedDoc.score);
+    const filename = nameToFilename(doc).replace(/\.drumtab$/, ".mid");
+    // Copy into a plain ArrayBuffer to satisfy Blob's strict typing.
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+    const blob = new Blob([buffer], { type: "audio/midi" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleImportDoc(source: string) {
     const parsedImport = parseDrumtab(source);
     if (parsedImport.score.sections.length === 0) {
@@ -545,6 +568,7 @@ export default function App() {
             onRename={handleRenameDoc}
             onDelete={handleDeleteDoc}
             onExport={handleExportDoc}
+            onExportMidi={handleExportDocMidi}
             onImport={handleImportDoc}
           />
           <HotkeyPanel />
