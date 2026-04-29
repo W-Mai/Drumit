@@ -108,6 +108,9 @@ export function wrapSvgInDynamicHtml(
     .tempo-control { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #44403c; }
     .tempo-control input[type="range"] { width: 160px; accent-color: #1c1917; }
     .tempo-control .value { min-width: 34px; font-variant-numeric: tabular-nums; font-weight: 600; color: #1c1917; }
+    .toggle { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: #44403c; cursor: pointer; user-select: none; }
+    .toggle input { accent-color: #1c1917; }
+    .chart svg [data-bar-index] { cursor: pointer; }
     button {
       padding: 6px 14px;
       font-size: 13px;
@@ -153,7 +156,10 @@ export function wrapSvgInDynamicHtml(
         <span id="tempo-value" class="value">${bpm}</span>
         BPM
       </label>
+      <label class="toggle"><input id="click" type="checkbox"> Click</label>
+      <label class="toggle"><input id="loop" type="checkbox"> Loop bar</label>
     </div>
+    <p style="margin: 0 0 12px; font-size: 11px; color: #78716c;">Click a bar to start playback from there.</p>
     <div class="chart">${svg}</div>
     ${
       source

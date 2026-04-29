@@ -30,6 +30,9 @@ declare global {
 const HL_BAR_FILL = "rgba(209, 250, 229, 0.7)"; // emerald-100/70
 const HL_BAR_STROKE = "#10b981"; // emerald-500
 const HL_BEAT_FILL = "rgba(110, 231, 183, 0.4)"; // emerald-300/40
+// Start-bar selection (not currently playing). Amber to match the app.
+const SEL_BAR_FILL = "rgba(254, 215, 170, 0.6)"; // amber-200/60
+const SEL_BAR_STROKE = "#f59e0b"; // amber-500
 
 export function init(): void {
   const sourceEl = document.getElementById("drumtab-source");
@@ -54,6 +57,12 @@ export function init(): void {
   const tempoLabel = document.getElementById(
     "tempo-value",
   ) as HTMLElement | null;
+  const clickToggle = document.getElementById(
+    "click",
+  ) as HTMLInputElement | null;
+  const loopToggle = document.getElementById(
+    "loop",
+  ) as HTMLInputElement | null;
   if (!playBtn || !stopBtn) return;
 
   const engine = new SynthEngine();
@@ -61,6 +70,21 @@ export function init(): void {
     engine,
     score: parsed.score,
   });
+
+  if (clickToggle) {
+    clickToggle.addEventListener("change", () => {
+      controller.setMetronome(clickToggle.checked);
+    });
+  }
+  if (loopToggle) {
+    loopToggle.addEventListener("change", () => {
+      if (loopToggle.checked) {
+        controller.setLoop({ startBar: selectedBar, endBar: selectedBar });
+      } else {
+        controller.setLoop(null);
+      }
+    });
+  }
 
   if (tempoSlider && tempoLabel) {
     // Treat the slider's initial value as the authoritative tempo so the
@@ -89,6 +113,9 @@ export function init(): void {
 
   let lastBarIndex = -1;
   let lastBeatIndex = -1;
+  // Bar the user most recently clicked, shown in amber when playback is
+  // idle. When playback starts, it's the resume-from bar.
+  let selectedBar = 0;
 
   function clearHighlight(barIdx: number) {
     const g = barGroups.get(barIdx);
@@ -102,6 +129,10 @@ export function init(): void {
     g.querySelectorAll<SVGRectElement>("[data-beat-rect]").forEach((r) => {
       r.style.fill = "";
     });
+    // If the cleared bar is also the user's selected bar, restore the
+    // amber selection tint so it doesn't visually disappear when the
+    // playhead moves on.
+    if (barIdx === selectedBar) applySelection(barIdx);
   }
 
   function applyHighlight(barIdx: number, beatIdx: number) {
@@ -125,7 +156,55 @@ export function init(): void {
     if (lastBarIndex >= 0) clearHighlight(lastBarIndex);
     lastBarIndex = -1;
     lastBeatIndex = -1;
+    // Reinstate the static selection once the playhead is gone.
+    applySelection(selectedBar);
   }
+
+  function applySelection(barIdx: number) {
+    const g = barGroups.get(barIdx);
+    if (!g) return;
+    const barRect = g.querySelector<SVGRectElement>("[data-bar-highlight]");
+    if (barRect) {
+      barRect.style.fill = SEL_BAR_FILL;
+      barRect.style.stroke = SEL_BAR_STROKE;
+      barRect.style.strokeWidth = "1.5";
+    }
+  }
+
+  function clearSelection(barIdx: number) {
+    const g = barGroups.get(barIdx);
+    if (!g) return;
+    const barRect = g.querySelector<SVGRectElement>("[data-bar-highlight]");
+    if (barRect) {
+      barRect.style.fill = "";
+      barRect.style.stroke = "";
+      barRect.style.strokeWidth = "";
+    }
+  }
+
+  function setSelectedBar(next: number) {
+    if (next === selectedBar) return;
+    // Only re-paint the old bar if it isn't currently the playhead.
+    if (selectedBar !== lastBarIndex) clearSelection(selectedBar);
+    selectedBar = next;
+    // Paint the new selection only if it isn't the live playhead (which
+    // has precedence and uses the emerald colours).
+    if (selectedBar !== lastBarIndex) applySelection(selectedBar);
+    controller.setStartBar(selectedBar);
+    if (loopToggle?.checked) {
+      controller.setLoop({ startBar: selectedBar, endBar: selectedBar });
+    }
+  }
+
+  // Wire bar-click to "play from here". Pointer events only fire on
+  // elements with a fill, so the data-bar-highlight rect (transparent
+  // but present) captures clicks across the whole bar.
+  for (const [idx, g] of barGroups) {
+    g.addEventListener("click", () => setSelectedBar(idx));
+  }
+
+  // Paint the initial selection.
+  applySelection(selectedBar);
 
   controller.onCursor((pos) => {
     if (pos.barIndex === lastBarIndex && pos.beatIndex === lastBeatIndex) return;
