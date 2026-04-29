@@ -219,3 +219,109 @@ export function TimeSignature({
     </g>
   );
 }
+
+const STEM_LENGTH = STAFF_SPACE * 3.5;
+const NOTEHEAD_HALF_WIDTH = STAFF_SPACE * 0.58;
+
+/**
+ * Vertical stem attached to a note's glyphs. Stem direction is supplied
+ * (up / down) by layout.ts based on whether the chord contains a cymbal
+ * voice. Stem length spans from the topmost glyph down by STEM_LENGTH
+ * (stems up) or from the bottommost glyph up (stems down).
+ */
+export function NoteheadStem({
+  x,
+  staffY,
+  topStep,
+  bottomStep,
+  direction,
+}: {
+  x: number;
+  staffY: number;
+  topStep: number;
+  bottomStep: number;
+  direction: "up" | "down";
+}): ReactNode {
+  if (direction === "up") {
+    const baseY = staffY + stepToY(bottomStep);
+    const tipY = staffY + stepToY(topStep) - STEM_LENGTH;
+    const stemX = x + NOTEHEAD_HALF_WIDTH;
+    return (
+      <line
+        x1={stemX}
+        x2={stemX}
+        y1={baseY}
+        y2={tipY}
+        className="stroke-stone-900"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+      />
+    );
+  }
+  const baseY = staffY + stepToY(topStep);
+  const tipY = staffY + stepToY(bottomStep) + STEM_LENGTH;
+  const stemX = x - NOTEHEAD_HALF_WIDTH;
+  return (
+    <line
+      x1={stemX}
+      x2={stemX}
+      y1={baseY}
+      y2={tipY}
+      className="stroke-stone-900"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+    />
+  );
+}
+
+/**
+ * Hand-drawn flags at the stem tip. Multiple flags stack with a small
+ * vertical offset. Slight S-curve to feel less mechanical than a
+ * straight line.
+ */
+export function NoteheadFlags({
+  x,
+  staffY,
+  topStep,
+  bottomStep,
+  direction,
+  count,
+}: {
+  x: number;
+  staffY: number;
+  topStep: number;
+  bottomStep: number;
+  direction: "up" | "down";
+  count: number;
+}): ReactNode {
+  if (count <= 0) return null;
+  const stemX =
+    direction === "up"
+      ? x + NOTEHEAD_HALF_WIDTH
+      : x - NOTEHEAD_HALF_WIDTH;
+  const tipY =
+    direction === "up"
+      ? staffY + stepToY(topStep) - STEM_LENGTH
+      : staffY + stepToY(bottomStep) + STEM_LENGTH;
+  const flagLen = STAFF_SPACE * 1.6;
+  const flagCurve = STAFF_SPACE * 0.9;
+  const sign = direction === "up" ? 1 : -1;
+  const paths: ReactNode[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const y = tipY + i * STAFF_SPACE * 0.9 * sign;
+    const cx = stemX + flagLen * 0.5;
+    const cy = y + flagCurve * 0.4 * sign;
+    const endX = stemX + flagLen;
+    const endY = y + flagCurve * 1.4 * sign;
+    paths.push(
+      <path
+        key={i}
+        d={`M ${stemX} ${y} Q ${cx} ${cy} ${endX} ${endY}`}
+        className="fill-none stroke-stone-900"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      />,
+    );
+  }
+  return <g>{paths}</g>;
+}

@@ -1,5 +1,5 @@
 import type { Bar, Hit, LaneBeat, LaneGroup, Score } from "../types";
-import { mappingFor } from "./drumMap";
+import { mappingFor, type DrumStaffMapping } from "./drumMap";
 import type {
   Duration,
   StaffBar,
@@ -97,17 +97,24 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     const slots = mergeLanesToSlots(beat.lanes);
     for (const slot of slots) {
       const glyphs: StaffGlyph[] = [];
+      const mappings: DrumStaffMapping[] = [];
       for (const hit of slot.hits) {
         const m = mappingFor(hit.instrument);
         if (!m) continue;
         glyphs.push({ step: m.step, head: m.head });
+        mappings.push(m);
       }
       if (glyphs.length === 0) continue;
+      const hasAbove = mappings.some((m) => m.above);
+      // Whole notes carry no stem at all; otherwise pick up / down based on
+      // whether any voice in the chord is a cymbal-family glyph.
+      const stem: StaffNote["stem"] =
+        slot.duration === "w" ? null : hasAbove ? "up" : "down";
       notes.push({
         x: beatStartX + slot.offsetRatio * beatWidth,
         duration: slot.duration,
         glyphs,
-        stem: null,
+        stem,
         tuplet: slot.tuplet,
       });
     }

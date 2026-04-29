@@ -55,3 +55,29 @@ meter: 4/4
     expect(lineCount).toBeGreaterThanOrEqual(5 + 2 + 16);
   });
 });
+
+describe("StaffView (S5: stems + flags)", () => {
+  it("draws flag paths on 8th notes (quadratic Q curves)", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / oo / oo / oo |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // 8 hi-hat 8ths → 8 flag paths (1 per 8th note). Each flag is a
+    // single <path d="M ... Q ..."> element.
+    const flags = (svg.match(/<path[^>]*d="M [^"]*Q [^"]*"/g) ?? []).length;
+    expect(flags).toBeGreaterThanOrEqual(8);
+  });
+
+  it("gives a quarter-note kick a stem but no flag", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / - / o / - |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // Two kicks: two solid ellipses.
+    const ellipses = (svg.match(/<ellipse /g) ?? []).length;
+    expect(ellipses).toBe(2);
+    // Quarter-note stems are straight <line>s; flags would be <path Q>s.
+    const flags = (svg.match(/<path[^>]*d="M [^"]*Q /g) ?? []).length;
+    expect(flags).toBe(0);
+  });
+});

@@ -3,10 +3,13 @@ import {
   PERCUSSION_CLEF_WIDTH,
   STAFF_SPACE,
   TIME_SIG_WIDTH,
+  flagsFor,
   stepToY,
 } from "./geometry";
 import {
   Notehead,
+  NoteheadFlags,
+  NoteheadStem,
   PercussionClef,
   StaffLines,
   TimeSignature,
@@ -103,6 +106,10 @@ function SystemNotes({ system }: { system: StaffSystem }) {
 }
 
 function NoteMarker({ note, staffY }: { note: StaffNote; staffY: number }) {
+  const steps = note.glyphs.map((g) => g.step);
+  const topStep = Math.min(...steps);
+  const bottomStep = Math.max(...steps);
+  const open = note.duration === "h" || note.duration === "w";
   return (
     <g>
       {note.glyphs.map((g, i) => (
@@ -113,9 +120,29 @@ function NoteMarker({ note, staffY }: { note: StaffNote; staffY: number }) {
             staffY={staffY}
             step={g.step}
             shape={g.head}
+            open={open}
           />
         </g>
       ))}
+      {note.stem ? (
+        <NoteheadStem
+          x={note.x}
+          staffY={staffY}
+          topStep={topStep}
+          bottomStep={bottomStep}
+          direction={note.stem}
+        />
+      ) : null}
+      {note.stem ? (
+        <NoteheadFlags
+          x={note.x}
+          staffY={staffY}
+          topStep={topStep}
+          bottomStep={bottomStep}
+          direction={note.stem}
+          count={flagsFor(note.duration)}
+        />
+      ) : null}
     </g>
   );
 }
