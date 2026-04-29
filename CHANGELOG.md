@@ -11,6 +11,42 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.2]
+
+Responsive layout pass + About panel + narrative refresh.
+
+### Added
+
+- **Mobile responsive layout** — the whole app is usable down to 320px wide.
+  - Sidebar moves to a full-height drawer opened from a header hamburger on `<lg`;
+    selecting / importing / loading a sample auto-closes it.
+  - PlaybackBar sticks to the bottom of the viewport on `<lg`, horizontally
+    scrollable for overflowing controls, with iOS safe-area padding.
+  - Editor panel is desktop-only (`lg:`) — its touch story is out of scope for now;
+    the 1700-line PadEditor isn't viable at 390px.
+  - AboutModal becomes a bottom sheet on `<sm`; ExportMenu popover too via the
+    new `FloatingMenu.mobileSheet` prop.
+  - HoverClickPopover skips hover timers on touch devices (`pointer: coarse`),
+    and outside-dismiss now listens on `pointerdown` to fire on both mouse and
+    touch.
+  - Header subtitle and the `benign.host` pill collapse on narrow viewports.
+  - App shell uses `h-dvh` to dodge iOS Safari URL-bar jitter.
+- **About panel** (header `i` button, Esc/backdrop to close) — tagline, first-person
+  "Why", acknowledgement to 董波老师, build info (version + git hash + branch +
+  dirty flag + ISO timestamp), and links to repo / CHANGELOG / LICENSE.
+- **Header links** — GitHub mark and a `benign.host` pill sit next to the About
+  button.
+- **`useMediaQuery` / `useIsDesktop` / `useIsTouchDevice` hooks** built on
+  `useSyncExternalStore`, covered by 6 behavioural tests under jsdom +
+  `@testing-library/react`.
+- Compile-time build metadata injected via `vite.config.ts` (`__BUILD_INFO__`)
+  and surfaced through `src/lib/buildInfo.ts`.
+
+### Changed
+
+- README (Chinese, default) rewritten in first-person drummer-speak; English
+  README kept in lockstep. New tagline: "白天练，夜里扒，做梦都在找鼓点打。"
+
 ## [2026.04.29.1]
 
 Same-day follow-up focusing on exports + chart hygiene.
@@ -128,6 +164,7 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.1...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.2...HEAD
+[2026.04.29.2]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.1...v2026.04.29.2
 [2026.04.29.1]: https://github.com/W-Mai/Drumit/compare/v2026.04.29...v2026.04.29.1
 [2026.04.29]: https://github.com/W-Mai/Drumit/releases/tag/v2026.04.29

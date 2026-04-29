@@ -84,6 +84,7 @@ meter: 4/4
 - **播放**：内置 Web Audio 合成鼓，或直连 Web MIDI；后台标签不掉速（调度跑在 Worker 里）；节拍器、循环、播放光标都有
 - **导出**：SVG、PNG、PDF、静态 HTML、**可播 HTML**（内嵌 Play 按钮，离线也能响）、`.drumtab`、`.mid`
 - **多谱子工作区**：侧栏切换，`.drumtab` 自由进出，localStorage 自动存档
+- **手机上也能看**：布局响应到 320px，侧栏变抽屉、播放条沉底；编辑功能桌面独享
 
 更新记录在 [CHANGELOG.md](./CHANGELOG.md)。
 

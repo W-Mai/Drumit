@@ -96,6 +96,8 @@ Full grammar lives in `src/notation/parser.ts`; more worked examples in
   Play button, works offline), `.drumtab`, `.mid`
 - **Workspace** — multi-document sidebar, `.drumtab` import / export,
   localStorage-backed autosave
+- **Works on phones** — layout responds down to 320px; the sidebar becomes a
+  drawer and the transport sticks to the bottom. Editing is desktop-only.
 
 See [CHANGELOG.md](./CHANGELOG.md) for the full changelog.
 
