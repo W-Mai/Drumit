@@ -30,3 +30,28 @@ describe("StaffView (S2: staff + clef + time sig)", () => {
     expect(svg).toContain("Hello");
   });
 });
+
+describe("StaffView (S3: notes for kick / snare / hi-hat)", () => {
+  const src = `title: T
+meter: 4/4
+[A]
+| hh: oo / oo / oo / oo  bd: o- / -- / o- / --  sn: - / x- / - / x- |
+`;
+
+  it("produces ellipses (kick + snare heads) for a classic beat", () => {
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    const ellipses = (svg.match(/<ellipse /g) ?? []).length;
+    // 2 kicks on beats 1 & 3 + 2 snares on beats 2 & 4 = 4 solid heads at least.
+    expect(ellipses).toBeGreaterThanOrEqual(4);
+  });
+
+  it("renders hi-hat as x glyphs (pairs of crossed lines)", () => {
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // Each hi-hat x is two stroke lines. Expect 8 pairs = 16 lines at minimum
+    // (4 beats × 2 hh × 2 strokes). Plus the 5 staff lines + clef bars.
+    const lineCount = (svg.match(/<line /g) ?? []).length;
+    expect(lineCount).toBeGreaterThanOrEqual(5 + 2 + 16);
+  });
+});

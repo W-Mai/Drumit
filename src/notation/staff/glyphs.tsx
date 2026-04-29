@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { STAFF_SPACE } from "./geometry";
+import { STAFF_SPACE, stepToY } from "./geometry";
+import type { NoteheadShape } from "./types";
 
 interface StaffLinesProps {
   x: number;
@@ -57,6 +58,128 @@ export function PercussionClef({
         strokeLinecap="round"
       />
     </g>
+  );
+}
+
+interface NoteheadProps {
+  x: number;
+  staffY: number;
+  step: number;
+  shape: NoteheadShape;
+  /** Filled heads (solid) are used for quarter notes and shorter; half and
+   *  whole notes use an open head. Callers decide based on Duration. */
+  open?: boolean;
+}
+
+const NOTEHEAD_RX = STAFF_SPACE * 0.58;
+const NOTEHEAD_RY = STAFF_SPACE * 0.42;
+
+/**
+ * One notehead centred at (x, staffY + stepToY(step)). Shape follows the
+ * drum map (solid/open ellipse, x-cross, circled x, triangle, slash).
+ */
+export function Notehead({
+  x,
+  staffY,
+  step,
+  shape,
+  open = false,
+}: NoteheadProps): ReactNode {
+  const y = staffY + stepToY(step);
+  if (shape === "x") {
+    const r = STAFF_SPACE * 0.42;
+    return (
+      <g>
+        <line
+          x1={x - r}
+          x2={x + r}
+          y1={y - r}
+          y2={y + r}
+          className="stroke-stone-900"
+          strokeWidth={1.6}
+          strokeLinecap="round"
+        />
+        <line
+          x1={x - r}
+          x2={x + r}
+          y1={y + r}
+          y2={y - r}
+          className="stroke-stone-900"
+          strokeWidth={1.6}
+          strokeLinecap="round"
+        />
+      </g>
+    );
+  }
+  if (shape === "circle-x") {
+    const r = STAFF_SPACE * 0.48;
+    return (
+      <g>
+        <circle
+          cx={x}
+          cy={y}
+          r={r}
+          className="fill-none stroke-stone-900"
+          strokeWidth={1.2}
+        />
+        <line
+          x1={x - r * 0.6}
+          x2={x + r * 0.6}
+          y1={y - r * 0.6}
+          y2={y + r * 0.6}
+          className="stroke-stone-900"
+          strokeWidth={1.4}
+          strokeLinecap="round"
+        />
+        <line
+          x1={x - r * 0.6}
+          x2={x + r * 0.6}
+          y1={y + r * 0.6}
+          y2={y - r * 0.6}
+          className="stroke-stone-900"
+          strokeWidth={1.4}
+          strokeLinecap="round"
+        />
+      </g>
+    );
+  }
+  if (shape === "triangle") {
+    const r = STAFF_SPACE * 0.55;
+    return (
+      <polygon
+        points={`${x},${y - r} ${x + r},${y + r * 0.8} ${x - r},${y + r * 0.8}`}
+        className="fill-stone-900"
+      />
+    );
+  }
+  if (shape === "slash") {
+    const r = STAFF_SPACE * 0.6;
+    return (
+      <line
+        x1={x - r}
+        x2={x + r}
+        y1={y + r}
+        y2={y - r}
+        className="stroke-stone-900"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+      />
+    );
+  }
+  // solid / open
+  return (
+    <ellipse
+      cx={x}
+      cy={y}
+      rx={NOTEHEAD_RX}
+      ry={NOTEHEAD_RY}
+      className={
+        shape === "open" || open
+          ? "fill-none stroke-stone-900"
+          : "fill-stone-900"
+      }
+      strokeWidth={1.4}
+    />
   );
 }
 

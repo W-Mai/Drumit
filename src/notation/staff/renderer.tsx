@@ -1,37 +1,42 @@
 import type { Score } from "../types";
 import {
   PERCUSSION_CLEF_WIDTH,
-  STAFF_HEIGHT,
   STAFF_SPACE,
   TIME_SIG_WIDTH,
+  stepToY,
 } from "./geometry";
-import { PercussionClef, StaffLines, TimeSignature } from "./glyphs";
+import {
+  Notehead,
+  PercussionClef,
+  StaffLines,
+  TimeSignature,
+} from "./glyphs";
+import { layoutStaff } from "./layout";
+import type { StaffNote, StaffSystem } from "./types";
 
 interface Props {
   score: Score;
   width?: number;
 }
 
-const HEADER_H = 42;
 const SYSTEM_PAD_X = 20;
-const SYSTEM_VERTICAL_PAD = STAFF_SPACE * 4;
-const MIN_WIDTH = 400;
+const LEDGER_WIDTH = STAFF_SPACE * 0.8;
 
 export function StaffView({ score, width = 980 }: Props) {
-  const actualWidth = Math.max(MIN_WIDTH, width);
-  const staffY = HEADER_H + STAFF_SPACE * 2;
-  const systemHeight = STAFF_HEIGHT + SYSTEM_VERTICAL_PAD;
+  const actualWidth = Math.max(400, width);
+  const layout = layoutStaff(score, { width: actualWidth });
+  const height = layout.height;
 
+  const system = layout.systems[0];
+  const staffY = system.y;
   const clefX = SYSTEM_PAD_X + 4;
   const timeSigX = clefX + PERCUSSION_CLEF_WIDTH + 12;
   const staffLinesX = SYSTEM_PAD_X;
   const staffLinesWidth = actualWidth - SYSTEM_PAD_X * 2;
 
-  const totalHeight = HEADER_H + systemHeight;
-
   return (
     <svg
-      viewBox={`0 0 ${actualWidth} ${totalHeight}`}
+      viewBox={`0 0 ${actualWidth} ${height}`}
       className="h-auto w-full"
       role="img"
       aria-label="Standard notation drum chart"
@@ -40,7 +45,7 @@ export function StaffView({ score, width = 980 }: Props) {
         x={0}
         y={0}
         width={actualWidth}
-        height={totalHeight}
+        height={height}
         rx={16}
         className="fill-stone-50"
       />
@@ -61,8 +66,8 @@ export function StaffView({ score, width = 980 }: Props) {
           className="fill-stone-500"
           style={{ fontSize: 12 }}
         >
-          {score.meter.beats}/{score.meter.beatUnit}
-          {score.tempo?.bpm ? `  ♩ = ${score.tempo.bpm}` : ""}
+          {layout.meter}
+          {layout.tempo ? `  ${layout.tempo}` : ""}
         </text>
       </g>
 
@@ -74,6 +79,82 @@ export function StaffView({ score, width = 980 }: Props) {
         beats={score.meter.beats}
         beatUnit={score.meter.beatUnit}
       />
+
+      <SystemNotes system={system} />
     </svg>
+  );
+}
+
+function SystemNotes({ system }: { system: StaffSystem }) {
+  const staffY = system.y;
+  return (
+    <>
+      {system.bars.map((bar) =>
+        bar.notes.map((note, i) => (
+          <NoteMarker
+            key={`${bar.index}-${i}`}
+            note={note}
+            staffY={staffY}
+          />
+        )),
+      )}
+    </>
+  );
+}
+
+function NoteMarker({ note, staffY }: { note: StaffNote; staffY: number }) {
+  return (
+    <g>
+      {note.glyphs.map((g, i) => (
+        <g key={i}>
+          <LedgerLines x={note.x} staffY={staffY} step={g.step} />
+          <Notehead
+            x={note.x}
+            staffY={staffY}
+            step={g.step}
+            shape={g.head}
+          />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/**
+ * Lines extending the staff above or below for notes that fall outside
+ * the five-line range. Each ledger is a short horizontal segment on the
+ * staff-line positions between the note and the staff.
+ */
+function LedgerLines({
+  x,
+  staffY,
+  step,
+}: {
+  x: number;
+  staffY: number;
+  step: number;
+}) {
+  // Staff lines live at even integer steps from -4 to 4.
+  const needLedgers: number[] = [];
+  if (step >= 5) {
+    for (let s = 6; s <= step; s += 2) needLedgers.push(s);
+  } else if (step <= -5) {
+    for (let s = -6; s >= step; s -= 2) needLedgers.push(s);
+  }
+  if (needLedgers.length === 0) return null;
+  return (
+    <g>
+      {needLedgers.map((s) => (
+        <line
+          key={s}
+          x1={x - LEDGER_WIDTH}
+          x2={x + LEDGER_WIDTH}
+          y1={staffY + stepToY(s)}
+          y2={staffY + stepToY(s)}
+          className="stroke-stone-700"
+          strokeWidth={1}
+        />
+      ))}
+    </g>
   );
 }
