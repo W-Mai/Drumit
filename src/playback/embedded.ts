@@ -23,6 +23,14 @@ declare global {
   }
 }
 
+// Visual tokens for the embedded player highlight. Kept as inline
+// styles so they don't depend on any stylesheet class (exported SVG's
+// transient classes are neutralized on export to avoid black-block
+// fallbacks — see src/notation/exporters/svg.ts).
+const HL_BAR_FILL = "rgba(209, 250, 229, 0.7)"; // emerald-100/70
+const HL_BAR_STROKE = "#10b981"; // emerald-500
+const HL_BEAT_FILL = "rgba(110, 231, 183, 0.4)"; // emerald-300/40
+
 export function init(): void {
   const sourceEl = document.getElementById("drumtab-source");
   if (!sourceEl) return;
@@ -31,7 +39,10 @@ export function init(): void {
 
   const parsed = parseDrumtab(text);
   if (parsed.diagnostics.some((d) => d.level === "error")) {
-    console.warn("[drumit] source has errors; playback may be partial", parsed.diagnostics);
+    console.warn(
+      "[drumit] source has errors; playback may be partial",
+      parsed.diagnostics,
+    );
   }
 
   const playBtn = document.getElementById("play") as HTMLButtonElement | null;
@@ -43,6 +54,76 @@ export function init(): void {
   const controller = new PlaybackController({
     engine,
     score: parsed.score,
+  });
+
+  // Cache of `<g data-bar-index="N">` elements so highlight lookups are O(1).
+  const barGroups = new Map<number, SVGGElement>();
+  document
+    .querySelectorAll<SVGGElement>("[data-bar-index]")
+    .forEach((g) => {
+      const idx = Number(g.getAttribute("data-bar-index"));
+      if (!Number.isNaN(idx)) barGroups.set(idx, g);
+    });
+
+  let lastBarIndex = -1;
+  let lastBeatIndex = -1;
+
+  function clearHighlight(barIdx: number) {
+    const g = barGroups.get(barIdx);
+    if (!g) return;
+    const barRect = g.querySelector<SVGRectElement>("[data-bar-highlight]");
+    if (barRect) {
+      barRect.style.fill = "";
+      barRect.style.stroke = "";
+      barRect.style.strokeWidth = "";
+    }
+    g.querySelectorAll<SVGRectElement>("[data-beat-rect]").forEach((r) => {
+      r.style.fill = "";
+    });
+  }
+
+  function applyHighlight(barIdx: number, beatIdx: number) {
+    const g = barGroups.get(barIdx);
+    if (!g) return;
+    const barRect = g.querySelector<SVGRectElement>("[data-bar-highlight]");
+    if (barRect) {
+      barRect.style.fill = HL_BAR_FILL;
+      barRect.style.stroke = HL_BAR_STROKE;
+      barRect.style.strokeWidth = "1.5";
+    }
+    const beatRect = g.querySelector<SVGRectElement>(
+      `[data-beat-rect][data-beat-index="${beatIdx}"]`,
+    );
+    if (beatRect) {
+      beatRect.style.fill = HL_BEAT_FILL;
+    }
+  }
+
+  function clearAllHighlights() {
+    if (lastBarIndex >= 0) clearHighlight(lastBarIndex);
+    lastBarIndex = -1;
+    lastBeatIndex = -1;
+  }
+
+  controller.onCursor((pos) => {
+    if (pos.barIndex === lastBarIndex && pos.beatIndex === lastBeatIndex) return;
+    if (lastBarIndex >= 0 && lastBarIndex !== pos.barIndex) {
+      clearHighlight(lastBarIndex);
+    } else if (
+      lastBarIndex === pos.barIndex &&
+      lastBeatIndex >= 0 &&
+      lastBeatIndex !== pos.beatIndex
+    ) {
+      // Same bar, new beat — clear just the previous beat overlay.
+      const g = barGroups.get(lastBarIndex);
+      const prev = g?.querySelector<SVGRectElement>(
+        `[data-beat-rect][data-beat-index="${lastBeatIndex}"]`,
+      );
+      if (prev) prev.style.fill = "";
+    }
+    applyHighlight(pos.barIndex, pos.beatIndex);
+    lastBarIndex = pos.barIndex;
+    lastBeatIndex = pos.beatIndex;
   });
 
   controller.onStateChange((state) => {
@@ -57,11 +138,17 @@ export function init(): void {
       if (pauseBtn) pauseBtn.disabled = true;
       stopBtn.disabled = false;
     } else {
+      // idle — clear cursor highlights.
+      clearAllHighlights();
       playBtn.textContent = "▶ Play";
       playBtn.disabled = false;
       if (pauseBtn) pauseBtn.disabled = true;
       stopBtn.disabled = true;
     }
+  });
+
+  controller.onEnd(() => {
+    clearAllHighlights();
   });
 
   playBtn.addEventListener("click", () => {

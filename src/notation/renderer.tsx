@@ -181,6 +181,7 @@ function BarView({
     <g
       onClick={onSelect}
       style={onSelect ? { cursor: "pointer" } : undefined}
+      data-bar-index={bar.index - 1}
     >
       {/* Click target + selection highlight */}
       <rect
@@ -197,6 +198,7 @@ function BarView({
               : "fill-transparent stroke-transparent hover:fill-stone-200/40"
         }
         strokeWidth={isPlayhead || selected ? 1.5 : 0}
+        data-bar-highlight="true"
       />
 
       {/* Current-beat vertical playhead line (only when this bar is the playhead). */}
@@ -209,6 +211,22 @@ function BarView({
           className="fill-emerald-300/40"
         />
       ) : null}
+
+      {/* Per-beat invisible overlays so embedded players can highlight the
+          current beat by index. These are `data-beat-rect` rects the
+          exporter can target; in the live app they're transparent. */}
+      {beats.map((b, i) => (
+        <rect
+          key={`beat-overlay-${i}`}
+          x={b.x - 1}
+          y={barlineTop}
+          width={b.width + 2}
+          height={barlineBottom - barlineTop}
+          className="fill-transparent"
+          data-beat-rect="true"
+          data-beat-index={i}
+        />
+      ))}
 
       <text
         x={x}
