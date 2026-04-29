@@ -660,7 +660,7 @@ export default function App() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col p-2 lg:flex-row lg:p-3">
+      <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-3 lg:flex-row">
         {/* Sidebar is desktop-only. On <lg, it's replaced by a drawer
             opened from the header hamburger — see S3. */}
         {sidebarCollapsed ? (
@@ -724,8 +724,12 @@ export default function App() {
             <Button
               variant={showLabels ? "primary" : "secondary"}
               onClick={() => setShowLabels((v) => !v)}
+              title={showLabels ? "隐藏乐器名" : "显示乐器名"}
             >
-              {showLabels ? "Hide labels" : "Show labels"}
+              <span className="sm:hidden">{showLabels ? "🏷" : "🏷︎"}</span>
+              <span className="hidden sm:inline">
+                {showLabels ? "Hide labels" : "Show labels"}
+              </span>
             </Button>
             <ExportMenu
               score={score}
@@ -736,7 +740,7 @@ export default function App() {
           </PanelHeader>
           <div
             ref={setChartContainer}
-            className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-4"
+            className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-2 sm:p-4"
           >
             {hasErrors ? (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
@@ -763,13 +767,13 @@ export default function App() {
           onClick={() => setEditorCollapsed((v) => !v)}
           title={editorCollapsed ? "Show editor" : "Hide editor"}
           aria-label={editorCollapsed ? "Show editor" : "Hide editor"}
-          className="group -my-0.5 flex h-2.5 flex-none items-center justify-center hover:bg-stone-200/70"
+          className="group -my-0.5 hidden h-2.5 flex-none items-center justify-center hover:bg-stone-200/70 lg:flex"
         >
           <span className="h-[2px] w-16 rounded-full bg-stone-200 group-hover:bg-stone-400" />
         </button>
         <div
           className={cn(
-            "flex min-h-0 flex-col",
+            "hidden min-h-0 flex-col lg:flex",
             editorCollapsed ? "flex-none" : "flex-[45_45_0%]",
           )}
         >
