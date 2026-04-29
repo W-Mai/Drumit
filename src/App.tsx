@@ -709,7 +709,7 @@ export default function App() {
         </button>
 
 
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 pb-[calc(3.25rem+env(safe-area-inset-bottom))] lg:pb-0">
         <PlaybackBar
           score={score}
           startBar={clampedSelectedBar ?? 0}

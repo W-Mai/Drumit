@@ -169,7 +169,16 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
   ]);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs">
+    <div
+      className="
+        fixed inset-x-0 bottom-0 z-30
+        flex items-center gap-3 overflow-x-auto
+        border-t border-stone-200 bg-white px-3 py-2 text-xs
+        pb-[max(0.5rem,env(safe-area-inset-bottom))]
+        lg:static lg:flex-wrap lg:overflow-visible
+        lg:rounded-xl lg:border lg:pb-2
+      "
+    >
       <div className="flex items-center gap-1">
         <Button
           onClick={playing ? handlePause : handlePlay}
