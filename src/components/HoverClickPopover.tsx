@@ -23,6 +23,8 @@ interface Props {
   /** Optional class applied to the wrapping trigger span. */
   triggerClassName?: string;
   className?: string;
+  /** Pass through to FloatingMenu.mobileSheet — on <sm, snap to a bottom sheet. */
+  mobileSheet?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export function HoverClickPopover({
   closeDelay = 180,
   triggerClassName,
   className,
+  mobileSheet = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
@@ -135,6 +138,7 @@ export function HoverClickPopover({
         onClose={handleClose}
         placement={placement}
         className={className}
+        mobileSheet={mobileSheet}
       >
         <div
           onMouseEnter={handlePanelEnter}

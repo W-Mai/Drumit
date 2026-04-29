@@ -149,7 +149,8 @@ export function ExportMenu({ score, getSvgElement }: Props) {
   return (
     <HoverClickPopover
       placement="bottom"
-      className="w-64"
+      className="w-64 sm:w-64"
+      mobileSheet
       trigger={({ open }) => (
         <span
           title="Export…"

@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useMediaQuery } from "../lib/useMediaQuery";
 
 interface Props {
   anchor: HTMLElement | null;
@@ -17,6 +18,12 @@ interface Props {
   /** Offset gap between anchor and menu (px). */
   gap?: number;
   className?: string;
+  /**
+   * When true, on narrow viewports (<sm) the menu snaps to the bottom
+   * of the screen as a full-width sheet instead of floating near the
+   * anchor. Useful for menus that get unwieldy at 390px like ExportMenu.
+   */
+  mobileSheet?: boolean;
 }
 
 /**
@@ -31,17 +38,17 @@ export function FloatingMenu({
   placement = "bottom",
   gap = 6,
   className,
+  mobileSheet = false,
 }: Props) {
   const [coords, setCoords] = useState<{ left: number; top: number } | null>(
     null,
   );
   const menuRef = useRef<HTMLDivElement>(null);
+  const isNarrow = useMediaQuery("(max-width: 639px)");
+  const asSheet = mobileSheet && isNarrow;
 
   useLayoutEffect(() => {
-    if (!open || !anchor || !menuRef.current) {
-      setCoords(null);
-      return;
-    }
+    if (!open || !anchor || !menuRef.current || asSheet) return;
     const rect = anchor.getBoundingClientRect();
     const menuRect = menuRef.current.getBoundingClientRect();
     let left = rect.left + rect.width / 2 - menuRect.width / 2;
@@ -60,7 +67,7 @@ export function FloatingMenu({
     if (top < pad) top = pad;
 
     setCoords({ left, top });
-  }, [open, anchor, placement, gap]);
+  }, [open, anchor, placement, gap, asSheet]);
 
   useEffect(() => {
     if (!open) return;
@@ -111,6 +118,29 @@ export function FloatingMenu({
 
   if (!open) return null;
 
+  if (asSheet) {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-50 flex items-end bg-stone-900/50"
+        onClick={onClose}
+        role="presentation"
+      >
+        <div
+          ref={menuRef}
+          onClick={(e) => e.stopPropagation()}
+          className={
+            "w-full max-h-[70dvh] overflow-auto rounded-t-2xl border-t border-stone-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl " +
+            (className ?? "")
+          }
+          role="dialog"
+        >
+          {children}
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
   return createPortal(
     <div
       ref={menuRef}
@@ -121,7 +151,6 @@ export function FloatingMenu({
       style={{
         left: coords?.left ?? -9999,
         top: coords?.top ?? -9999,
-        // Hide until we've measured
         visibility: coords ? "visible" : "hidden",
       }}
       role="dialog"

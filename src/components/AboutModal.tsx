@@ -36,11 +36,16 @@ export function AboutModal({ open, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="about-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="
+          flex w-full flex-col overflow-hidden bg-white shadow-xl
+          max-h-[85dvh] rounded-t-2xl
+          sm:max-h-[85vh] sm:max-w-xl sm:rounded-2xl
+          pb-[env(safe-area-inset-bottom)]
+        "
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-4 border-b border-stone-200 px-6 py-4">
