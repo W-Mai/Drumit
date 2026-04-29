@@ -115,6 +115,16 @@ export default function App() {
     () => loadInitialWorkspace().sidebarCollapsed,
   );
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen]);
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
   );
@@ -505,13 +515,32 @@ export default function App() {
 
   return (
     <HotkeyContextProvider>
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-stone-50">
-      <header className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-5 py-2">
-        <div className="flex items-baseline gap-3">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-stone-50">
+      <header className="flex flex-none flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-3 py-2 lg:gap-3 lg:px-5">
+        <div className="flex items-center gap-2 lg:gap-3">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="打开文档列表"
+            title="文档"
+            className="flex size-8 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900 lg:hidden"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <p className="text-brand text-[11px] font-bold tracking-[0.18em] uppercase">
             Drumit
           </p>
-          <h1 className="text-ink font-serif text-base leading-none font-semibold tracking-tight">
+          <h1 className="text-ink hidden font-serif text-base leading-none font-semibold tracking-tight sm:block">
             Drumtab visualizer
           </h1>
         </div>
@@ -538,7 +567,7 @@ export default function App() {
             rel="noreferrer noopener"
             title="博客 · benign.host"
             aria-label="博客"
-            className="flex h-7 items-center justify-center rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+            className="hidden h-7 items-center justify-center rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-600 hover:bg-stone-50 hover:text-stone-900 sm:flex"
           >
             benign.host
           </a>
@@ -582,13 +611,60 @@ export default function App() {
       </header>
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
 
-      <div className="flex min-h-0 flex-1 p-3">
-        {/* Sidebar slot: either a full-width DocumentList with an overlay
-            collapse button on its top-right corner, or a narrow launcher
-            column showing just a ⇥ pin button. The whole right-edge strip
-            is also a click target to toggle visibility. */}
+      {mobileNavOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="文档列表"
+          className="fixed inset-0 z-50 flex lg:hidden"
+        >
+          <button
+            type="button"
+            aria-label="关闭文档列表"
+            onClick={() => setMobileNavOpen(false)}
+            className="absolute inset-0 bg-stone-900/50"
+          />
+          <div className="relative flex h-full w-[85vw] max-w-sm flex-col bg-white shadow-xl">
+            <DocumentList
+              documents={documents.map((d) => ({
+                id: d.id,
+                name: d.name,
+                source: d.source,
+              }))}
+              activeId={activeId}
+              onSelect={(id) => {
+                handleSelectDoc(id);
+                setMobileNavOpen(false);
+              }}
+              onCreate={() => {
+                handleCreateDoc();
+                setMobileNavOpen(false);
+              }}
+              onDuplicate={handleDuplicateDoc}
+              onRename={handleRenameDoc}
+              onDelete={handleDeleteDoc}
+              onExport={handleExportDoc}
+              onExportMidi={handleExportDocMidi}
+              onImport={(src) => {
+                handleImportDoc(src);
+                setMobileNavOpen(false);
+              }}
+              samples={samples.map(({ id, label }) => ({ id, label }))}
+              onLoadSample={(id) => {
+                handleLoadSample(id);
+                setMobileNavOpen(false);
+              }}
+              onCollapse={() => setMobileNavOpen(false)}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex min-h-0 flex-1 flex-col p-2 lg:flex-row lg:p-3">
+        {/* Sidebar is desktop-only. On <lg, it's replaced by a drawer
+            opened from the header hamburger — see S3. */}
         {sidebarCollapsed ? (
-          <div className="flex flex-none items-start justify-center">
+          <div className="hidden flex-none items-start justify-center lg:flex">
             <button
               type="button"
               onClick={() => setSidebarCollapsed(false)}
@@ -600,7 +676,7 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <div className="relative flex w-[200px] flex-none flex-col transition-[width] duration-150">
+          <div className="relative hidden w-[200px] flex-none flex-col transition-[width] duration-150 lg:flex">
             <DocumentList
               documents={documents.map((d) => ({
                 id: d.id,
@@ -622,14 +698,12 @@ export default function App() {
             />
           </div>
         )}
-        {/* Vertical splitter between sidebar and main content — the whole
-            gap is clickable to toggle the sidebar. */}
         <button
           type="button"
           onClick={() => setSidebarCollapsed((v) => !v)}
           title={sidebarCollapsed ? "Show documents" : "Hide documents"}
           aria-label={sidebarCollapsed ? "Show documents" : "Hide documents"}
-          className="group mx-0.5 flex w-2.5 flex-none items-center justify-center hover:bg-stone-200/70"
+          className="group mx-0.5 hidden w-2.5 flex-none items-center justify-center hover:bg-stone-200/70 lg:flex"
         >
           <span className="h-10 w-[2px] rounded-full bg-stone-200 group-hover:bg-stone-400" />
         </button>
