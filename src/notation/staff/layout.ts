@@ -7,6 +7,7 @@ import type {
   StaffGlyph,
   StaffLayout,
   StaffNote,
+  StaffRest,
   StaffSystem,
 } from "./types";
 
@@ -88,6 +89,7 @@ interface BarCtx {
 
 function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
   const notes: StaffNote[] = [];
+  const rests: StaffRest[] = [];
   const beatOfNote: number[] = [];
   const beatWidth = width / beatsPerBar;
 
@@ -97,6 +99,7 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     const beat = beats[beatIndex] ?? { lanes: [] };
     const beatStartX = x + beatIndex * beatWidth;
     const slots = mergeLanesToSlots(beat.lanes);
+    let hitsOnBeat = 0;
     for (const slot of slots) {
       const glyphs: StaffGlyph[] = [];
       const mappings: DrumStaffMapping[] = [];
@@ -118,6 +121,14 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
         tuplet: slot.tuplet,
       });
       beatOfNote.push(beatIndex);
+      hitsOnBeat += 1;
+    }
+    if (hitsOnBeat === 0) {
+      rests.push({
+        x: beatStartX + beatWidth * 0.5,
+        duration: "q",
+        step: 0,
+      });
     }
   }
 
@@ -128,7 +139,7 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     x,
     width,
     notes,
-    rests: [],
+    rests,
     beams,
     tuplets: [],
     barlineX: x + width,

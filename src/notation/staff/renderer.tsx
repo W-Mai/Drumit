@@ -11,6 +11,7 @@ import {
   NoteheadFlags,
   NoteheadStem,
   PercussionClef,
+  Rest,
   StaffLines,
   TimeSignature,
 } from "./glyphs";
@@ -113,6 +114,9 @@ function BarNotes({ bar, staffY }: { bar: StaffBar; staffY: number }) {
           staffY={staffY}
           suppressFlag={beamedNoteIndices.has(i)}
         />
+      ))}
+      {bar.rests.map((rest, i) => (
+        <Rest key={`r${i}`} x={rest.x} staffY={staffY} duration={rest.duration} />
       ))}
       {bar.beams.map((beam, i) => (
         <BeamLine key={i} beam={beam} bar={bar} staffY={staffY} />

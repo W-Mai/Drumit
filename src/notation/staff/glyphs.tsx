@@ -220,6 +220,100 @@ export function TimeSignature({
   );
 }
 
+/**
+ * Hand-drawn rests for each duration. Positions follow standard
+ * conventions (whole rest hangs from line 4, half rest sits on line 3).
+ *
+ * - whole / half: a small filled rectangle on the appropriate line
+ * - quarter:      a zig-zag "squiggle" centred on the middle of the staff
+ * - 8th / 16th:   vertical stroke + 1 or 2 small flags at the top
+ */
+export function Rest({
+  x,
+  staffY,
+  duration,
+}: {
+  x: number;
+  staffY: number;
+  duration: import("./types").Duration;
+}): ReactNode {
+  if (duration === "w") {
+    const y = staffY + stepToY(-2) - STAFF_SPACE * 0.18;
+    return (
+      <rect
+        x={x - STAFF_SPACE * 0.55}
+        y={y}
+        width={STAFF_SPACE * 1.1}
+        height={STAFF_SPACE * 0.5}
+        className="fill-stone-900"
+      />
+    );
+  }
+  if (duration === "h") {
+    const y = staffY + stepToY(0) - STAFF_SPACE * 0.5;
+    return (
+      <rect
+        x={x - STAFF_SPACE * 0.55}
+        y={y}
+        width={STAFF_SPACE * 1.1}
+        height={STAFF_SPACE * 0.5}
+        className="fill-stone-900"
+      />
+    );
+  }
+  if (duration === "q") {
+    const midY = staffY + stepToY(0);
+    const d = [
+      `M ${x - STAFF_SPACE * 0.4} ${midY - STAFF_SPACE * 1.0}`,
+      `L ${x + STAFF_SPACE * 0.25} ${midY - STAFF_SPACE * 0.35}`,
+      `L ${x - STAFF_SPACE * 0.25} ${midY + STAFF_SPACE * 0.35}`,
+      `L ${x + STAFF_SPACE * 0.45} ${midY + STAFF_SPACE * 1.0}`,
+    ].join(" ");
+    return (
+      <path
+        d={d}
+        className="fill-none stroke-stone-900"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    );
+  }
+  // 8 / 16 / 32: stem + stacked flags
+  const topY = staffY + stepToY(-2);
+  const botY = staffY + stepToY(1);
+  const flagCount = duration === "8" ? 1 : duration === "16" ? 2 : 3;
+  const flags: ReactNode[] = [];
+  for (let i = 0; i < flagCount; i += 1) {
+    const fy = topY + i * STAFF_SPACE * 0.9;
+    flags.push(
+      <g key={i}>
+        <circle cx={x} cy={fy} r={STAFF_SPACE * 0.18} className="fill-stone-900" />
+        <path
+          d={`M ${x} ${fy} Q ${x + STAFF_SPACE * 0.5} ${fy + STAFF_SPACE * 0.4} ${x + STAFF_SPACE * 0.7} ${fy + STAFF_SPACE * 1}`}
+          className="fill-none stroke-stone-900"
+          strokeWidth={1.6}
+          strokeLinecap="round"
+        />
+      </g>,
+    );
+  }
+  return (
+    <g>
+      <line
+        x1={x}
+        x2={x + STAFF_SPACE * 0.4}
+        y1={botY}
+        y2={topY}
+        className="stroke-stone-900"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+      />
+      {flags}
+    </g>
+  );
+}
+
 const STEM_LENGTH = STAFF_SPACE * 3.5;
 const NOTEHEAD_HALF_WIDTH = STAFF_SPACE * 0.58;
 
