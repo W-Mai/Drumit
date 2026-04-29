@@ -186,18 +186,19 @@ function planLaneBeat(
     };
   }
 
-  // Un-split lane: follow bar-level resolution unless the lane's own
-  // division is finer. If the lane was triplet and bar is binary (or vice
-  // versa), the lane's setting takes precedence since it's musically
-  // different.
+  // Un-split lane:
+  //   - If the lane already exists (even with division=1), the lane's own
+  //     division is the source of truth. Bar-level resolution is IGNORED
+  //     so users can see exactly what's in the data.
+  //   - If the lane doesn't exist yet (first hit to be written), use the
+  //     bar-level resolution as the default template — that way clicking
+  //     the grid at resolution=1/16 will create a 4-slot lane.
+  const hasLane = lane !== undefined;
   const laneDiv = lane?.division ?? 1;
-  const laneIsTriplet = !!lane?.tuplet;
-  const barIsTriplet = barResolution.kind === "triplet";
-  const mismatch = lane ? laneIsTriplet !== barIsTriplet : false;
-  const custom = mismatch || laneDiv > barResolution.slotsPerBeat;
-  const slotsPerBeat = custom
+  const slotsPerBeat = hasLane
     ? Math.max(1, laneDiv)
     : barResolution.slotsPerBeat;
+  const custom = hasLane;
 
   const widthUnits = 1 / Math.max(1, slotsPerBeat);
   const columns: CellPlan[] = Array.from({ length: slotsPerBeat }, (_, i) => ({
