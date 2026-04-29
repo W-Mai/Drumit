@@ -9,6 +9,7 @@ import type {
   StaffNote,
   StaffRest,
   StaffSystem,
+  StaffTupletBracket,
 } from "./types";
 
 const HEADER_HEIGHT = 42;
@@ -133,6 +134,7 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
   }
 
   const beams = computeBeams(notes, beatOfNote);
+  const tuplets = computeTuplets(notes);
 
   return {
     index: barIndex,
@@ -141,9 +143,39 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     notes,
     rests,
     beams,
-    tuplets: [],
+    tuplets,
     barlineX: x + width,
   };
+}
+
+/** Collapse consecutive notes that share the same tuplet number into one bracket. */
+function computeTuplets(notes: StaffNote[]): StaffTupletBracket[] {
+  const out: StaffTupletBracket[] = [];
+  let start = -1;
+  let count = 0;
+  for (let i = 0; i < notes.length; i += 1) {
+    const t = notes[i].tuplet;
+    if (!t) {
+      if (start !== -1 && i - 1 > start) {
+        out.push({ start, end: i - 1, count });
+      }
+      start = -1;
+      count = 0;
+      continue;
+    }
+    if (start === -1) {
+      start = i;
+      count = t;
+    } else if (t !== count) {
+      out.push({ start, end: i - 1, count });
+      start = i;
+      count = t;
+    }
+  }
+  if (start !== -1 && notes.length - 1 > start) {
+    out.push({ start, end: notes.length - 1, count });
+  }
+  return out;
 }
 
 const BEAMABLE: Record<Duration, number> = {

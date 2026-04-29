@@ -16,7 +16,13 @@ import {
   TimeSignature,
 } from "./glyphs";
 import { layoutStaff } from "./layout";
-import type { StaffBar, StaffBeam, StaffNote, StaffSystem } from "./types";
+import type {
+  StaffBar,
+  StaffBeam,
+  StaffNote,
+  StaffSystem,
+  StaffTupletBracket,
+} from "./types";
 
 interface Props {
   score: Score;
@@ -121,6 +127,93 @@ function BarNotes({ bar, staffY }: { bar: StaffBar; staffY: number }) {
       {bar.beams.map((beam, i) => (
         <BeamLine key={i} beam={beam} bar={bar} staffY={staffY} />
       ))}
+      {bar.tuplets.map((t, i) => (
+        <TupletBracket key={`t${i}`} tuplet={t} bar={bar} staffY={staffY} />
+      ))}
+    </g>
+  );
+}
+
+function TupletBracket({
+  tuplet,
+  bar,
+  staffY,
+}: {
+  tuplet: StaffTupletBracket;
+  bar: StaffBar;
+  staffY: number;
+}) {
+  const start = bar.notes[tuplet.start];
+  const end = bar.notes[tuplet.end];
+  if (!start || !end) return null;
+  // Place the bracket above stem-up notes and below stem-down notes.
+  // A run should already be homogeneous in stem direction since they
+  // share a beat, but fall back to "up" if unclear.
+  const direction = start.stem ?? "up";
+  const topStepOf = (n: StaffNote) => Math.min(...n.glyphs.map((g) => g.step));
+  const bottomStepOf = (n: StaffNote) =>
+    Math.max(...n.glyphs.map((g) => g.step));
+  const sign = direction === "up" ? -1 : 1;
+  const outerY =
+    direction === "up"
+      ? Math.min(
+          ...bar.notes
+            .slice(tuplet.start, tuplet.end + 1)
+            .map((n) => staffY + stepToY(topStepOf(n)) - STAFF_SPACE * 4.5),
+        )
+      : Math.max(
+          ...bar.notes
+            .slice(tuplet.start, tuplet.end + 1)
+            .map((n) => staffY + stepToY(bottomStepOf(n)) + STAFF_SPACE * 4.5),
+        );
+  const leftX = start.x;
+  const rightX = end.x;
+  const midX = (leftX + rightX) / 2;
+  const tickLen = STAFF_SPACE * 0.6;
+  const gapHalf = STAFF_SPACE * 0.8;
+  return (
+    <g>
+      <line
+        x1={leftX}
+        x2={midX - gapHalf}
+        y1={outerY}
+        y2={outerY}
+        className="stroke-stone-700"
+        strokeWidth={1}
+      />
+      <line
+        x1={midX + gapHalf}
+        x2={rightX}
+        y1={outerY}
+        y2={outerY}
+        className="stroke-stone-700"
+        strokeWidth={1}
+      />
+      <line
+        x1={leftX}
+        x2={leftX}
+        y1={outerY}
+        y2={outerY - sign * tickLen}
+        className="stroke-stone-700"
+        strokeWidth={1}
+      />
+      <line
+        x1={rightX}
+        x2={rightX}
+        y1={outerY}
+        y2={outerY - sign * tickLen}
+        className="stroke-stone-700"
+        strokeWidth={1}
+      />
+      <text
+        x={midX}
+        y={outerY + STAFF_SPACE * 0.3}
+        textAnchor="middle"
+        className="fill-stone-900 font-bold italic"
+        style={{ fontSize: STAFF_SPACE * 1.1 }}
+      >
+        {tuplet.count}
+      </text>
     </g>
   );
 }

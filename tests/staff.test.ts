@@ -103,6 +103,19 @@ describe("StaffView (S7: rests on empty beats)", () => {
   });
 });
 
+describe("StaffView (S8: tuplets)", () => {
+  it("emits a bracket with the tuplet digit for a triplet beat", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: ooo / - / - / - |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // Tuplet digit "3" shows up as a <text> node, and there's only one
+    // tuplet bracket in this bar.
+    const threeText = (svg.match(/>3</g) ?? []).length;
+    expect(threeText).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe("StaffView (S6: beams within a beat)", () => {
   it("replaces flags with a beam when two 8ths share a beat", () => {
     const { score } = parseDrumtab(
