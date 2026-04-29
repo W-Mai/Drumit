@@ -367,6 +367,17 @@ function NoteMarker({
             />
           ))
         : null}
+      {note.sticking ? (
+        <text
+          x={note.x}
+          y={staffY + STAFF_SPACE * 6.2}
+          textAnchor="middle"
+          className="fill-stone-600 font-bold italic"
+          style={{ fontSize: 10 }}
+        >
+          {note.sticking}
+        </text>
+      ) : null}
     </g>
   );
 }

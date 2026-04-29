@@ -213,6 +213,17 @@ describe("StaffView (P5: flam / roll / choke)", () => {
   });
 });
 
+describe("StaffView (P6: sticking)", () => {
+  it("prints R / L beneath notes with /R /L suffixes", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o/R / o/L / o/R / o/L |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    expect((svg.match(/>R</g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect((svg.match(/>L</g) ?? []).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe("StaffView (S10: auto-wrap systems)", () => {
   it("emits multiple systems when bar count exceeds a single row", () => {
     const bars = Array.from(
