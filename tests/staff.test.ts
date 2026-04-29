@@ -148,6 +148,32 @@ meter: 4/4
   });
 });
 
+describe("StaffView (P4: accent + ghost)", () => {
+  it("adds an accent wedge path for an accented hit", () => {
+    const plain = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o / - / - / - |`,
+    ).score;
+    const accented = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: >o / - / - / - |`,
+    ).score;
+    const svgPlain = renderToStaticMarkup(createElement(StaffView, { score: plain }));
+    const svgAcc = renderToStaticMarkup(createElement(StaffView, { score: accented }));
+    expect((svgAcc.match(/<path /g) ?? []).length).toBeGreaterThan(
+      (svgPlain.match(/<path /g) ?? []).length,
+    );
+  });
+
+  it("wraps ghost notes in rounded parentheses", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (o) / - / - / - |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // Two Q-curve path strokes per ghost note (left + right paren).
+    const parens = (svg.match(/<path[^>]*d="M [^"]*Q [^"]*"/g) ?? []).length;
+    expect(parens).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe("StaffView (S10: auto-wrap systems)", () => {
   it("emits multiple systems when bar count exceeds a single row", () => {
     const bars = Array.from(

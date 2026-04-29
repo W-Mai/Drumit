@@ -111,11 +111,25 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     for (const slot of slots) {
       const glyphs: StaffGlyph[] = [];
       const mappings: DrumStaffMapping[] = [];
+      const articulationsSet = new Set<string>();
+      let sticking: "R" | "L" | undefined;
       for (const hit of slot.hits) {
         const m = mappingFor(hit.instrument);
         if (!m) continue;
         glyphs.push({ step: m.step, head: m.head });
         mappings.push(m);
+        for (const a of hit.articulations) {
+          if (
+            a === "accent" ||
+            a === "ghost" ||
+            a === "flam" ||
+            a === "roll" ||
+            a === "choke"
+          ) {
+            articulationsSet.add(a);
+          }
+        }
+        if (hit.sticking && !sticking) sticking = hit.sticking;
       }
       if (glyphs.length === 0) continue;
       const hasAbove = mappings.some((m) => m.above);
@@ -127,6 +141,8 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
         glyphs,
         stem,
         tuplet: slot.tuplet,
+        articulations: [...articulationsSet] as StaffNote["articulations"],
+        sticking,
       });
       beatOfNote.push(beatIndex);
       hitsOnBeat += 1;

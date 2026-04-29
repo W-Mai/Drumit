@@ -32,12 +32,23 @@ export interface StaffGlyph {
   head: NoteheadShape;
 }
 
+export type StaffArticulation =
+  | "accent"
+  | "ghost"
+  | "flam"
+  | "roll"
+  | "choke";
+
 export interface StaffNote {
   x: number;
   duration: Duration;
   glyphs: StaffGlyph[];
   stem: "up" | "down" | null;
   tuplet?: number;
+  /** Note-level articulations, merged across all glyphs in the chord. */
+  articulations: StaffArticulation[];
+  /** Per-hit sticking ("R" / "L") collected from the chord voices. */
+  sticking?: "R" | "L";
 }
 
 export interface StaffRest {

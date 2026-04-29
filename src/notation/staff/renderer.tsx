@@ -7,7 +7,9 @@ import {
   stepToY,
 } from "./geometry";
 import {
+  AccentMark,
   EndingBracket,
+  GhostParens,
   Notehead,
   NoteheadFlags,
   NoteheadStem,
@@ -312,6 +314,26 @@ function NoteMarker({
           count={flagsFor(note.duration)}
         />
       ) : null}
+      {note.articulations.includes("accent") ? (
+        <AccentMark
+          x={note.x}
+          y={
+            note.stem === "up"
+              ? staffY + stepToY(topStep)
+              : staffY + stepToY(bottomStep)
+          }
+          direction={note.stem === "up" ? "up" : "down"}
+        />
+      ) : null}
+      {note.articulations.includes("ghost")
+        ? note.glyphs.map((g, i) => (
+            <GhostParens
+              key={`gh-${i}`}
+              x={note.x}
+              y={staffY + stepToY(g.step)}
+            />
+          ))
+        : null}
     </g>
   );
 }

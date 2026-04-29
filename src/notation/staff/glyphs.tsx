@@ -61,6 +61,58 @@ export function PercussionClef({
   );
 }
 
+/** Accent wedge `>` above or below a notehead. */
+export function AccentMark({
+  x,
+  y,
+  direction,
+}: {
+  x: number;
+  y: number;
+  direction: "up" | "down";
+}): ReactNode {
+  const sign = direction === "up" ? -1 : 1;
+  const tipY = y + sign * STAFF_SPACE * 1.6;
+  const r = STAFF_SPACE * 0.55;
+  return (
+    <path
+      d={`M ${x - r} ${tipY - sign * r * 0.8} L ${x + r} ${tipY} L ${x - r} ${tipY + sign * r * 0.8}`}
+      className="fill-none stroke-stone-900"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  );
+}
+
+/** Ghost note parentheses hugging a notehead. */
+export function GhostParens({
+  x,
+  y,
+}: {
+  x: number;
+  y: number;
+}): ReactNode {
+  const dx = STAFF_SPACE * 0.9;
+  const dy = STAFF_SPACE * 0.7;
+  return (
+    <g>
+      <path
+        d={`M ${x - dx} ${y - dy} Q ${x - dx * 1.5} ${y} ${x - dx} ${y + dy}`}
+        className="fill-none stroke-stone-700"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${x + dx} ${y - dy} Q ${x + dx * 1.5} ${y} ${x + dx} ${y + dy}`}
+        className="fill-none stroke-stone-700"
+        strokeWidth={1.2}
+        strokeLinecap="round"
+      />
+    </g>
+  );
+}
+
 /** First / second ending bracket above a bar. */
 export function EndingBracket({
   x,
