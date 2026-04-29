@@ -174,6 +174,45 @@ describe("StaffView (P4: accent + ghost)", () => {
   });
 });
 
+describe("StaffView (P5: flam / roll / choke)", () => {
+  it("flam adds a grace-note ellipse ahead of the main note", () => {
+    const plain = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o / - / - / - |`,
+    ).score;
+    const flam = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: fo / - / - / - |`,
+    ).score;
+    const svgPlain = renderToStaticMarkup(createElement(StaffView, { score: plain }));
+    const svgFlam = renderToStaticMarkup(createElement(StaffView, { score: flam }));
+    expect((svgFlam.match(/<ellipse /g) ?? []).length).toBeGreaterThan(
+      (svgPlain.match(/<ellipse /g) ?? []).length,
+    );
+  });
+
+  it("roll draws tremolo slashes near the stem", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: ~o / - / - / - |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // Two additional stroke <line>s from the two slashes.
+    expect((svg.match(/<line /g) ?? []).length).toBeGreaterThanOrEqual(7);
+  });
+
+  it("choke adds a + glyph above a cymbal hit", () => {
+    const plain = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| cr: o / - / - / - |`,
+    ).score;
+    const choked = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| cr: o! / - / - / - |`,
+    ).score;
+    const svgPlain = renderToStaticMarkup(createElement(StaffView, { score: plain }));
+    const svgChoked = renderToStaticMarkup(createElement(StaffView, { score: choked }));
+    expect((svgChoked.match(/<line /g) ?? []).length).toBeGreaterThan(
+      (svgPlain.match(/<line /g) ?? []).length,
+    );
+  });
+});
+
 describe("StaffView (S10: auto-wrap systems)", () => {
   it("emits multiple systems when bar count exceeds a single row", () => {
     const bars = Array.from(

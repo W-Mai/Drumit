@@ -8,7 +8,9 @@ import {
 } from "./geometry";
 import {
   AccentMark,
+  ChokeMark,
   EndingBracket,
+  FlamGrace,
   GhostParens,
   Notehead,
   NoteheadFlags,
@@ -16,6 +18,7 @@ import {
   PercussionClef,
   RepeatBarline,
   Rest,
+  RollSlashes,
   StaffLines,
   TimeSignature,
 } from "./glyphs";
@@ -331,6 +334,36 @@ function NoteMarker({
               key={`gh-${i}`}
               x={note.x}
               y={staffY + stepToY(g.step)}
+            />
+          ))
+        : null}
+      {note.articulations.includes("flam")
+        ? note.glyphs.map((g, i) => (
+            <FlamGrace
+              key={`fl-${i}`}
+              x={note.x}
+              staffY={staffY}
+              step={g.step}
+              direction={note.stem === "up" ? "up" : "down"}
+            />
+          ))
+        : null}
+      {note.articulations.includes("roll") && note.stem ? (
+        <RollSlashes
+          x={note.x}
+          staffY={staffY}
+          topStep={topStep}
+          bottomStep={bottomStep}
+          direction={note.stem}
+          count={2}
+        />
+      ) : null}
+      {note.articulations.includes("choke")
+        ? note.glyphs.map((g, i) => (
+            <ChokeMark
+              key={`ch-${i}`}
+              x={note.x}
+              y={staffY + stepToY(g.step) - STAFF_SPACE * 1.6}
             />
           ))
         : null}

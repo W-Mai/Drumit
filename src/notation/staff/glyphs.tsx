@@ -61,6 +61,130 @@ export function PercussionClef({
   );
 }
 
+/** Small grace notehead to the left of the main note, with a slash
+ *  through its stem — the standard flam glyph. */
+export function FlamGrace({
+  x,
+  staffY,
+  step,
+  direction,
+}: {
+  x: number;
+  staffY: number;
+  step: number;
+  direction: "up" | "down";
+}): ReactNode {
+  const graceX = x - STAFF_SPACE * 1.4;
+  const graceY = staffY + stepToY(step);
+  const rx = STAFF_SPACE * 0.3;
+  const ry = STAFF_SPACE * 0.22;
+  const stemLen = STAFF_SPACE * 2.2;
+  const sign = direction === "up" ? -1 : 1;
+  const stemX = graceX + (direction === "up" ? rx : -rx);
+  const stemTipY = graceY + sign * stemLen;
+  return (
+    <g>
+      <ellipse
+        cx={graceX}
+        cy={graceY}
+        rx={rx}
+        ry={ry}
+        className="fill-stone-900"
+      />
+      <line
+        x1={stemX}
+        x2={stemX}
+        y1={graceY}
+        y2={stemTipY}
+        className="stroke-stone-900"
+        strokeWidth={1}
+      />
+      <line
+        x1={stemX - STAFF_SPACE * 0.55}
+        x2={stemX + STAFF_SPACE * 0.55}
+        y1={stemTipY + sign * STAFF_SPACE * 0.3}
+        y2={stemTipY - sign * STAFF_SPACE * 0.3}
+        className="stroke-stone-900"
+        strokeWidth={1}
+        strokeLinecap="round"
+      />
+    </g>
+  );
+}
+
+/** Tremolo slashes across the stem for a drum roll. */
+export function RollSlashes({
+  x,
+  staffY,
+  topStep,
+  bottomStep,
+  direction,
+  count = 2,
+}: {
+  x: number;
+  staffY: number;
+  topStep: number;
+  bottomStep: number;
+  direction: "up" | "down";
+  count?: number;
+}): ReactNode {
+  const stemX = direction === "up" ? x + STAFF_SPACE * 0.58 : x - STAFF_SPACE * 0.58;
+  const baseY =
+    direction === "up"
+      ? staffY + stepToY(topStep) - STAFF_SPACE * 1.6
+      : staffY + stepToY(bottomStep) + STAFF_SPACE * 1.6;
+  const slashes: ReactNode[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const y = baseY + i * STAFF_SPACE * 0.55 * (direction === "up" ? -1 : 1);
+    slashes.push(
+      <line
+        key={i}
+        x1={stemX - STAFF_SPACE * 0.45}
+        x2={stemX + STAFF_SPACE * 0.45}
+        y1={y + STAFF_SPACE * 0.25}
+        y2={y - STAFF_SPACE * 0.25}
+        className="stroke-stone-900"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />,
+    );
+  }
+  return <g>{slashes}</g>;
+}
+
+/** Small `+` above a cymbal note to indicate a choke / dampen. */
+export function ChokeMark({
+  x,
+  y,
+}: {
+  x: number;
+  y: number;
+}): ReactNode {
+  const r = STAFF_SPACE * 0.35;
+  return (
+    <g>
+      <line
+        x1={x - r}
+        x2={x + r}
+        y1={y}
+        y2={y}
+        className="stroke-stone-900"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+      />
+      <line
+        x1={x}
+        x2={x}
+        y1={y - r}
+        y2={y + r}
+        className="stroke-stone-900"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+      />
+    </g>
+  );
+}
+
 /** Accent wedge `>` above or below a notehead. */
 export function AccentMark({
   x,
