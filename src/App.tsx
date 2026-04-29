@@ -29,6 +29,7 @@ import {
   newId,
   saveWorkspace,
   type DocumentRecord,
+  type ViewMode,
 } from "./lib/storage";
 import { DocumentList } from "./components/DocumentList";
 import { HotkeyPanel } from "./components/HotkeyPanel";
@@ -36,6 +37,7 @@ import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
+import { StaffView } from "./notation/staff/renderer";
 import { Badge, Button, Panel, PanelHeader } from "./components/ui";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
@@ -58,6 +60,7 @@ function loadInitialWorkspace(): {
   activeId: string;
   sidebarCollapsed: boolean;
   editorCollapsed: boolean;
+  viewMode: ViewMode;
 } {
   const ws = loadWorkspace();
   if (ws && ws.documents.length) {
@@ -65,8 +68,8 @@ function loadInitialWorkspace(): {
       documents: ws.documents,
       activeId: ws.activeId ?? ws.documents[0].id,
       sidebarCollapsed: ws.ui?.sidebarCollapsed ?? false,
-      // Default collapsed = read-only mode. The user opts in to editing.
       editorCollapsed: ws.ui?.editorCollapsed ?? true,
+      viewMode: ws.ui?.viewMode ?? "drumit",
     };
   }
   const id = newId();
@@ -82,6 +85,7 @@ function loadInitialWorkspace(): {
     activeId: id,
     sidebarCollapsed: false,
     editorCollapsed: true,
+    viewMode: "drumit",
   };
 }
 
@@ -128,6 +132,9 @@ export default function App() {
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
   );
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => loadInitialWorkspace().viewMode,
+  );
 
   const serializedSource = useMemo(() => serializeScore(score), [score]);
   const currentSource = textDraft ?? serializedSource;
@@ -138,10 +145,10 @@ export default function App() {
     if (saveTimer.current !== null) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveWorkspace({
-        version: 3,
+        version: 4,
         documents,
         activeId,
-        ui: { sidebarCollapsed, editorCollapsed },
+        ui: { sidebarCollapsed, editorCollapsed, viewMode },
       });
     }, 400);
     return () => {
@@ -150,7 +157,7 @@ export default function App() {
         saveTimer.current = null;
       }
     };
-  }, [documents, activeId, sidebarCollapsed, editorCollapsed]);
+  }, [documents, activeId, sidebarCollapsed, editorCollapsed, viewMode]);
 
   const validation = useMemo(() => validateScore(score), [score]);
   const diagnostics = [...textDiagnostics, ...validation];
@@ -720,7 +727,14 @@ export default function App() {
         />
 
         <Panel className="flex min-h-0 flex-[55_55_0%] flex-col">
-          <PanelHeader title="Preview">
+          <PanelHeader
+            title={
+              <span className="flex items-center gap-2">
+                <span>Preview</span>
+                <ViewModeToggle value={viewMode} onChange={setViewMode} />
+              </span>
+            }
+          >
             <Button
               variant={showLabels ? "primary" : "secondary"}
               onClick={() => setShowLabels((v) => !v)}
@@ -746,6 +760,8 @@ export default function App() {
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
                 Fix parse errors to update the preview.
               </div>
+            ) : viewMode === "staff" ? (
+              <StaffView score={score} />
             ) : (
               <DrumChart
                 layout={layout}
@@ -973,6 +989,25 @@ export default function App() {
       </div>
     </div>
     </HotkeyContextProvider>
+  );
+}
+
+function ViewModeToggle({
+  value,
+  onChange,
+}: {
+  value: ViewMode;
+  onChange: (v: ViewMode) => void;
+}) {
+  return (
+    <span className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
+      <ModeTab active={value === "drumit"} onClick={() => onChange("drumit")}>
+        Drumit
+      </ModeTab>
+      <ModeTab active={value === "staff"} onClick={() => onChange("staff")}>
+        Staff
+      </ModeTab>
+    </span>
   );
 }
 

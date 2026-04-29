@@ -1,4 +1,4 @@
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 
 export interface DocumentRecord {
   id: string;
@@ -12,9 +12,12 @@ export interface DocumentRecord {
  * that predate these fields round-trip without clobbering the user's
  * documents — missing fields fall back to defaults on read.
  */
+export type ViewMode = "drumit" | "staff";
+
 export interface StoredUiState {
   sidebarCollapsed?: boolean;
   editorCollapsed?: boolean;
+  viewMode?: ViewMode;
 }
 
 export interface StoredWorkspace {
@@ -40,9 +43,13 @@ export function loadWorkspace(): StoredWorkspace | null {
     if (raw) {
       const parsed = JSON.parse(raw) as StoredWorkspace;
       if (!Array.isArray(parsed.documents)) return null;
-      // Accept v2 (pre-ui-state) by in-place upgrading — ui defaults are
-      // simply absent and will be filled in by the consumer.
-      if (parsed.version === 2 || parsed.version === STORAGE_VERSION) {
+      // Accept v2 (pre-ui-state) and v3 (pre-viewMode) by in-place upgrading —
+      // any fields introduced later default to undefined, handled by consumers.
+      if (
+        parsed.version === 2 ||
+        parsed.version === 3 ||
+        parsed.version === STORAGE_VERSION
+      ) {
         return { ...parsed, version: STORAGE_VERSION };
       }
       return null;

@@ -112,14 +112,32 @@ describe("workspace", () => {
 
   it("round-trips optional ui state alongside documents", () => {
     saveWorkspace({
-      version: 3,
+      version: 4,
       documents: [{ id: "a", name: "", source: "x", savedAt: 1 }],
       activeId: "a",
-      ui: { sidebarCollapsed: true, editorCollapsed: true },
+      ui: { sidebarCollapsed: true, editorCollapsed: true, viewMode: "staff" },
     });
     const ws = loadWorkspace();
     expect(ws?.ui?.sidebarCollapsed).toBe(true);
     expect(ws?.ui?.editorCollapsed).toBe(true);
+    expect(ws?.ui?.viewMode).toBe("staff");
+  });
+
+  it("accepts a v3 workspace (pre-viewMode) and upgrades in place", () => {
+    localStorage.setItem(
+      "drumit:workspace",
+      JSON.stringify({
+        version: 3,
+        documents: [{ id: "a", name: "doc", source: "x", savedAt: 1 }],
+        activeId: "a",
+        ui: { sidebarCollapsed: true },
+      }),
+    );
+    const ws = loadWorkspace();
+    expect(ws).not.toBeNull();
+    expect(ws!.version).toBe(4);
+    expect(ws!.ui?.sidebarCollapsed).toBe(true);
+    expect(ws!.ui?.viewMode).toBeUndefined();
   });
 
   it("accepts a v2 workspace with no ui field and preserves documents", () => {
