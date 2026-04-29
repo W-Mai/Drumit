@@ -81,6 +81,8 @@ export interface StaffBar {
   repeatTimes?: number;
   /** First / second ending bracket above this bar. */
   ending?: "1" | "2";
+  /** Rendered navigation label, e.g. "D.C. al Fine" or "𝄋". */
+  navigationLabel?: string;
 }
 
 export interface StaffSystem {

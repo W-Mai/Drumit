@@ -122,6 +122,32 @@ meter: 4/4
   });
 });
 
+describe("StaffView (P3: navigation markers)", () => {
+  it("prints D.C. al Fine text above the bar", () => {
+    const src = `title: T
+meter: 4/4
+[A]
+| bd: o / o / o / o |
+@dc al fine
+| bd: o / o / o / o |`;
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    expect(svg).toContain("D.C. al Fine");
+  });
+
+  it("prints Segno glyph 𝄋 when a bar carries the segno marker", () => {
+    const src = `title: T
+meter: 4/4
+[A]
+| bd: o / o / o / o |
+@segno
+| bd: o / o / o / o |`;
+    const { score } = parseDrumtab(src);
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    expect(svg).toContain("𝄋");
+  });
+});
+
 describe("StaffView (S10: auto-wrap systems)", () => {
   it("emits multiple systems when bar count exceeds a single row", () => {
     const bars = Array.from(

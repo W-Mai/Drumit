@@ -133,6 +133,17 @@ function BarNotes({ bar, staffY }: { bar: StaffBar; staffY: number }) {
           label={`${bar.ending}.`}
         />
       ) : null}
+      {bar.navigationLabel ? (
+        <text
+          x={bar.x + bar.width - 4}
+          y={staffY - 4}
+          textAnchor="end"
+          className="fill-stone-900 font-bold italic"
+          style={{ fontSize: 12 }}
+        >
+          {bar.navigationLabel}
+        </text>
+      ) : null}
       {bar.endBarline === "repeat-end" ? (
         <RepeatBarline
           x={bar.barlineX}
