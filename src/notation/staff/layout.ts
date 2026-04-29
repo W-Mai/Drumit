@@ -3,6 +3,7 @@ import { mappingFor, type DrumStaffMapping } from "./drumMap";
 import type {
   Duration,
   StaffBar,
+  StaffBeam,
   StaffGlyph,
   StaffLayout,
   StaffNote,
@@ -87,6 +88,7 @@ interface BarCtx {
 
 function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
   const notes: StaffNote[] = [];
+  const beatOfNote: number[] = [];
   const beatWidth = width / beatsPerBar;
 
   const beats = bar.beats.length > 0 ? bar.beats : fillEmptyBeats(beatsPerBar);
@@ -106,8 +108,6 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
       }
       if (glyphs.length === 0) continue;
       const hasAbove = mappings.some((m) => m.above);
-      // Whole notes carry no stem at all; otherwise pick up / down based on
-      // whether any voice in the chord is a cymbal-family glyph.
       const stem: StaffNote["stem"] =
         slot.duration === "w" ? null : hasAbove ? "up" : "down";
       notes.push({
@@ -117,8 +117,11 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
         stem,
         tuplet: slot.tuplet,
       });
+      beatOfNote.push(beatIndex);
     }
   }
+
+  const beams = computeBeams(notes, beatOfNote);
 
   return {
     index: barIndex,
@@ -126,10 +129,68 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     width,
     notes,
     rests: [],
-    beams: [],
+    beams,
     tuplets: [],
     barlineX: x + width,
   };
+}
+
+const BEAMABLE: Record<Duration, number> = {
+  w: 0,
+  h: 0,
+  q: 0,
+  "8": 1,
+  "16": 2,
+  "32": 3,
+};
+
+/**
+ * Walk the flat note list and collect consecutive runs within the same
+ * beat whose durations are 8th or shorter. Each run becomes one StaffBeam
+ * whose depth equals the minimum beam count across its members (shorter
+ * notes add extra beams on their side — we don't render those sub-beams
+ * yet; MVP just uses the run's min depth).
+ */
+function computeBeams(notes: StaffNote[], beatOfNote: number[]): StaffBeam[] {
+  const out: StaffBeam[] = [];
+  let runStart = -1;
+  let runBeat = -1;
+  let runDepth = 0;
+
+  const flush = (end: number) => {
+    if (runStart === -1) return;
+    if (end > runStart && runDepth > 0) {
+      out.push({ start: runStart, end, depth: runDepth });
+    }
+    runStart = -1;
+    runBeat = -1;
+    runDepth = 0;
+  };
+
+  for (let i = 0; i < notes.length; i += 1) {
+    const depth = BEAMABLE[notes[i].duration];
+    const beat = beatOfNote[i];
+    if (depth === 0) {
+      flush(i - 1);
+      continue;
+    }
+    if (runStart === -1) {
+      runStart = i;
+      runBeat = beat;
+      runDepth = depth;
+      continue;
+    }
+    if (beat !== runBeat) {
+      flush(i - 1);
+      runStart = i;
+      runBeat = beat;
+      runDepth = depth;
+      continue;
+    }
+    runDepth = Math.min(runDepth, depth);
+  }
+  flush(notes.length - 1);
+  return out;
 }
 
 interface MergedSlot {

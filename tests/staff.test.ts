@@ -57,15 +57,15 @@ meter: 4/4
 });
 
 describe("StaffView (S5: stems + flags)", () => {
-  it("draws flag paths on 8th notes (quadratic Q curves)", () => {
+  it("draws a flag on an isolated 8th note that can't beam to a neighbour", () => {
+    // A single 8th on beat 1 and rests elsewhere: no neighbour inside the
+    // same beat, so the note keeps its flag.
     const { score } = parseDrumtab(
-      `title: T\nmeter: 4/4\n[A]\n| hh: oo / oo / oo / oo |`,
+      `title: T\nmeter: 4/4\n[A]\n| hh: o- / - / - / - |`,
     );
     const svg = renderToStaticMarkup(createElement(StaffView, { score }));
-    // 8 hi-hat 8ths → 8 flag paths (1 per 8th note). Each flag is a
-    // single <path d="M ... Q ..."> element.
     const flags = (svg.match(/<path[^>]*d="M [^"]*Q [^"]*"/g) ?? []).length;
-    expect(flags).toBeGreaterThanOrEqual(8);
+    expect(flags).toBeGreaterThanOrEqual(1);
   });
 
   it("gives a quarter-note kick a stem but no flag", () => {
@@ -79,5 +79,36 @@ describe("StaffView (S5: stems + flags)", () => {
     // Quarter-note stems are straight <line>s; flags would be <path Q>s.
     const flags = (svg.match(/<path[^>]*d="M [^"]*Q /g) ?? []).length;
     expect(flags).toBe(0);
+  });
+});
+
+describe("StaffView (S6: beams within a beat)", () => {
+  it("replaces flags with a beam when two 8ths share a beat", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / oo / oo / oo |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    const flagCount = (svg.match(/<path[^>]*d="M [^"]*Q /g) ?? []).length;
+    // 4 beats, each gets a 1-depth beam; flags are suppressed entirely.
+    expect(flagCount).toBe(0);
+  });
+
+  it("draws twice as many beam lines for 16ths as 8ths", () => {
+    const eighths = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oo / oo / oo / oo |`,
+    ).score;
+    const sixteenths = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oooo / oooo / oooo / oooo |`,
+    ).score;
+    const svg8 = renderToStaticMarkup(createElement(StaffView, { score: eighths }));
+    const svg16 = renderToStaticMarkup(
+      createElement(StaffView, { score: sixteenths }),
+    );
+    // Count only thick beam lines (stroke-width ~= BEAM_THICKNESS). Easier:
+    // total <line> count grows by 4 extra beams (1 extra per beat) when
+    // going from 8ths to 16ths.
+    const lines8 = (svg8.match(/<line /g) ?? []).length;
+    const lines16 = (svg16.match(/<line /g) ?? []).length;
+    expect(lines16).toBeGreaterThan(lines8);
   });
 });

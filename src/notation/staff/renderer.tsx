@@ -15,7 +15,7 @@ import {
   TimeSignature,
 } from "./glyphs";
 import { layoutStaff } from "./layout";
-import type { StaffNote, StaffSystem } from "./types";
+import type { StaffBar, StaffBeam, StaffNote, StaffSystem } from "./types";
 
 interface Props {
   score: Score;
@@ -92,20 +92,44 @@ function SystemNotes({ system }: { system: StaffSystem }) {
   const staffY = system.y;
   return (
     <>
-      {system.bars.map((bar) =>
-        bar.notes.map((note, i) => (
-          <NoteMarker
-            key={`${bar.index}-${i}`}
-            note={note}
-            staffY={staffY}
-          />
-        )),
-      )}
+      {system.bars.map((bar) => (
+        <BarNotes key={bar.index} bar={bar} staffY={staffY} />
+      ))}
     </>
   );
 }
 
-function NoteMarker({ note, staffY }: { note: StaffNote; staffY: number }) {
+function BarNotes({ bar, staffY }: { bar: StaffBar; staffY: number }) {
+  const beamedNoteIndices = new Set<number>();
+  for (const beam of bar.beams) {
+    for (let i = beam.start; i <= beam.end; i += 1) beamedNoteIndices.add(i);
+  }
+  return (
+    <g>
+      {bar.notes.map((note, i) => (
+        <NoteMarker
+          key={i}
+          note={note}
+          staffY={staffY}
+          suppressFlag={beamedNoteIndices.has(i)}
+        />
+      ))}
+      {bar.beams.map((beam, i) => (
+        <BeamLine key={i} beam={beam} bar={bar} staffY={staffY} />
+      ))}
+    </g>
+  );
+}
+
+function NoteMarker({
+  note,
+  staffY,
+  suppressFlag,
+}: {
+  note: StaffNote;
+  staffY: number;
+  suppressFlag?: boolean;
+}) {
   const steps = note.glyphs.map((g) => g.step);
   const topStep = Math.min(...steps);
   const bottomStep = Math.max(...steps);
@@ -133,7 +157,7 @@ function NoteMarker({ note, staffY }: { note: StaffNote; staffY: number }) {
           direction={note.stem}
         />
       ) : null}
-      {note.stem ? (
+      {note.stem && !suppressFlag ? (
         <NoteheadFlags
           x={note.x}
           staffY={staffY}
@@ -145,6 +169,58 @@ function NoteMarker({ note, staffY }: { note: StaffNote; staffY: number }) {
       ) : null}
     </g>
   );
+}
+
+const STEM_LENGTH_SCREEN = STAFF_SPACE * 3.5;
+const BEAM_THICKNESS = STAFF_SPACE * 0.55;
+const BEAM_GAP = STAFF_SPACE * 0.4;
+
+function BeamLine({
+  beam,
+  bar,
+  staffY,
+}: {
+  beam: StaffBeam;
+  bar: StaffBar;
+  staffY: number;
+}) {
+  const start = bar.notes[beam.start];
+  const end = bar.notes[beam.end];
+  if (!start || !end || !start.stem) return null;
+  const direction = start.stem;
+  const stemXOffset =
+    direction === "up"
+      ? STAFF_SPACE * 0.58
+      : -STAFF_SPACE * 0.58;
+  const topStepOf = (n: StaffNote) =>
+    Math.min(...n.glyphs.map((g) => g.step));
+  const bottomStepOf = (n: StaffNote) =>
+    Math.max(...n.glyphs.map((g) => g.step));
+  const tipY = (n: StaffNote) =>
+    direction === "up"
+      ? staffY + stepToY(topStepOf(n)) - STEM_LENGTH_SCREEN
+      : staffY + stepToY(bottomStepOf(n)) + STEM_LENGTH_SCREEN;
+  const x1 = start.x + stemXOffset;
+  const x2 = end.x + stemXOffset;
+  const y1 = tipY(start);
+  const y2 = tipY(end);
+  const beams: React.ReactNode[] = [];
+  for (let i = 0; i < beam.depth; i += 1) {
+    const dy = direction === "up" ? i * BEAM_GAP : -i * BEAM_GAP;
+    beams.push(
+      <line
+        key={i}
+        x1={x1}
+        x2={x2}
+        y1={y1 + dy}
+        y2={y2 + dy}
+        className="stroke-stone-900"
+        strokeWidth={BEAM_THICKNESS}
+        strokeLinecap="butt"
+      />,
+    );
+  }
+  return <g>{beams}</g>;
 }
 
 /**
