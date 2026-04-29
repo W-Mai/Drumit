@@ -245,14 +245,19 @@ function BarView({
               if (!existing) tupletByRow.set(t.rowGroup, t);
             }
 
-            // The bottom-most beam for each row becomes the "host" where
-            // the tuplet number is drawn. Every beam on that row leaves a
-            // notch around the number so the digit sits clearly.
-            const hostBeamIdx = new Map<string, number>();
-            beat.beams.forEach((b, i) => {
-              const cur = hostBeamIdx.get(b.rowGroup);
-              if (cur === undefined || beat.beams[cur].depth < b.depth) {
-                hostBeamIdx.set(b.rowGroup, i);
+            // Per-row y range of all beams — the tuplet number is
+            // vertically centered across all beams on that row (1, 2, 3 or
+            // more stacked lines).
+            const rowYRange = new Map<
+              string,
+              { minY: number; maxY: number }
+            >();
+            beat.beams.forEach((b) => {
+              const cur = rowYRange.get(b.rowGroup);
+              if (!cur) rowYRange.set(b.rowGroup, { minY: b.y, maxY: b.y });
+              else {
+                cur.minY = Math.min(cur.minY, b.y);
+                cur.maxY = Math.max(cur.maxY, b.y);
               }
             });
 
@@ -263,7 +268,6 @@ function BarView({
               <Fragment key={`beat-${bar.index}-${beat.index}`}>
                 {beat.beams.map((b, i) => {
                   const t = tupletByRow.get(b.rowGroup);
-                  const isHost = hostBeamIdx.get(b.rowGroup) === i;
                   const rowHasTuplet = rowsWithTuplet.has(b.rowGroup);
                   if (!rowHasTuplet || !t) {
                     return (
@@ -279,8 +283,7 @@ function BarView({
                     );
                   }
                   // Notch around the number so every beam on this row
-                  // clears the digit (especially for sextuplet with two
-                  // stacked beams).
+                  // clears the digit.
                   const left = Math.min(t.x - GAP_HALF, b.x2);
                   const right = Math.max(t.x + GAP_HALF, b.x1);
                   return (
@@ -305,23 +308,31 @@ function BarView({
                           strokeWidth={1}
                         />
                       ) : null}
-                      {/* Only the host beam carries the number itself. */}
-                      {isHost ? (
-                        <text
-                          x={t.x}
-                          y={b.y + 3}
-                          textAnchor="middle"
-                          className="fill-stone-700 text-[9px] font-extrabold"
-                        >
-                          {t.number}
-                        </text>
-                      ) : null}
                     </Fragment>
+                  );
+                })}
+                {/* Draw each tuplet number once, vertically centered
+                    across all beams on that row. */}
+                {Array.from(tupletByRow.entries()).map(([rowGroup, t]) => {
+                  const range = rowYRange.get(rowGroup);
+                  if (!range) return null;
+                  const centerY = (range.minY + range.maxY) / 2;
+                  return (
+                    <text
+                      key={`tuplet-${rowGroup}`}
+                      x={t.x}
+                      y={centerY}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      className="fill-stone-700 text-[9px] font-extrabold"
+                    >
+                      {t.number}
+                    </text>
                   );
                 })}
                 {/* Tuplets without any beam on their row get the fallback label. */}
                 {beat.tuplets
-                  .filter((t) => hostBeamIdx.get(t.rowGroup) === undefined)
+                  .filter((t) => !rowYRange.has(t.rowGroup))
                   .map((t, li) => (
                     <text
                       key={`tuplet-fallback-${li}`}
