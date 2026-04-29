@@ -492,6 +492,10 @@ function mergeTuplets(laneSegments: LaidOutLane[]): LaidOutTuplet[] {
   for (const lane of laneSegments) {
     if (!lane.tuplet) continue;
     if (lane.tickXs.length === 0) continue;
+    // A lane that is marked as a tuplet but has no actual beam (all rests)
+    // can't host the number — skip and let the label move up to the next
+    // tuplet-bearing row with a visible beam.
+    if (lane.beamDepth <= 0) continue;
     const x1 = lane.tickXs[0];
     const x2 = lane.tickXs[lane.tickXs.length - 1];
     entries.push({
