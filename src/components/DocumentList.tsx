@@ -19,8 +19,6 @@ interface Props {
   onExport: (id: string) => void;
   onExportMidi: (id: string) => void;
   onImport: (source: string) => void;
-  /** Optional: show a collapse button in the header when provided. */
-  onCollapse?: () => void;
 }
 
 export function DocumentList({
@@ -34,7 +32,6 @@ export function DocumentList({
   onExport,
   onExportMidi,
   onImport,
-  onCollapse,
 }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -64,16 +61,6 @@ export function DocumentList({
           >
             ↑ Import
           </Button>
-          {onCollapse ? (
-            <button
-              type="button"
-              onClick={onCollapse}
-              title="Collapse documents panel"
-              className="ml-0.5 flex size-5 items-center justify-center rounded text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-            >
-              ‹
-            </button>
-          ) : null}
           <input
             ref={fileInput}
             type="file"

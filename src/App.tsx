@@ -547,20 +547,17 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-3 p-3">
-        {sidebarCollapsed ? (
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed(false)}
-            title="Show documents"
-            className="flex w-8 flex-none items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-500 hover:bg-stone-100"
-          >
-            <span className="[writing-mode:vertical-lr] text-[10px] font-bold tracking-wider uppercase">
-              Documents ›
-            </span>
-          </button>
-        ) : (
-          <div className="flex w-[200px] flex-none flex-col">
+      <div className="flex min-h-0 flex-1 p-3">
+        {/* Sidebar + edge handle. The handle always sits on the right edge
+            of the sidebar slot, so its on-screen position stays consistent
+            across expanded / collapsed states. */}
+        <div
+          className={cn(
+            "relative flex flex-none flex-col transition-[width] duration-150",
+            sidebarCollapsed ? "w-0" : "w-[200px]",
+          )}
+        >
+          {!sidebarCollapsed ? (
             <DocumentList
               documents={documents.map((d) => ({
                 id: d.id,
@@ -576,10 +573,20 @@ export default function App() {
               onExport={handleExportDoc}
               onExportMidi={handleExportDocMidi}
               onImport={handleImportDoc}
-              onCollapse={() => setSidebarCollapsed(true)}
             />
-          </div>
-        )}
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? "Show documents" : "Hide documents"}
+            aria-label={sidebarCollapsed ? "Show documents" : "Hide documents"}
+            className="group absolute top-1/2 -right-1.5 z-10 flex h-14 w-3 -translate-y-1/2 items-center justify-center rounded-full bg-stone-200/0 hover:bg-stone-200/70"
+          >
+            <span className="h-8 w-[3px] rounded-full bg-stone-300 group-hover:bg-stone-500" />
+          </button>
+        </div>
+        <div className="w-3 flex-none" />
+
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
         <PlaybackBar
