@@ -45,6 +45,38 @@ describe("postProcessSvg", () => {
     const out = postProcessSvg(`<svg viewBox="0 0 10 10"></svg>`);
     expect(out).not.toContain("<title>");
   });
+
+  it("neutralizes transient selection/playhead classes to transparent so exports don't render black blocks", () => {
+    const input = `<svg><rect class="fill-amber-200/60 stroke-amber-500"/><rect class="fill-emerald-300/40"/><rect class="fill-emerald-100/70 stroke-emerald-500"/></svg>`;
+    const out = postProcessSvg(input);
+    // Extract the class attributes of rect elements (ignore INLINE_CSS).
+    const rectClasses = [...out.matchAll(/<rect[^>]*class="([^"]*)"/g)].map(
+      (m) => m[1],
+    );
+    for (const cls of rectClasses) {
+      expect(cls).not.toMatch(/fill-amber-200/);
+      expect(cls).not.toMatch(/stroke-amber-500/);
+      expect(cls).not.toMatch(/fill-emerald-(100|300)/);
+      expect(cls).not.toMatch(/stroke-emerald-500/);
+      // Replacement keeps an explicit fill so the bare SVG default
+      // (black) doesn't leak through.
+      expect(cls).toMatch(/fill-transparent/);
+    }
+  });
+
+  it("preserves the section-pill fill-amber-100 (design token, not transient)", () => {
+    const input = `<svg><rect class="fill-stone-900"/><text class="fill-amber-100">A</text></svg>`;
+    const out = postProcessSvg(input);
+    expect(out).toContain("fill-amber-100");
+    expect(out).toContain("fill-stone-900");
+  });
+
+  it("drops hover: classes from exports", () => {
+    const input = `<svg><rect class="fill-transparent stroke-transparent hover:fill-stone-200/40"/></svg>`;
+    const out = postProcessSvg(input);
+    expect(out).not.toMatch(/hover:/);
+    expect(out).toContain("fill-transparent");
+  });
 });
 
 describe("wrapSvgInStaticHtml", () => {

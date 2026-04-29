@@ -49,14 +49,66 @@ function escapeXml(s: string): string {
 }
 
 /**
+ * Transient UI classes applied by the live preview — selection glow,
+ * playhead bar highlight, current-beat bar. These should never bleed
+ * into an exported file: (a) they leak editor state into a static
+ * artifact, and (b) the classes aren't in INLINE_CSS, so renderers that
+ * ignore unknown classes fall back to black fills (that's the "black
+ * block over the focused bar" users see).
+ */
+// Explicit list of fill/stroke utilities applied by the live preview to
+// reflect selection / playhead state — keep in sync with renderer.tsx's
+// BarView. These MUST be replaced (not just stripped) in exports: an SVG
+// element without a fill attribute defaults to black, which would cover
+// a whole bar in the output.
+const TRANSIENT_FILL_CLASSES = [
+  "fill-amber-200/60",
+  "fill-emerald-100/70",
+  "fill-emerald-300/40",
+];
+const TRANSIENT_STROKE_CLASSES = ["stroke-amber-500", "stroke-emerald-500"];
+const TRANSIENT_FILL_RE = new RegExp(
+  "\\b(?:" +
+    TRANSIENT_FILL_CLASSES.map((c) =>
+      c.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&"),
+    ).join("|") +
+    ")\\b",
+  "g",
+);
+const TRANSIENT_STROKE_RE = new RegExp(
+  "\\b(?:" + TRANSIENT_STROKE_CLASSES.join("|") + ")\\b",
+  "g",
+);
+const HOVER_RE = /\bhover:[\w-]+(?:\/\d+)?\b/g;
+
+/**
+ * Neutralize classes that reflect live editor state (selection highlight,
+ * playhead bar, playhead beat) by replacing them with transparent
+ * equivalents that ARE covered by INLINE_CSS. This keeps the underlying
+ * `<rect>` element in place (so layout / z-order doesn't shift) while
+ * producing a clean, stateless export.
+ */
+function neutralizeTransientClasses(svg: string): string {
+  return svg.replace(/class="([^"]*)"/g, (_m, cls: string) => {
+    let next = cls
+      .replace(TRANSIENT_FILL_RE, "fill-transparent")
+      .replace(TRANSIENT_STROKE_RE, "stroke-transparent")
+      .replace(HOVER_RE, "");
+    next = next.replace(/\s+/g, " ").trim();
+    return next ? `class="${next}"` : "";
+  });
+}
+
+/**
  * Turn a raw `renderToStaticMarkup` SVG string into a standalone,
  * portable `.svg` file — adds the XML namespace, an optional `<title>`
- * for a11y, the inlined Tailwind-equivalent stylesheet, and font-size
- * fallbacks.
+ * for a11y, the inlined Tailwind-equivalent stylesheet, font-size
+ * fallbacks, and strips transient UI state classes.
  */
 export function postProcessSvg(raw: string, title?: string): string {
   const titleEl = title ? `<title>${escapeXml(title)}</title>` : "";
-  const styled = raw.replace(
+  const cleaned = neutralizeTransientClasses(raw);
+  const styled = cleaned.replace(
     /<svg([^>]*)>/,
     (_m, attrs) =>
       `<svg${attrs} xmlns="http://www.w3.org/2000/svg">${titleEl}<style>${INLINE_CSS}</style>`,
