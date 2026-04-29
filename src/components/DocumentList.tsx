@@ -48,22 +48,24 @@ export function DocumentList({
   }
 
   return (
-    <aside className="relative flex h-full min-h-0 flex-1 flex-col rounded-2xl border border-stone-200 bg-white">
-      {onCollapse ? (
-        <button
-          type="button"
-          onClick={onCollapse}
-          title="Hide documents"
-          aria-label="Hide documents"
-          className="absolute top-1.5 right-1.5 z-10 flex size-6 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
-        >
-          <span className="text-[12px] font-bold leading-none">⇤</span>
-        </button>
-      ) : null}
-      <header className="flex items-center justify-between gap-1 border-b border-stone-200 px-3 py-2 pr-9">
-        <h3 className="text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-          Documents
-        </h3>
+    <aside className="flex h-full min-h-0 flex-1 flex-col rounded-2xl border border-stone-200 bg-white">
+      <header className="flex flex-col gap-1.5 border-b border-stone-200 px-3 py-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+            Documents
+          </h3>
+          {onCollapse ? (
+            <button
+              type="button"
+              onClick={onCollapse}
+              title="Hide documents"
+              aria-label="Hide documents"
+              className="flex size-5 items-center justify-center rounded text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+            >
+              <span className="text-[12px] font-bold leading-none">⇤</span>
+            </button>
+          ) : null}
+        </div>
         <div className="flex items-center gap-1">
           <Button size="xs" onClick={onCreate} title="New document">
             + New
