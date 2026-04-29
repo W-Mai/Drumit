@@ -71,6 +71,21 @@ describe("postProcessSvg", () => {
     expect(out).toContain("fill-stone-900");
   });
 
+  it("strips interaction hit-box rects (data-beat-rect / data-bar-highlight) from exports", () => {
+    const input = `<svg><rect data-bar-highlight="true" class="fill-transparent"/><rect data-beat-rect="true" data-beat-index="0" class="fill-transparent"/><rect class="fill-stone-900"/></svg>`;
+    const out = postProcessSvg(input);
+    expect(out).not.toContain("data-bar-highlight");
+    expect(out).not.toContain("data-beat-rect");
+    // The non-interaction rect survives.
+    expect(out).toContain('class="fill-stone-900"');
+  });
+
+  it("keeps interaction rects when stripInteraction is false (for playable HTML)", () => {
+    const input = `<svg><rect data-beat-rect="true" data-beat-index="0" class="fill-transparent"/></svg>`;
+    const out = postProcessSvg(input, undefined, { stripInteraction: false });
+    expect(out).toContain("data-beat-rect");
+  });
+
   it("drops hover: classes from exports", () => {
     const input = `<svg><rect class="fill-transparent stroke-transparent hover:fill-stone-200/40"/></svg>`;
     const out = postProcessSvg(input);

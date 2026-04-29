@@ -100,14 +100,44 @@ function neutralizeTransientClasses(svg: string): string {
 }
 
 /**
+ * Drop `<rect>` elements that only exist as interaction hit-boxes or
+ * playhead highlight slots. They carry `data-beat-rect` / `data-bar-highlight`
+ * attributes; outside the app they have no purpose and some renderers
+ * draw them as faint grey borders, which looks like spurious barlines.
+ */
+function stripInteractionLayers(svg: string): string {
+  return svg.replace(
+    /<rect\b[^>]*\bdata-(?:beat-rect|bar-highlight)=[^>]*\/?>/g,
+    "",
+  );
+}
+
+export interface PostProcessOptions {
+  /**
+   * When true (default), remove invisible interaction rects and neutralise
+   * transient selection classes so the exported file looks stateless.
+   * Playable HTML sets this to false because its embedded script needs the
+   * `data-*` hooks to paint the cursor live.
+   */
+  stripInteraction?: boolean;
+}
+
+/**
  * Turn a raw `renderToStaticMarkup` SVG string into a standalone,
  * portable `.svg` file — adds the XML namespace, an optional `<title>`
  * for a11y, the inlined Tailwind-equivalent stylesheet, font-size
- * fallbacks, and strips transient UI state classes.
+ * fallbacks, strips transient UI classes, and removes DOM hit-boxes.
  */
-export function postProcessSvg(raw: string, title?: string): string {
+export function postProcessSvg(
+  raw: string,
+  title?: string,
+  options: PostProcessOptions = {},
+): string {
+  const strip = options.stripInteraction ?? true;
   const titleEl = title ? `<title>${escapeXml(title)}</title>` : "";
-  const cleaned = neutralizeTransientClasses(raw);
+  const cleaned = strip
+    ? stripInteractionLayers(neutralizeTransientClasses(raw))
+    : neutralizeTransientClasses(raw);
   const styled = cleaned.replace(
     /<svg([^>]*)>/,
     (_m, attrs) =>
@@ -167,6 +197,7 @@ export async function renderScoreToSvg(
 export function renderScoreToSvgFromDom(
   svgEl: SVGSVGElement,
   title?: string,
+  options: PostProcessOptions = {},
 ): string {
-  return postProcessSvg(svgEl.outerHTML, title);
+  return postProcessSvg(svgEl.outerHTML, title, options);
 }

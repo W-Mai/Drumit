@@ -50,10 +50,12 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     return `${stem}${suffix}.${ext}`;
   }
 
-  function getSvg(): string {
+  function getSvg(opts: { keepInteraction?: boolean } = {}): string {
     const el = getSvgElement();
     if (!el) throw exportError();
-    return renderScoreToSvgFromDom(el, score.title);
+    return renderScoreToSvgFromDom(el, score.title, {
+      stripInteraction: !opts.keepInteraction,
+    });
   }
 
   async function run(action: () => Promise<void> | void) {
@@ -117,7 +119,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
       label: "HTML (playable)",
       hint: "Single file with inline Play button",
       onClick: () => {
-        const svg = getSvg();
+        const svg = getSvg({ keepInteraction: true });
         const source = serializeScore(score);
         const html = wrapSvgInDynamicHtml(svg, score, { source });
         triggerDownload(
