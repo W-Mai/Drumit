@@ -1,7 +1,7 @@
 # Drumit
 
-> A condensed drum-tab editor.
-> Built for **reading while playing**, not for engraving scores.
+> Practice by day, learn charts by night — and dream up grooves in between.
+> A drum-tab tool for people who'd rather not squint at a five-line staff.
 
 English · [中文](./README.md)
 
@@ -13,46 +13,45 @@ English · [中文](./README.md)
 
 ## Why
 
-MuseScore and Guitar Pro render drum charts on a five-line staff with
-stems, flags, and ledger lines — great for publishing, overkill for a
-practice sheet. Drumit renders a two-row layout (cymbals up top, drums
-on the bottom), expands to extra rows only when voices collide, and
-drops the stems entirely. The result looks like the paper a gigging
-drummer would scribble the night before.
+I'm not a pro drummer. Five-line staves make my eyes glaze over — too
+many lines to count, too many glyphs to decode. But I still want to
+learn charts and practice.
 
-The source format is a plain-text `.drumtab` file — diff-able,
-copy-pasteable, and round-trippable through the editor.
+Drumit's approach: cymbals on one row, drums on another; expand to
+extra rows only when voices actually collide; drop the stems. The
+source file is a plain-text `.drumtab` — diff-able, copy-pasteable,
+PR-able.
 
-## Samples
+## What it looks like
 
-**Basic 8th-note rock beat (动次打次):**
+**Basic 8th-note groove · 动次打次**
 
 ![动次打次](./docs/samples/dong-ci-da-ci.svg)
 
-**Mixed in-beat subdivisions, multi-voice:**
+**Mixed in-beat subdivisions + multi-voice**
 
-![Mixed subdivisions](./docs/samples/mixed-subdivisions.svg)
+![mixed subdivisions](./docs/samples/mixed-subdivisions.svg)
 
-**Triplets and sextuplets:**
+**Triplets and sextuplets**
 
-![Tuplets](./docs/samples/tuplets.svg)
+![tuplets](./docs/samples/tuplets.svg)
 
-**Repeats with 1st / 2nd endings:**
+**Repeats with 1st / 2nd endings**
 
-![Repeats and endings](./docs/samples/repeats-endings.svg)
+![repeats](./docs/samples/repeats-endings.svg)
 
-**Fill with syncopation, flam, ghost, accent:**
+**Fill with every articulation in the book**
 
-![Fill](./docs/samples/fill-articulations.svg)
+![fill](./docs/samples/fill-articulations.svg)
 
-## Quick start
+## Run it
 
 ```bash
 bun install
 bun run dev      # http://localhost:5173
 bun run test
 bun run build    # → dist/
-bun run samples:generate   # re-render the README svgs
+bun run samples:generate   # re-render the svgs in this README
 ```
 
 Requires [Bun](https://bun.sh) ≥ 1.3.
@@ -71,38 +70,47 @@ meter: 4/4
 | Construct | Meaning |
 |---|---|
 | `\| ... \|` | One bar |
-| `hh: a / b / c / d` | A lane (hi-hat) with four beats |
-| `oo` `oooo` `ooo` | In-beat subdivisions (8ths, 16ths, triplets) |
+| `hh: a / b / c / d` | A lane (hi-hat), beats separated by `/` |
+| `oo` / `oooo` / `ooo` | Even in-beat subdivisions (8ths, 16ths, triplets) |
 | `o , x x` | Mixed subdivisions inside a beat (8th + two 16ths) |
 | `\|: ... :\| x3` | Repeat three times |
 | `... \| [1]` / `... \| [2]` | First / second ending |
-| `@segno` `@dc al fine` | Navigation markers |
-| `>o` `(o)` `fo` `~o` `o!` | accent / ghost / flam / roll / choke |
-| `o/R` `o/L` | Sticking suffix |
+| `@segno` / `@dc al fine` | D.S. / D.C. / Coda / Fine markers |
+| `>o` / `(o)` / `fo` / `~o` / `o!` | accent / ghost / flam / roll / choke |
+| `o/R` / `o/L` | Sticking (right / left hand) |
 
-Full grammar lives in `src/notation/parser.ts`; worked examples live in
-`src/notation/samples/`.
+Full grammar lives in `src/notation/parser.ts`; more worked examples in
+`samples/*.drumtab`.
 
 ## What's in the box
 
-- **Editor** — click-to-edit bar grid, numeric hotkeys for instruments,
-  modifier keys for articulations, per-document undo/redo, Source mode
-  for raw `.drumtab` editing
-- **Renderer** — beam merging across voices, embedded tuplet numbers,
-  repeat dots, D.C. / D.S. / Fine / Coda markings
-- **Playback** — Web Audio synth engine and Web MIDI engine
-  (look-ahead scheduler in a Worker so background tabs don't drift),
-  metronome click, loop-to-bar, live cursor
-- **Export** — round-trip `.drumtab` text and Standard MIDI File
-  (Type 0, channel 10)
-- **Workspace** — multi-document sidebar, `.drumtab` import/export,
-  localStorage-backed persistence
+- **Editor** — click a cell to place, digit keys to switch instruments,
+  modifier keys for ghost / flam / accents; per-document undo / redo;
+  Source mode for raw `.drumtab` editing
+- **Renderer** — beams merged across voices, tuplet numbers embedded
+  mid-beam, repeat dots, D.C. / D.S. / Fine / Coda markings
+- **Playback** — built-in Web Audio synth or your MIDI device;
+  look-ahead scheduler runs in a Worker so background tabs don't drift;
+  metronome, loop, live cursor
+- **Export** — SVG, PNG, PDF, static HTML, **playable HTML** (embedded
+  Play button, works offline), `.drumtab`, `.mid`
+- **Workspace** — multi-document sidebar, `.drumtab` import / export,
+  localStorage-backed autosave
 
-The full changelog is in [CHANGELOG.md](./CHANGELOG.md).
+See [CHANGELOG.md](./CHANGELOG.md) for the full changelog.
 
 ## Tech
 
 Bun + Vite + React 19 + TypeScript 6 + Tailwind v4 + Vitest.
+
+## Acknowledgements
+
+Thanks to **Dong Bo** (董波). The two-row compressed notation Drumit uses
+— cymbals above, drums below, no stems, one beat split into however many
+cells it needs — is exactly what I picked up from him at the Xiaomi
+music club. His charts were simple, direct, and easy to read; pick one
+up and you could play it. This project is basically an attempt to port
+that hand-written feel onto a screen.
 
 ## License
 
