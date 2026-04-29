@@ -24,7 +24,25 @@ describe("DrumChart", () => {
     expect(svg).toContain("∕");
     // Ghost brackets are drawn as stroke paths using stone-600.
     expect(svg).toContain("stroke-stone-600");
-    expect(svg).toContain("Cym");
+    expect(svg).toContain("Cymbal");
+  });
+
+  it("showLabels only prints instrument names on the leftmost bar of each row", () => {
+    // Six identical bars at a width that packs them all in one row.
+    const bars = Array.from(
+      { length: 6 },
+      () => `| hh: x / x / x / x  bd: o / - / o / -  sn: - / o / - / o |`,
+    ).join("\n");
+    const src = `title: T\nmeter: 4/4\n[A]\n${bars}`;
+    const svg = renderSvg(src, 2400, true);
+    // Exactly one of each label regardless of bar count, since they all
+    // land on the same row.
+    const cymbalCount = (svg.match(/>Cymbal</g) ?? []).length;
+    const snareCount = (svg.match(/>Snare</g) ?? []).length;
+    const kickCount = (svg.match(/>Kick</g) ?? []).length;
+    expect(cymbalCount).toBe(1);
+    expect(snareCount).toBe(1);
+    expect(kickCount).toBe(1);
   });
 
   it("every <text> and <circle> and <line> in the output has numeric coords", () => {

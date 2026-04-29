@@ -31,13 +31,13 @@ function navigationLabel(nav: import("./types").NavigationMarker): string {
 function rowGroupLabel(g: RowGroup): string {
   switch (g) {
     case "cymbals":
-      return "Cym";
+      return "Cymbal";
     case "toms":
       return "Tom";
     case "snare":
-      return "Sn";
+      return "Snare";
     case "kick":
-      return "BD";
+      return "Kick";
   }
 }
 
@@ -131,7 +131,7 @@ export function DrumChart({
       ))}
 
       {layout.rows.flatMap((row) =>
-        row.map((bar) => {
+        row.map((bar, indexInRow) => {
           const globalIdx = bar.index - 1;
           const isPlayhead = playCursor?.barIndex === globalIdx;
           return (
@@ -139,6 +139,7 @@ export function DrumChart({
               key={`bar-${bar.index}`}
               bar={bar}
               showLabels={showLabels}
+              isRowStart={indexInRow === 0}
               selected={selectedBarIndex === globalIdx}
               isPlayhead={isPlayhead}
               playBeatIndex={isPlayhead ? playCursor?.beatIndex : undefined}
@@ -154,6 +155,7 @@ export function DrumChart({
 function BarView({
   bar,
   showLabels,
+  isRowStart,
   selected,
   isPlayhead,
   playBeatIndex,
@@ -161,6 +163,9 @@ function BarView({
 }: {
   bar: LaidOutBar;
   showLabels: boolean;
+  /** True for the leftmost bar of a chart row — only this bar prints the
+   *  instrument-group labels on the left margin. */
+  isRowStart?: boolean;
   selected?: boolean;
   isPlayhead?: boolean;
   playBeatIndex?: number;
@@ -214,18 +219,22 @@ function BarView({
         {bar.repeatCount > 1 ? ` · ×${bar.repeatCount}` : ""}
       </text>
 
-      {showLabels
-        ? rowGroups.map((g) => (
-            <text
-              key={g}
-              x={x - 6}
-              y={(rowY[g] ?? firstRowY) + 4}
-              textAnchor="end"
-              className="fill-stone-400 text-[9px] font-semibold"
-            >
-              {rowGroupLabel(g)}
-            </text>
-          ))
+      {showLabels && isRowStart
+        ? rowGroups.flatMap((g) => {
+            const ry = rowY[g];
+            if (ry === undefined) return [];
+            return [
+              <text
+                key={g}
+                x={x - 6}
+                y={ry + 4}
+                textAnchor="end"
+                className="fill-stone-400 text-[9px] font-semibold"
+              >
+                {rowGroupLabel(g)}
+              </text>,
+            ];
+          })
         : null}
 
       {/* Opening barline. `|:` draws a thick bar + a thin one + two dots. */}
