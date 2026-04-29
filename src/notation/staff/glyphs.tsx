@@ -614,23 +614,26 @@ export function NoteheadStem({
   topStep,
   bottomStep,
   direction,
+  tipY,
 }: {
   x: number;
   staffY: number;
   topStep: number;
   bottomStep: number;
   direction: "up" | "down";
+  /** Override the stem's far end (used when a beam pins all stems to the same y). */
+  tipY?: number;
 }): ReactNode {
   if (direction === "up") {
     const baseY = staffY + stepToY(bottomStep);
-    const tipY = staffY + stepToY(topStep) - STEM_LENGTH;
+    const y = tipY ?? staffY + stepToY(topStep) - STEM_LENGTH;
     const stemX = x + NOTEHEAD_HALF_WIDTH;
     return (
       <line
         x1={stemX}
         x2={stemX}
         y1={baseY}
-        y2={tipY}
+        y2={y}
         className="stroke-stone-900"
         strokeWidth={1.4}
         strokeLinecap="round"
@@ -638,14 +641,14 @@ export function NoteheadStem({
     );
   }
   const baseY = staffY + stepToY(topStep);
-  const tipY = staffY + stepToY(bottomStep) + STEM_LENGTH;
+  const y = tipY ?? staffY + stepToY(bottomStep) + STEM_LENGTH;
   const stemX = x - NOTEHEAD_HALF_WIDTH;
   return (
     <line
       x1={stemX}
       x2={stemX}
       y1={baseY}
-      y2={tipY}
+      y2={y}
       className="stroke-stone-900"
       strokeWidth={1.4}
       strokeLinecap="round"

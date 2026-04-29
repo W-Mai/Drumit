@@ -269,9 +269,27 @@ function VoicePaint({
   staffY: number;
 }) {
   const direction: "up" | "down" = voice.position === "upper" ? "up" : "down";
+  // Compute the shared beam line (one per primary run). Only level-1
+  // beams pin the stems; sub-beams sit alongside.
+  const stemTipY = new Map<number, number>();
   const beamedNoteIndices = new Set<number>();
   for (const beam of voice.beams) {
     for (let i = beam.start; i <= beam.end; i += 1) beamedNoteIndices.add(i);
+    if (beam.level !== 1) continue;
+    const tipYs: number[] = [];
+    for (let i = beam.start; i <= beam.end; i += 1) {
+      const n = voice.notes[i];
+      if (direction === "up") {
+        const topStep = Math.min(...n.glyphs.map((g) => g.step));
+        tipYs.push(staffY + stepToY(topStep) - STEM_LENGTH_SCREEN);
+      } else {
+        const bottomStep = Math.max(...n.glyphs.map((g) => g.step));
+        tipYs.push(staffY + stepToY(bottomStep) + STEM_LENGTH_SCREEN);
+      }
+    }
+    const beamY =
+      direction === "up" ? Math.min(...tipYs) : Math.max(...tipYs);
+    for (let i = beam.start; i <= beam.end; i += 1) stemTipY.set(i, beamY);
   }
   return (
     <g>
@@ -282,6 +300,7 @@ function VoicePaint({
           staffY={staffY}
           direction={direction}
           suppressFlag={beamedNoteIndices.has(i)}
+          stemTipY={stemTipY.get(i)}
         />
       ))}
       {voice.rests.map((rest, i) => (
@@ -314,11 +333,13 @@ function NoteMarker({
   staffY,
   direction,
   suppressFlag,
+  stemTipY,
 }: {
   note: StaffNote;
   staffY: number;
   direction: "up" | "down";
   suppressFlag?: boolean;
+  stemTipY?: number;
 }) {
   const steps = note.glyphs.map((g) => g.step);
   const topStep = Math.min(...steps);
@@ -346,6 +367,7 @@ function NoteMarker({
           topStep={topStep}
           bottomStep={bottomStep}
           direction={direction}
+          tipY={stemTipY}
         />
       ) : null}
       {!stemless && !suppressFlag ? (
@@ -443,26 +465,30 @@ function BeamLine({
   if (!start || !end) return null;
   const stemXOffset =
     direction === "up" ? STAFF_SPACE * 0.58 : -STAFF_SPACE * 0.58;
-  const topStepOf = (n: StaffNote) => Math.min(...n.glyphs.map((g) => g.step));
-  const bottomStepOf = (n: StaffNote) =>
-    Math.max(...n.glyphs.map((g) => g.step));
-  const tipY = (n: StaffNote) =>
-    direction === "up"
-      ? staffY + stepToY(topStepOf(n)) - STEM_LENGTH_SCREEN
-      : staffY + stepToY(bottomStepOf(n)) + STEM_LENGTH_SCREEN;
+  // Horizontal beam: pick a single y line that every note in the run
+  // can reach with a ≥STEM_LENGTH_SCREEN stem. For stem-up that's the
+  // minimum tip-y (the highest point); for stem-down it's the maximum.
+  const tipYs = notes
+    .slice(beam.start, beam.end + 1)
+    .map((n) => {
+      if (direction === "up") {
+        const topStep = Math.min(...n.glyphs.map((g) => g.step));
+        return staffY + stepToY(topStep) - STEM_LENGTH_SCREEN;
+      }
+      const bottomStep = Math.max(...n.glyphs.map((g) => g.step));
+      return staffY + stepToY(bottomStep) + STEM_LENGTH_SCREEN;
+    });
+  const beamY = direction === "up" ? Math.min(...tipYs) : Math.max(...tipYs);
   const x1 = start.x + stemXOffset;
   const x2 = end.x + stemXOffset;
-  const y1 = tipY(start);
-  const y2 = tipY(end);
-  // Level 1 = primary (always painted), level 2 = 16ths sub-beam, level 3 = 32nds.
   const baseDy = direction === "up" ? 1 : -1;
   const dy = (beam.level - 1) * BEAM_GAP * baseDy;
   return (
     <line
       x1={x1}
       x2={x2}
-      y1={y1 + dy}
-      y2={y2 + dy}
+      y1={beamY + dy}
+      y2={beamY + dy}
       className="stroke-stone-900"
       strokeWidth={BEAM_THICKNESS}
       strokeLinecap="butt"

@@ -102,6 +102,9 @@ interface RawNote {
   hitDivisions: number[];
   hits: Hit[];
   mappings: DrumStaffMapping[];
+  /** Tuplet number carried by this tick (3 / 6 etc.) when any hit's
+   *  group is a tuplet. */
+  tuplet?: number;
 }
 
 function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
