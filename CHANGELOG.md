@@ -34,6 +34,12 @@ against Weinberg 1994 PAS conventions.
   SVG / PNG / static HTML exports. Playable HTML keeps them (its
   embedded script drives live highlights).
 
+### Fixed
+
+- SVG exports no longer emit `<rect …>` without its closing tag (React
+  SSR's paired form was only half-stripped, producing XML parse
+  errors when opened as `.svg`).
+
 ## [2026.04.29.7]
 
 ### Fixed
@@ -295,7 +301,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.7...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.8...HEAD
+[2026.04.29.8]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.7...v2026.04.29.8
 [2026.04.29.7]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.6...v2026.04.29.7
 [2026.04.29.6]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.5...v2026.04.29.6
 [2026.04.29.5]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.4...v2026.04.29.5
