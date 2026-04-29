@@ -561,16 +561,24 @@ export default function App() {
       </header>
 
       <div className="flex min-h-0 flex-1 p-3">
-        {/* Sidebar + edge handle. The handle always sits on the right edge
-            of the sidebar slot, so its on-screen position stays consistent
-            across expanded / collapsed states. */}
-        <div
-          className={cn(
-            "relative flex flex-none flex-col transition-[width] duration-150",
-            sidebarCollapsed ? "w-0" : "w-[200px]",
-          )}
-        >
-          {!sidebarCollapsed ? (
+        {/* Sidebar slot: either a full-width DocumentList with an overlay
+            collapse button on its top-right corner, or a narrow launcher
+            column showing just a ⇥ pin button. The whole right-edge strip
+            is also a click target to toggle visibility. */}
+        {sidebarCollapsed ? (
+          <div className="flex flex-none items-start justify-center">
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(false)}
+              title="Show documents"
+              aria-label="Show documents"
+              className="flex size-8 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
+            >
+              <span className="text-[14px] font-bold leading-none">⇥</span>
+            </button>
+          </div>
+        ) : (
+          <div className="relative flex w-[200px] flex-none flex-col transition-[width] duration-150">
             <DocumentList
               documents={documents.map((d) => ({
                 id: d.id,
@@ -586,19 +594,21 @@ export default function App() {
               onExport={handleExportDoc}
               onExportMidi={handleExportDocMidi}
               onImport={handleImportDoc}
+              onCollapse={() => setSidebarCollapsed(true)}
             />
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed((v) => !v)}
-            title={sidebarCollapsed ? "Show documents" : "Hide documents"}
-            aria-label={sidebarCollapsed ? "Show documents" : "Hide documents"}
-            className="group absolute top-1/2 -right-1.5 z-10 flex h-14 w-3 -translate-y-1/2 items-center justify-center rounded-full bg-stone-200/0 hover:bg-stone-200/70"
-          >
-            <span className="h-8 w-[3px] rounded-full bg-stone-300 group-hover:bg-stone-500" />
-          </button>
-        </div>
-        <div className="w-3 flex-none" />
+          </div>
+        )}
+        {/* Vertical splitter between sidebar and main content — the whole
+            gap is clickable to toggle the sidebar. */}
+        <button
+          type="button"
+          onClick={() => setSidebarCollapsed((v) => !v)}
+          title={sidebarCollapsed ? "Show documents" : "Hide documents"}
+          aria-label={sidebarCollapsed ? "Show documents" : "Hide documents"}
+          className="group mx-0.5 flex w-2.5 flex-none items-center justify-center hover:bg-stone-200/70"
+        >
+          <span className="h-10 w-[2px] rounded-full bg-stone-200 group-hover:bg-stone-400" />
+        </button>
 
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
@@ -637,33 +647,49 @@ export default function App() {
           </div>
         </Panel>
 
+        {/* Horizontal splitter between Preview and the editor — clicking
+            anywhere along the strip toggles the editor. Mirrors the
+            sidebar's vertical splitter to make the interaction
+            discoverable. */}
+        <button
+          type="button"
+          onClick={() => setEditorCollapsed((v) => !v)}
+          title={editorCollapsed ? "Show editor" : "Hide editor"}
+          aria-label={editorCollapsed ? "Show editor" : "Hide editor"}
+          className="group -my-0.5 flex h-2.5 flex-none items-center justify-center hover:bg-stone-200/70"
+        >
+          <span className="h-[2px] w-16 rounded-full bg-stone-200 group-hover:bg-stone-400" />
+        </button>
         <div
           className={cn(
-            "relative flex min-h-0 flex-col",
+            "flex min-h-0 flex-col",
             editorCollapsed ? "flex-none" : "flex-[45_45_0%]",
           )}
         >
-          {/* Top-edge drag handle — mirrors the sidebar's right-edge
-              handle. Clicking collapses/expands the editor panel. When
-              collapsed the panel becomes read-only (no PadEditor), only
-              the PanelHeader and preview remain. */}
-          <button
-            type="button"
-            onClick={() => setEditorCollapsed((v) => !v)}
-            title={editorCollapsed ? "Show editor" : "Hide editor"}
-            aria-label={editorCollapsed ? "Show editor" : "Hide editor"}
-            className="group absolute -top-1.5 left-1/2 z-10 flex h-3 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-stone-200/0 hover:bg-stone-200/70"
-          >
-            <span className="h-[3px] w-8 rounded-full bg-stone-300 group-hover:bg-stone-500" />
-          </button>
           <Panel className="flex min-h-0 flex-1 flex-col">
           <PanelHeader
             title={
-              editorCollapsed
-                ? `${mode === "visual" ? "Bar editor" : "Source"} · read-only`
-                : mode === "visual"
-                  ? "Bar editor"
-                  : "Source"
+              <span className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditorCollapsed((v) => !v)}
+                  title={editorCollapsed ? "Show editor" : "Hide editor"}
+                  aria-label={editorCollapsed ? "Show editor" : "Hide editor"}
+                  className="flex size-5 items-center justify-center rounded text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+                >
+                  <span className="text-[10px] leading-none">
+                    {editorCollapsed ? "▸" : "▾"}
+                  </span>
+                </button>
+                <span>
+                  {mode === "visual" ? "Bar editor" : "Source"}
+                </span>
+                {editorCollapsed ? (
+                  <span className="text-[10px] font-medium text-stone-500">
+                    · read-only
+                  </span>
+                ) : null}
+              </span>
             }
           >
             <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
