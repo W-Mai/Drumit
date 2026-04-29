@@ -94,8 +94,12 @@ interface BarCtx {
 
 interface RawNote {
   beatIndex: number;
-  tick: number;       // integer tick within the beat (0..finest-1)
-  finest: number;     // this beat's finest division for this voice
+  tick: number;
+  finest: number;
+  /** Individual per-hit effective division — preserves the actual
+   *  time value (8th / 16th / …) so secondary beams can flag the
+   *  shorter notes. */
+  hitDivisions: number[];
   hits: Hit[];
   mappings: DrumStaffMapping[];
 }
@@ -195,7 +199,6 @@ function collectVoice(
     );
     const finest = snapFinest(maxDiv);
 
-    // Bucket hits by their tick on `finest`.
     const byTick = new Map<number, RawNote>();
     for (const h of voiceHits) {
       const tick = Math.round(h.offsetRatio * finest);
@@ -203,6 +206,7 @@ function collectVoice(
       if (existing) {
         existing.hits.push(h.hit);
         existing.mappings.push(h.mapping);
+        existing.hitDivisions.push(h.groupEffDivision);
       } else {
         byTick.set(tick, {
           beatIndex,
@@ -210,6 +214,7 @@ function collectVoice(
           finest,
           hits: [h.hit],
           mappings: [h.mapping],
+          hitDivisions: [h.groupEffDivision],
         });
       }
     }
@@ -234,7 +239,6 @@ function collectVoice(
       continue;
     }
     const finest = raws[0].finest;
-    const duration = durationFor(finest);
     for (const r of raws) {
       const glyphs: StaffGlyph[] = [];
       const artSet = new Set<StaffArticulation>();
@@ -255,9 +259,14 @@ function collectVoice(
         }
         if (r.hits[i].sticking && !sticking) sticking = r.hits[i].sticking;
       }
+      // Per-note duration: use the longest effective division across the
+      // chord's voices at this tick (so a 16th + 8th chord would record
+      // as "8"; in practice chords at the same tick come from the same
+      // group so they share a division).
+      const noteDiv = r.hitDivisions.reduce((a, b) => Math.min(a, b), Infinity);
       notes.push({
         x: beatStartX + (r.tick / finest) * beatWidth,
-        duration,
+        duration: durationFor(noteDiv),
         glyphs,
         articulations: [...artSet],
         sticking,
@@ -318,51 +327,71 @@ const BEAMABLE: Record<Duration, number> = {
 };
 
 /**
- * Primary beams only at this stage: a run of ≥2 consecutive notes with
- * any beamable duration inside the same beat. Since all notes in the
- * voice belong to the same stem direction (voice-level), the beam is
- * guaranteed straight.
+ * Beams within a beat. Primary beam (level 1) connects every beamable
+ * note in the run. Higher-level beams (level 2, 3 for 16ths and 32nds)
+ * cover contiguous sub-runs where every note has that flag count.
  *
- * Secondary beams (C5) come later and refine the run with extra
- * partial beams on the shorter-note segments.
+ * Stem direction is decided at the voice level, so beams never go
+ * diagonal across up/down stems.
  */
 function computeBeams(
   notes: StaffNote[],
   beatIndex: number[],
-  finest: number[],
+  _finest: number[],
 ): StaffBeam[] {
+  void _finest;
   const out: StaffBeam[] = [];
+
+  // Step 1: find primary runs — maximal spans of beamable notes within a beat.
+  const runs: Array<{ start: number; end: number }> = [];
   let runStart = -1;
   let runBeat = -1;
-
-  const flush = (end: number) => {
-    if (runStart === -1) return;
-    if (end > runStart) {
-      out.push({ start: runStart, end, level: 1 });
+  const closeRun = (end: number) => {
+    if (runStart !== -1 && end > runStart) {
+      runs.push({ start: runStart, end });
     }
     runStart = -1;
     runBeat = -1;
   };
-
   for (let i = 0; i < notes.length; i += 1) {
     const depth = BEAMABLE[notes[i].duration];
     if (depth === 0) {
-      flush(i - 1);
+      closeRun(i - 1);
       continue;
     }
     if (runStart === -1) {
       runStart = i;
       runBeat = beatIndex[i];
-      continue;
-    }
-    if (beatIndex[i] !== runBeat) {
-      flush(i - 1);
+    } else if (beatIndex[i] !== runBeat) {
+      closeRun(i - 1);
       runStart = i;
       runBeat = beatIndex[i];
     }
-    void finest;
   }
-  flush(notes.length - 1);
+  closeRun(notes.length - 1);
+
+  // Step 2: for each run, emit primary beam + higher-level partial beams.
+  for (const run of runs) {
+    out.push({ start: run.start, end: run.end, level: 1 });
+    for (let level = 2; level <= 3; level += 1) {
+      let subStart = -1;
+      for (let i = run.start; i <= run.end; i += 1) {
+        const hasLevel = BEAMABLE[notes[i].duration] >= level;
+        if (hasLevel) {
+          if (subStart === -1) subStart = i;
+        } else if (subStart !== -1) {
+          if (i - 1 > subStart) {
+            out.push({ start: subStart, end: i - 1, level });
+          }
+          subStart = -1;
+        }
+      }
+      if (subStart !== -1 && run.end > subStart) {
+        out.push({ start: subStart, end: run.end, level });
+      }
+    }
+  }
+
   return out;
 }
 
