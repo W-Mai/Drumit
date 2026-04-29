@@ -98,8 +98,13 @@ describe("wrapSvgInDynamicHtml", () => {
     });
     expect(html).toContain("<svg");
     expect(html).toContain('id="drumtab-source"');
-    expect(html).toContain("parseDrumtab");
+    // Minified bundle keeps AudioContext as a reference into the Web
+    // Audio API — good sentinel that the player script actually shipped.
     expect(html).toContain("AudioContext");
+    // The bundle is substantial (~19 kB minified), not just a shim.
+    const playerScriptStart = html.indexOf("<script>", html.indexOf("drumtab-source"));
+    expect(playerScriptStart).toBeGreaterThan(0);
+    expect(html.length).toBeGreaterThan(20_000);
   });
 
   it("escapes </script> inside the embedded source so the page parses safely", async () => {
