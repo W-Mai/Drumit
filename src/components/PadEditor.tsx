@@ -187,18 +187,19 @@ function planLaneBeat(
   }
 
   // Un-split lane:
-  //   - If the lane already exists (even with division=1), the lane's own
-  //     division is the source of truth. Bar-level resolution is IGNORED
-  //     so users can see exactly what's in the data.
-  //   - If the lane doesn't exist yet (first hit to be written), use the
-  //     bar-level resolution as the default template — that way clicking
-  //     the grid at resolution=1/16 will create a 4-slot lane.
-  const hasLane = lane !== undefined;
+  //   A lane "locks in" its own division only once the user has committed
+  //   to it — concretely, when any slot carries a hit. A lane that exists
+  //   but is all-rest is treated as "free": it follows the bar-level
+  //   resolution so changing the global grid re-slices it.
+  const laneHasHit = !!lane?.slots.some((s) => s !== null);
   const laneDiv = lane?.division ?? 1;
-  const slotsPerBeat = hasLane
+  const slotsPerBeat = laneHasHit
     ? Math.max(1, laneDiv)
     : barResolution.slotsPerBeat;
-  const custom = hasLane;
+  // `custom` here means "this lane's grid deviates from the bar-level grid"
+  // — used by the ⚙ button to decide whether to look amber.
+  const custom =
+    laneHasHit && slotsPerBeat !== barResolution.slotsPerBeat;
 
   const widthUnits = 1 / Math.max(1, slotsPerBeat);
   const columns: CellPlan[] = Array.from({ length: slotsPerBeat }, (_, i) => ({
