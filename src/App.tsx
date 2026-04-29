@@ -70,12 +70,17 @@ function nameToFilename(doc: { name: string; source: string }): string {
 function loadInitialWorkspace(): {
   documents: DocumentRecord[];
   activeId: string;
+  sidebarCollapsed: boolean;
+  editorCollapsed: boolean;
 } {
   const ws = loadWorkspace();
   if (ws && ws.documents.length) {
     return {
       documents: ws.documents,
       activeId: ws.activeId ?? ws.documents[0].id,
+      sidebarCollapsed: ws.ui?.sidebarCollapsed ?? false,
+      // Default collapsed = read-only mode. The user opts in to editing.
+      editorCollapsed: ws.ui?.editorCollapsed ?? true,
     };
   }
   const id = newId();
@@ -89,6 +94,8 @@ function loadInitialWorkspace(): {
       },
     ],
     activeId: id,
+    sidebarCollapsed: false,
+    editorCollapsed: true,
   };
 }
 
@@ -118,7 +125,12 @@ export default function App() {
   const [mode, setMode] = useState<Mode>("visual");
   const [selectedBar, setSelectedBar] = useState<number | null>(0);
   const [showLabels, setShowLabels] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => loadInitialWorkspace().sidebarCollapsed,
+  );
+  const [editorCollapsed, setEditorCollapsed] = useState(
+    () => loadInitialWorkspace().editorCollapsed,
+  );
 
   const serializedSource = useMemo(() => serializeScore(score), [score]);
   const currentSource = textDraft ?? serializedSource;
@@ -129,9 +141,10 @@ export default function App() {
     if (saveTimer.current !== null) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveWorkspace({
-        version: 2,
+        version: 3,
         documents,
         activeId,
+        ui: { sidebarCollapsed, editorCollapsed },
       });
     }, 400);
     return () => {
@@ -140,7 +153,7 @@ export default function App() {
         saveTimer.current = null;
       }
     };
-  }, [documents, activeId]);
+  }, [documents, activeId, sidebarCollapsed, editorCollapsed]);
 
   const validation = useMemo(() => validateScore(score), [score]);
   const diagnostics = [...textDiagnostics, ...validation];
@@ -624,13 +637,52 @@ export default function App() {
           </div>
         </Panel>
 
-        <Panel className="flex min-h-0 flex-[45_45_0%] flex-col">
-          <PanelHeader title={mode === "visual" ? "Bar editor" : "Source"}>
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-col",
+            editorCollapsed ? "flex-none" : "flex-[45_45_0%]",
+          )}
+        >
+          {/* Top-edge drag handle — mirrors the sidebar's right-edge
+              handle. Clicking collapses/expands the editor panel. When
+              collapsed the panel becomes read-only (no PadEditor), only
+              the PanelHeader and preview remain. */}
+          <button
+            type="button"
+            onClick={() => setEditorCollapsed((v) => !v)}
+            title={editorCollapsed ? "Show editor" : "Hide editor"}
+            aria-label={editorCollapsed ? "Show editor" : "Hide editor"}
+            className="group absolute -top-1.5 left-1/2 z-10 flex h-3 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-stone-200/0 hover:bg-stone-200/70"
+          >
+            <span className="h-[3px] w-8 rounded-full bg-stone-300 group-hover:bg-stone-500" />
+          </button>
+          <Panel className="flex min-h-0 flex-1 flex-col">
+          <PanelHeader
+            title={
+              editorCollapsed
+                ? `${mode === "visual" ? "Bar editor" : "Source"} · read-only`
+                : mode === "visual"
+                  ? "Bar editor"
+                  : "Source"
+            }
+          >
             <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
-              <ModeTab active={mode === "visual"} onClick={() => switchMode("visual")}>
+              <ModeTab
+                active={mode === "visual"}
+                onClick={() => {
+                  switchMode("visual");
+                  if (editorCollapsed) setEditorCollapsed(false);
+                }}
+              >
                 Visual
               </ModeTab>
-              <ModeTab active={mode === "source"} onClick={() => switchMode("source")}>
+              <ModeTab
+                active={mode === "source"}
+                onClick={() => {
+                  switchMode("source");
+                  if (editorCollapsed) setEditorCollapsed(false);
+                }}
+              >
                 Source
               </ModeTab>
             </div>
@@ -657,6 +709,7 @@ export default function App() {
             </HoverClickPopover>
           </PanelHeader>
 
+          {editorCollapsed ? null : (
           <div className="min-h-0 flex-1 overflow-auto p-4">
             {mode === "source" ? (
               <textarea
@@ -776,7 +829,9 @@ export default function App() {
               </div>
             )}
           </div>
-        </Panel>
+          )}
+          </Panel>
+        </div>
       </section>
       </div>
     </div>

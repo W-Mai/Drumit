@@ -1,4 +1,4 @@
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 
 export interface DocumentRecord {
   id: string;
@@ -7,10 +7,21 @@ export interface DocumentRecord {
   savedAt: number;
 }
 
+/**
+ * Persisted UI preferences. Optional so older workspace snapshots (v2)
+ * that predate these fields round-trip without clobbering the user's
+ * documents — missing fields fall back to defaults on read.
+ */
+export interface StoredUiState {
+  sidebarCollapsed?: boolean;
+  editorCollapsed?: boolean;
+}
+
 export interface StoredWorkspace {
   version: number;
   documents: DocumentRecord[];
   activeId: string | null;
+  ui?: StoredUiState;
 }
 
 interface StoredScoreV1 {
@@ -28,9 +39,13 @@ export function loadWorkspace(): StoredWorkspace | null {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as StoredWorkspace;
-      if (parsed.version !== STORAGE_VERSION) return null;
       if (!Array.isArray(parsed.documents)) return null;
-      return parsed;
+      // Accept v2 (pre-ui-state) by in-place upgrading — ui defaults are
+      // simply absent and will be filled in by the consumer.
+      if (parsed.version === 2 || parsed.version === STORAGE_VERSION) {
+        return { ...parsed, version: STORAGE_VERSION };
+      }
+      return null;
     }
     // Migrate from v1 single-document format.
     const legacyRaw = localStorage.getItem(LEGACY_KEY);

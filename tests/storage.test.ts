@@ -110,6 +110,33 @@ describe("workspace", () => {
     expect(ws?.activeId).toBe("b");
   });
 
+  it("round-trips optional ui state alongside documents", () => {
+    saveWorkspace({
+      version: 3,
+      documents: [{ id: "a", name: "", source: "x", savedAt: 1 }],
+      activeId: "a",
+      ui: { sidebarCollapsed: true, editorCollapsed: true },
+    });
+    const ws = loadWorkspace();
+    expect(ws?.ui?.sidebarCollapsed).toBe(true);
+    expect(ws?.ui?.editorCollapsed).toBe(true);
+  });
+
+  it("accepts a v2 workspace with no ui field and preserves documents", () => {
+    localStorage.setItem(
+      "drumit:workspace",
+      JSON.stringify({
+        version: 2,
+        documents: [{ id: "a", name: "doc", source: "x", savedAt: 1 }],
+        activeId: "a",
+      }),
+    );
+    const ws = loadWorkspace();
+    expect(ws).not.toBeNull();
+    expect(ws!.documents[0].source).toBe("x");
+    expect(ws!.ui).toBeUndefined();
+  });
+
   it("clearWorkspace wipes both keys", () => {
     saveWorkspace({
       version: 2,
