@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { Score } from "../notation/types";
 import {
-  renderScoreToSvg,
-  renderScoreToPng,
-  renderScoreToStaticHtml,
-  renderScoreToDynamicHtml,
-  exportScoreAsPdf,
+  renderScoreToSvgFromDom,
+  svgStringToPng,
+  wrapSvgInStaticHtml,
+  wrapSvgInDynamicHtml,
+  printSvgAsPdf,
   triggerDownload,
   filenameStem,
 } from "../notation/exporters";
@@ -16,27 +16,38 @@ import { cn } from "../lib/utils";
 
 interface Props {
   score: Score;
-  /** The current showLabels toggle — SVG/PNG/HTML exports respect it. */
-  showLabels: boolean;
-  /** Preferred chart width for exports. */
-  width?: number;
+  /** Return the currently rendered chart SVG element, or null if there is none. */
+  getSvgElement: () => SVGSVGElement | null;
 }
 
 type Status = "idle" | "pending" | "error";
+
+function exportError(
+  message = "No chart to export — fix parse errors first.",
+): Error {
+  return new Error(message);
+}
 
 /**
  * Dropdown of export actions attached to the Preview panel header.
  * Shares the same hover/click popover UX as the `?` cheat-sheet, so
  * experienced users can hover, and new users can click.
  *
- * All file writes go through `triggerDownload`; the PDF path opens a new
- * tab and lets the browser's print dialog produce the file.
+ * All exporters read the already-rendered SVG from the DOM (via
+ * `getSvgElement`) rather than re-rendering with `react-dom/server`, so
+ * no server runtime is pulled into the client bundle.
  */
-export function ExportMenu({ score, showLabels, width }: Props) {
+export function ExportMenu({ score, getSvgElement }: Props) {
   const [status, setStatus] = useState<Status>("idle");
 
   function filenameFor(ext: string): string {
     return `${filenameStem(score.title ?? "chart")}.${ext}`;
+  }
+
+  function getSvg(): string {
+    const el = getSvgElement();
+    if (!el) throw exportError();
+    return renderScoreToSvgFromDom(el, score.title);
   }
 
   async function run(action: () => Promise<void> | void) {
@@ -60,7 +71,7 @@ export function ExportMenu({ score, showLabels, width }: Props) {
       label: "SVG",
       hint: "Vector, crisp at any zoom",
       onClick: () => {
-        const svg = renderScoreToSvg(score, { showLabels, width });
+        const svg = getSvg();
         triggerDownload(
           new Blob([svg], { type: "image/svg+xml;charset=utf-8" }),
           filenameFor("svg"),
@@ -71,11 +82,8 @@ export function ExportMenu({ score, showLabels, width }: Props) {
       label: "PNG",
       hint: "Bitmap, prints cleanly",
       onClick: async () => {
-        const blob = await renderScoreToPng(score, {
-          showLabels,
-          width,
-          background: "#fafaf9",
-        });
+        const svg = getSvg();
+        const blob = await svgStringToPng(svg, { background: "#fafaf9" });
         triggerDownload(blob, filenameFor("png"));
       },
     },
@@ -83,14 +91,16 @@ export function ExportMenu({ score, showLabels, width }: Props) {
       label: "PDF",
       hint: "Opens a print dialog (save as PDF)",
       onClick: () => {
-        exportScoreAsPdf(score, { showLabels, width });
+        const svg = getSvg();
+        printSvgAsPdf(svg, score);
       },
     },
     {
       label: "HTML (static)",
       hint: "Single file, no interactivity",
       onClick: () => {
-        const html = renderScoreToStaticHtml(score, { showLabels, width });
+        const svg = getSvg();
+        const html = wrapSvgInStaticHtml(svg, score);
         triggerDownload(
           new Blob([html], { type: "text/html;charset=utf-8" }),
           filenameFor("html"),
@@ -101,12 +111,9 @@ export function ExportMenu({ score, showLabels, width }: Props) {
       label: "HTML (playable)",
       hint: "Single file with inline Play button",
       onClick: () => {
+        const svg = getSvg();
         const source = serializeScore(score);
-        const html = renderScoreToDynamicHtml(score, {
-          showLabels,
-          width,
-          source,
-        });
+        const html = wrapSvgInDynamicHtml(svg, score, { source });
         triggerDownload(
           new Blob([html], { type: "text/html;charset=utf-8" }),
           filenameFor("html"),

@@ -1,5 +1,5 @@
 import type { Score } from "../types";
-import { renderScoreToStaticHtml, type RenderHtmlOptions } from "./html";
+import { wrapSvgInStaticHtml, type RenderHtmlOptions } from "./html";
 
 /**
  * "Export as PDF" by piggybacking on the browser's print pipeline. We
@@ -10,11 +10,12 @@ import { renderScoreToStaticHtml, type RenderHtmlOptions } from "./html";
  * This keeps the feature dependency-free and trusts the OS's PDF
  * renderer to handle fonts, vector fidelity, and page breaks.
  */
-export function exportScoreAsPdf(
+export function printSvgAsPdf(
+  svg: string,
   score: Score,
   options: RenderHtmlOptions = {},
 ): void {
-  const baseHtml = renderScoreToStaticHtml(score, options);
+  const baseHtml = wrapSvgInStaticHtml(svg, score, options);
   // Inject a small print stylesheet so the output matches A-series paper
   // and removes chrome like the Drumit footer link underline.
   const printable = baseHtml.replace(

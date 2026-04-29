@@ -1,5 +1,5 @@
 import type { Score } from "../types";
-import { renderScoreToSvg, type RenderSvgOptions } from "./svg";
+import type { RenderSvgOptions } from "./svg";
 
 export interface RenderHtmlOptions extends RenderSvgOptions {
   /** Override the document <title>. Defaults to the score title. */
@@ -12,15 +12,15 @@ export interface RenderHtmlOptions extends RenderSvgOptions {
 }
 
 /**
- * Render a Score to a single self-contained HTML document — SVG is inlined
- * and styled inline, so the result renders identically in any browser
- * without needing the Drumit runtime.
+ * Wrap a pre-rendered SVG string in a single self-contained HTML
+ * document — SVG is inlined and styled inline, so the result renders
+ * identically in any browser without needing the Drumit runtime.
  */
-export function renderScoreToStaticHtml(
+export function wrapSvgInStaticHtml(
+  svg: string,
   score: Score,
   options: RenderHtmlOptions = {},
 ): string {
-  const svg = renderScoreToSvg(score, options);
   const title = options.title ?? score.title ?? "Drumit chart";
   return `<!doctype html>
 <html lang="en">
@@ -61,7 +61,7 @@ export function renderScoreToStaticHtml(
 }
 
 /**
- * Like `renderScoreToStaticHtml`, but with an embedded transport that lets
+ * Like `wrapSvgInStaticHtml`, but with an embedded transport that lets
  * the viewer play the chart through the Web Audio synth engine (no
  * network, no samples). Includes a Play / Stop button and the `.drumtab`
  * source for reference.
@@ -70,11 +70,11 @@ export function renderScoreToStaticHtml(
  * the score. To keep the HTML small, the runtime is reimplemented as a
  * tiny inline helper rather than shipping the full app bundle.
  */
-export function renderScoreToDynamicHtml(
+export function wrapSvgInDynamicHtml(
+  svg: string,
   score: Score,
   options: RenderHtmlOptions = {},
 ): string {
-  const svg = renderScoreToSvg(score, options);
   const title = options.title ?? score.title ?? "Drumit chart";
   const source = options.source ?? "";
   const bpm = score.tempo?.bpm ?? 100;

@@ -1,5 +1,4 @@
-import { renderScoreToSvg, type RenderSvgOptions } from "./svg";
-import type { Score } from "../types";
+import type { RenderSvgOptions } from "./svg";
 
 export interface RenderPngOptions extends RenderSvgOptions {
   /** Device-pixel multiplier. 2 yields retina-crisp output. */
@@ -9,17 +8,18 @@ export interface RenderPngOptions extends RenderSvgOptions {
 }
 
 /**
- * Rasterize a Score to a PNG Blob. Runs entirely in the browser via
- *   SVG → data URL → Image → canvas.drawImage → canvas.toBlob.
- * The SVG is serialized with `renderScoreToSvg` so all styling is self-
- * contained (no Tailwind runtime required on the rendering Image).
+ * Rasterize a pre-built SVG string to a PNG Blob. Runs entirely in the
+ * browser via SVG → data URL → Image → canvas.drawImage → canvas.toBlob.
+ *
+ * The caller is responsible for producing a self-contained SVG string
+ * (see `renderScoreToSvg` / `renderScoreToSvgFromDom`) so the rendering
+ * Image doesn't need Tailwind at runtime.
  */
-export async function renderScoreToPng(
-  score: Score,
-  options: RenderPngOptions = {},
+export async function svgStringToPng(
+  svg: string,
+  options: Pick<RenderPngOptions, "scale" | "background"> = {},
 ): Promise<Blob> {
   const scale = options.scale ?? 2;
-  const svg = renderScoreToSvg(score, options);
 
   const { width, height } = readSvgDimensions(svg);
 

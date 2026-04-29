@@ -1,15 +1,17 @@
-export { renderScoreToSvg, postProcessSvg, INLINE_CSS } from "./svg";
+export {
+  renderScoreToSvg,
+  renderScoreToSvgFromDom,
+  postProcessSvg,
+  INLINE_CSS,
+} from "./svg";
 export type { RenderSvgOptions } from "./svg";
 
-export { renderScoreToPng } from "./png";
+export { svgStringToPng } from "./png";
 export type { RenderPngOptions } from "./png";
 
-export {
-  renderScoreToStaticHtml,
-  renderScoreToDynamicHtml,
-} from "./html";
+export { wrapSvgInStaticHtml, wrapSvgInDynamicHtml } from "./html";
 export type { RenderHtmlOptions } from "./html";
 
-export { exportScoreAsPdf } from "./pdf";
+export { printSvgAsPdf } from "./pdf";
 
 export { triggerDownload, filenameStem } from "./download";

@@ -155,6 +155,11 @@ export default function App() {
     beatIndex: number;
   } | null>(null);
 
+  // Ref-as-state so Export actions can reach the currently rendered
+  // SVG without re-rendering through `react-dom/server`.
+  const [chartContainer, setChartContainer] =
+    useState<HTMLDivElement | null>(null);
+
   useHotkeys([
     {
       key: "ArrowLeft",
@@ -610,9 +615,17 @@ export default function App() {
             >
               {showLabels ? "Hide labels" : "Show labels"}
             </Button>
-            <ExportMenu score={score} showLabels={showLabels} />
+            <ExportMenu
+              score={score}
+              getSvgElement={() =>
+                chartContainer?.querySelector("svg") ?? null
+              }
+            />
           </PanelHeader>
-          <div className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-4">
+          <div
+            ref={setChartContainer}
+            className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-4"
+          >
             {hasErrors ? (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
                 Fix parse errors to update the preview.

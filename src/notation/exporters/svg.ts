@@ -1,8 +1,5 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import type { Score } from "../types";
 import { layoutScore } from "../layout";
-import { DrumChart } from "../renderer";
 
 /**
  * Tailwind utilities used by `DrumChart`, flattened into plain CSS so the
@@ -81,11 +78,21 @@ export interface RenderSvgOptions {
 /**
  * Render a Score to a standalone SVG string ready to drop into a file,
  * a data URL, or an HTML embed.
+ *
+ * Uses `react-dom/server` under the hood so it works in Node / scripts /
+ * unit tests. For the browser, there's a lighter-weight helper below
+ * (`renderScoreToSvgFromDom`) that extracts an already-rendered SVG and
+ * avoids pulling the server renderer into the client bundle.
  */
-export function renderScoreToSvg(
+export async function renderScoreToSvg(
   score: Score,
   options: RenderSvgOptions = {},
-): string {
+): Promise<string> {
+  // Lazily import the server renderer so callers who only use the DOM
+  // path (the browser app) don't pay the bundle cost.
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { createElement } = await import("react");
+  const { DrumChart } = await import("../renderer");
   const layout = layoutScore(score, {
     showLabels: options.showLabels ?? false,
     expanded: false,
@@ -98,4 +105,16 @@ export function renderScoreToSvg(
     }),
   );
   return postProcessSvg(raw, options.title ?? score.title);
+}
+
+/**
+ * Synchronous DOM-based variant used in the browser: the app already has
+ * the chart SVG mounted for the live preview, so we can just clone its
+ * outerHTML and post-process it. Zero react-dom/server cost.
+ */
+export function renderScoreToSvgFromDom(
+  svgEl: SVGSVGElement,
+  title?: string,
+): string {
+  return postProcessSvg(svgEl.outerHTML, title);
 }

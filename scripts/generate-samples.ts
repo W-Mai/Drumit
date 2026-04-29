@@ -99,7 +99,7 @@ meter: 4/4
   },
 ];
 
-function renderSample(sample: Sample): string {
+async function renderSample(sample: Sample): Promise<string> {
   const { score } = parseDrumtab(sample.source);
   return renderScoreToSvg(score, {
     width: sample.width ?? 900,
@@ -108,12 +108,12 @@ function renderSample(sample: Sample): string {
   });
 }
 
-function main() {
+async function main() {
   const outDir = join(process.cwd(), "docs", "samples");
   mkdirSync(outDir, { recursive: true });
 
   for (const sample of samples) {
-    const svg = renderSample(sample);
+    const svg = await renderSample(sample);
     const filePath = join(outDir, `${sample.slug}.svg`);
     writeFileSync(filePath, svg, "utf-8");
     console.log(`wrote ${filePath} (${svg.length} bytes)`);
