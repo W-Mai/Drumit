@@ -85,6 +85,7 @@ meter: 4/4
 - **导出**：SVG、PNG、PDF、静态 HTML、**可播 HTML**（内嵌 Play 按钮，离线也能响）、`.drumtab`、`.mid`
 - **多谱子工作区**：侧栏切换，`.drumtab` 自由进出，localStorage 自动存档
 - **手机上也能看**：布局响应到 320px，侧栏变抽屉、播放条沉底；编辑功能桌面独享
+- **两种视图**：Drumit 紧凑谱（默认）/ Staff 五线谱（手写 SVG，零依赖）；预览顶部一键切换
 
 更新记录在 [CHANGELOG.md](./CHANGELOG.md)。
 

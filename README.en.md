@@ -98,6 +98,8 @@ Full grammar lives in `src/notation/parser.ts`; more worked examples in
   localStorage-backed autosave
 - **Works on phones** — layout responds down to 320px; the sidebar becomes a
   drawer and the transport sticks to the bottom. Editing is desktop-only.
+- **Two views** — Drumit condensed chart (default) or a five-line staff
+  rendering (hand-rolled SVG, zero deps); toggle at the top of the preview.
 
 See [CHANGELOG.md](./CHANGELOG.md) for the full changelog.
 
