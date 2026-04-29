@@ -82,6 +82,28 @@ describe("StaffView (S5: stems + flags)", () => {
   });
 });
 
+describe("StaffView (S10: auto-wrap systems)", () => {
+  it("emits multiple systems when bar count exceeds a single row", () => {
+    const bars = Array.from(
+      { length: 10 },
+      () => "| bd: o / o / o / o |",
+    ).join("\n");
+    const { score } = parseDrumtab(`title: T\nmeter: 4/4\n[A]\n${bars}`);
+    const svg = renderToStaticMarkup(
+      createElement(StaffView, { score, width: 600 }),
+    );
+    const oneBar = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    ).score;
+    const svgOne = renderToStaticMarkup(
+      createElement(StaffView, { score: oneBar, width: 600 }),
+    );
+    const hMulti = Number(svg.match(/viewBox="0 0 \d+ (\d+)"/)?.[1]);
+    const hOne = Number(svgOne.match(/viewBox="0 0 \d+ (\d+)"/)?.[1]);
+    expect(hMulti).toBeGreaterThan(hOne);
+  });
+});
+
 describe("StaffView (S7: rests on empty beats)", () => {
   it("draws a quarter rest on a beat with no hits", () => {
     // Three beats of kicks, a silent beat 3, another kick on beat 4.

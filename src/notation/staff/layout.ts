@@ -39,41 +39,48 @@ export function layoutStaff(
   const barsFlat = score.sections.flatMap((s) => s.bars);
   const beatsPerBar = score.meter.beats;
   const sideMargin = 20;
+  const minBarWidth = 120;
 
-  const totalBars = barsFlat.length;
-  const minBarWidth = 100;
+  // First system carries the clef + time sig, so it has less room than
+  // subsequent systems. Use the tighter value to keep the grid rectangular
+  // instead of re-flowing later systems with a wider barWidth.
   const availableForBars =
     options.width - sideMargin * 2 - CLEF_PLUS_METER_WIDTH;
-  const barWidth = Math.max(
-    minBarWidth,
-    totalBars > 0 ? availableForBars / totalBars : minBarWidth,
+  const barsPerSystem = Math.max(
+    1,
+    Math.floor(availableForBars / minBarWidth),
   );
+  const barWidth = availableForBars / barsPerSystem;
 
-  const systemY = HEADER_HEIGHT + STAFF_TOP_PAD;
-  const bars: StaffBar[] = [];
-  let x = sideMargin + CLEF_PLUS_METER_WIDTH;
-
-  for (const bar of barsFlat) {
-    const staffBar = layoutBar({
-      bar,
-      barIndex: bar.source ? bars.length : bars.length,
-      x,
-      width: barWidth,
-      beatsPerBar,
+  const systems: StaffSystem[] = [];
+  let y = HEADER_HEIGHT + STAFF_TOP_PAD;
+  for (let i = 0; i < barsFlat.length; i += barsPerSystem) {
+    const slice = barsFlat.slice(i, i + barsPerSystem);
+    let x = sideMargin + CLEF_PLUS_METER_WIDTH;
+    const bars: StaffBar[] = slice.map((bar, j) => {
+      const staffBar = layoutBar({
+        bar,
+        barIndex: i + j,
+        x,
+        width: barWidth,
+        beatsPerBar,
+      });
+      x += barWidth;
+      return staffBar;
     });
-    bars.push(staffBar);
-    x += barWidth;
+    systems.push({ y, bars });
+    y += STAFF_ROW_HEIGHT;
   }
 
-  const system: StaffSystem = {
-    y: systemY,
-    bars,
-  };
+  if (systems.length === 0) {
+    systems.push({ y, bars: [] });
+    y += STAFF_ROW_HEIGHT;
+  }
 
   return {
     width: options.width,
-    height: HEADER_HEIGHT + STAFF_ROW_HEIGHT,
-    systems: [system],
+    height: y,
+    systems,
     title: score.title,
     tempo: score.tempo ? `♩ = ${score.tempo.bpm}` : undefined,
     meter: `${score.meter.beats}/${score.meter.beatUnit}`,

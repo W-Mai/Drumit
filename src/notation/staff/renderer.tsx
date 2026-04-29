@@ -37,8 +37,6 @@ export function StaffView({ score, width = 980 }: Props) {
   const layout = layoutStaff(score, { width: actualWidth });
   const height = layout.height;
 
-  const system = layout.systems[0];
-  const staffY = system.y;
   const clefX = SYSTEM_PAD_X + 4;
   const timeSigX = clefX + PERCUSSION_CLEF_WIDTH + 12;
   const staffLinesX = SYSTEM_PAD_X;
@@ -81,16 +79,25 @@ export function StaffView({ score, width = 980 }: Props) {
         </text>
       </g>
 
-      <StaffLines x={staffLinesX} y={staffY} width={staffLinesWidth} />
-      <PercussionClef x={clefX} y={staffY} />
-      <TimeSignature
-        x={timeSigX + TIME_SIG_WIDTH / 2}
-        y={staffY}
-        beats={score.meter.beats}
-        beatUnit={score.meter.beatUnit}
-      />
-
-      <SystemNotes system={system} />
+      {layout.systems.map((system, index) => (
+        <g key={index}>
+          <StaffLines x={staffLinesX} y={system.y} width={staffLinesWidth} />
+          {index === 0 ? (
+            <>
+              <PercussionClef x={clefX} y={system.y} />
+              <TimeSignature
+                x={timeSigX + TIME_SIG_WIDTH / 2}
+                y={system.y}
+                beats={score.meter.beats}
+                beatUnit={score.meter.beatUnit}
+              />
+            </>
+          ) : (
+            <PercussionClef x={clefX} y={system.y} />
+          )}
+          <SystemNotes system={system} />
+        </g>
+      ))}
     </svg>
   );
 }
