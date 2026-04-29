@@ -43,11 +43,8 @@ export interface StaffNote {
   x: number;
   duration: Duration;
   glyphs: StaffGlyph[];
-  stem: "up" | "down" | null;
   tuplet?: number;
-  /** Note-level articulations, merged across all glyphs in the chord. */
   articulations: StaffArticulation[];
-  /** Per-hit sticking ("R" / "L") collected from the chord voices. */
   sticking?: "R" | "L";
 }
 
@@ -58,11 +55,13 @@ export interface StaffRest {
 }
 
 export interface StaffBeam {
-  /** Indices into `StaffBar.notes`; inclusive. */
+  /** Indices into the host `StaffVoice.notes`; inclusive. */
   start: number;
   end: number;
-  /** 1 = 8th, 2 = 16th, 3 = 32nd. */
-  depth: number;
+  /** Beam level: 1 = primary (connects 8ths and shorter), 2 = 16ths
+   *  sub-beam, 3 = 32nds sub-beam. Primary beams cover every note in
+   *  the run; higher-level sub-beams may cover only a contiguous subset. */
+  level: number;
 }
 
 export interface StaffTupletBracket {
@@ -73,16 +72,24 @@ export interface StaffTupletBracket {
 
 export type BarlineKind = "single" | "repeat-start" | "repeat-end";
 
+export type VoicePosition = "upper" | "lower";
+
+export interface StaffVoice {
+  position: VoicePosition;
+  notes: StaffNote[];
+  rests: StaffRest[];
+  beams: StaffBeam[];
+  tuplets: StaffTupletBracket[];
+}
+
 export interface StaffBar {
   index: number;
   x: number;
   width: number;
   /** Number of beats in the bar (bar-level meter override collapsed down). */
   beats: number;
-  notes: StaffNote[];
-  rests: StaffRest[];
-  beams: StaffBeam[];
-  tuplets: StaffTupletBracket[];
+  upper: StaffVoice;
+  lower: StaffVoice;
   barlineX: number;
   /** Visual kind of the right-edge barline of this bar. Repeat-starts are
    *  painted on the _next_ bar's left edge by the renderer. */

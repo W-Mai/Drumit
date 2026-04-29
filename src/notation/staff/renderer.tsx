@@ -29,6 +29,7 @@ import type {
   StaffNote,
   StaffSystem,
   StaffTupletBracket,
+  StaffVoice,
 } from "./types";
 
 interface Props {
@@ -111,7 +112,7 @@ export function StaffView({
           ) : (
             <PercussionClef x={clefX} y={system.y} />
           )}
-          <SystemNotes
+          <SystemBars
             system={system}
             selectedBarIndex={selectedBarIndex}
             onSelectBar={onSelectBar}
@@ -123,7 +124,7 @@ export function StaffView({
   );
 }
 
-function SystemNotes({
+function SystemBars({
   system,
   selectedBarIndex,
   onSelectBar,
@@ -138,7 +139,7 @@ function SystemNotes({
   return (
     <>
       {system.bars.map((bar) => (
-        <BarNotes
+        <BarShell
           key={bar.index}
           bar={bar}
           staffY={staffY}
@@ -154,7 +155,7 @@ function SystemNotes({
   );
 }
 
-function BarNotes({
+function BarShell({
   bar,
   staffY,
   selected,
@@ -169,10 +170,6 @@ function BarNotes({
   playBeatIndex?: number;
   onSelect?: () => void;
 }) {
-  const beamedNoteIndices = new Set<number>();
-  for (const beam of bar.beams) {
-    for (let i = beam.start; i <= beam.end; i += 1) beamedNoteIndices.add(i);
-  }
   const barTop = staffY - STAFF_SPACE * 0.5;
   const barHeight = STAFF_SPACE * 5;
   const beatWidth = bar.width / bar.beats;
@@ -258,43 +255,235 @@ function BarNotes({
           strokeWidth={1}
         />
       )}
-      {bar.notes.map((note, i) => (
+      <VoicePaint voice={bar.upper} staffY={staffY} />
+      <VoicePaint voice={bar.lower} staffY={staffY} />
+    </g>
+  );
+}
+
+function VoicePaint({
+  voice,
+  staffY,
+}: {
+  voice: StaffVoice;
+  staffY: number;
+}) {
+  const direction: "up" | "down" = voice.position === "upper" ? "up" : "down";
+  const beamedNoteIndices = new Set<number>();
+  for (const beam of voice.beams) {
+    for (let i = beam.start; i <= beam.end; i += 1) beamedNoteIndices.add(i);
+  }
+  return (
+    <g>
+      {voice.notes.map((note, i) => (
         <NoteMarker
           key={i}
           note={note}
           staffY={staffY}
+          direction={direction}
           suppressFlag={beamedNoteIndices.has(i)}
         />
       ))}
-      {bar.rests.map((rest, i) => (
+      {voice.rests.map((rest, i) => (
         <Rest key={`r${i}`} x={rest.x} staffY={staffY} duration={rest.duration} />
       ))}
-      {bar.beams.map((beam, i) => (
-        <BeamLine key={i} beam={beam} bar={bar} staffY={staffY} />
+      {voice.beams.map((beam, i) => (
+        <BeamLine
+          key={i}
+          beam={beam}
+          notes={voice.notes}
+          direction={direction}
+          staffY={staffY}
+        />
       ))}
-      {bar.tuplets.map((t, i) => (
-        <TupletBracket key={`t${i}`} tuplet={t} bar={bar} staffY={staffY} />
+      {voice.tuplets.map((t, i) => (
+        <TupletBracket
+          key={`t${i}`}
+          tuplet={t}
+          notes={voice.notes}
+          direction={direction}
+          staffY={staffY}
+        />
       ))}
     </g>
   );
 }
 
+function NoteMarker({
+  note,
+  staffY,
+  direction,
+  suppressFlag,
+}: {
+  note: StaffNote;
+  staffY: number;
+  direction: "up" | "down";
+  suppressFlag?: boolean;
+}) {
+  const steps = note.glyphs.map((g) => g.step);
+  const topStep = Math.min(...steps);
+  const bottomStep = Math.max(...steps);
+  const open = note.duration === "h" || note.duration === "w";
+  const stemless = note.duration === "w";
+  return (
+    <g>
+      {note.glyphs.map((g, i) => (
+        <g key={i}>
+          <LedgerLines x={note.x} staffY={staffY} step={g.step} />
+          <Notehead
+            x={note.x}
+            staffY={staffY}
+            step={g.step}
+            shape={g.head}
+            open={open}
+          />
+        </g>
+      ))}
+      {!stemless ? (
+        <NoteheadStem
+          x={note.x}
+          staffY={staffY}
+          topStep={topStep}
+          bottomStep={bottomStep}
+          direction={direction}
+        />
+      ) : null}
+      {!stemless && !suppressFlag ? (
+        <NoteheadFlags
+          x={note.x}
+          staffY={staffY}
+          topStep={topStep}
+          bottomStep={bottomStep}
+          direction={direction}
+          count={flagsFor(note.duration)}
+        />
+      ) : null}
+      {note.articulations.includes("accent") ? (
+        <AccentMark
+          x={note.x}
+          y={
+            direction === "up"
+              ? staffY + stepToY(topStep)
+              : staffY + stepToY(bottomStep)
+          }
+          direction={direction}
+        />
+      ) : null}
+      {note.articulations.includes("ghost")
+        ? note.glyphs.map((g, i) => (
+            <GhostParens
+              key={`gh-${i}`}
+              x={note.x}
+              y={staffY + stepToY(g.step)}
+            />
+          ))
+        : null}
+      {note.articulations.includes("flam")
+        ? note.glyphs.map((g, i) => (
+            <FlamGrace
+              key={`fl-${i}`}
+              x={note.x}
+              staffY={staffY}
+              step={g.step}
+              direction={direction}
+            />
+          ))
+        : null}
+      {note.articulations.includes("roll") ? (
+        <RollSlashes
+          x={note.x}
+          staffY={staffY}
+          topStep={topStep}
+          bottomStep={bottomStep}
+          direction={direction}
+          count={2}
+        />
+      ) : null}
+      {note.articulations.includes("choke")
+        ? note.glyphs.map((g, i) => (
+            <ChokeMark
+              key={`ch-${i}`}
+              x={note.x}
+              y={staffY + stepToY(g.step) - STAFF_SPACE * 1.6}
+            />
+          ))
+        : null}
+      {note.sticking ? (
+        <text
+          x={note.x}
+          y={staffY + STAFF_SPACE * 6.2}
+          textAnchor="middle"
+          className="fill-stone-600 font-bold italic"
+          style={{ fontSize: 10 }}
+        >
+          {note.sticking}
+        </text>
+      ) : null}
+    </g>
+  );
+}
+
+const STEM_LENGTH_SCREEN = STAFF_SPACE * 3.5;
+const BEAM_THICKNESS = STAFF_SPACE * 0.55;
+const BEAM_GAP = STAFF_SPACE * 0.4;
+
+function BeamLine({
+  beam,
+  notes,
+  direction,
+  staffY,
+}: {
+  beam: StaffBeam;
+  notes: StaffNote[];
+  direction: "up" | "down";
+  staffY: number;
+}) {
+  const start = notes[beam.start];
+  const end = notes[beam.end];
+  if (!start || !end) return null;
+  const stemXOffset =
+    direction === "up" ? STAFF_SPACE * 0.58 : -STAFF_SPACE * 0.58;
+  const topStepOf = (n: StaffNote) => Math.min(...n.glyphs.map((g) => g.step));
+  const bottomStepOf = (n: StaffNote) =>
+    Math.max(...n.glyphs.map((g) => g.step));
+  const tipY = (n: StaffNote) =>
+    direction === "up"
+      ? staffY + stepToY(topStepOf(n)) - STEM_LENGTH_SCREEN
+      : staffY + stepToY(bottomStepOf(n)) + STEM_LENGTH_SCREEN;
+  const x1 = start.x + stemXOffset;
+  const x2 = end.x + stemXOffset;
+  const y1 = tipY(start);
+  const y2 = tipY(end);
+  // Level 1 = primary (always painted), level 2 = 16ths sub-beam, level 3 = 32nds.
+  const baseDy = direction === "up" ? 1 : -1;
+  const dy = (beam.level - 1) * BEAM_GAP * baseDy;
+  return (
+    <line
+      x1={x1}
+      x2={x2}
+      y1={y1 + dy}
+      y2={y2 + dy}
+      className="stroke-stone-900"
+      strokeWidth={BEAM_THICKNESS}
+      strokeLinecap="butt"
+    />
+  );
+}
+
 function TupletBracket({
   tuplet,
-  bar,
+  notes,
+  direction,
   staffY,
 }: {
   tuplet: StaffTupletBracket;
-  bar: StaffBar;
+  notes: StaffNote[];
+  direction: "up" | "down";
   staffY: number;
 }) {
-  const start = bar.notes[tuplet.start];
-  const end = bar.notes[tuplet.end];
+  const start = notes[tuplet.start];
+  const end = notes[tuplet.end];
   if (!start || !end) return null;
-  // Place the bracket above stem-up notes and below stem-down notes.
-  // A run should already be homogeneous in stem direction since they
-  // share a beat, but fall back to "up" if unclear.
-  const direction = start.stem ?? "up";
   const topStepOf = (n: StaffNote) => Math.min(...n.glyphs.map((g) => g.step));
   const bottomStepOf = (n: StaffNote) =>
     Math.max(...n.glyphs.map((g) => g.step));
@@ -302,12 +491,12 @@ function TupletBracket({
   const outerY =
     direction === "up"
       ? Math.min(
-          ...bar.notes
+          ...notes
             .slice(tuplet.start, tuplet.end + 1)
             .map((n) => staffY + stepToY(topStepOf(n)) - STAFF_SPACE * 4.5),
         )
       : Math.max(
-          ...bar.notes
+          ...notes
             .slice(tuplet.start, tuplet.end + 1)
             .map((n) => staffY + stepToY(bottomStepOf(n)) + STAFF_SPACE * 4.5),
         );
@@ -363,174 +552,6 @@ function TupletBracket({
   );
 }
 
-function NoteMarker({
-  note,
-  staffY,
-  suppressFlag,
-}: {
-  note: StaffNote;
-  staffY: number;
-  suppressFlag?: boolean;
-}) {
-  const steps = note.glyphs.map((g) => g.step);
-  const topStep = Math.min(...steps);
-  const bottomStep = Math.max(...steps);
-  const open = note.duration === "h" || note.duration === "w";
-  return (
-    <g>
-      {note.glyphs.map((g, i) => (
-        <g key={i}>
-          <LedgerLines x={note.x} staffY={staffY} step={g.step} />
-          <Notehead
-            x={note.x}
-            staffY={staffY}
-            step={g.step}
-            shape={g.head}
-            open={open}
-          />
-        </g>
-      ))}
-      {note.stem ? (
-        <NoteheadStem
-          x={note.x}
-          staffY={staffY}
-          topStep={topStep}
-          bottomStep={bottomStep}
-          direction={note.stem}
-        />
-      ) : null}
-      {note.stem && !suppressFlag ? (
-        <NoteheadFlags
-          x={note.x}
-          staffY={staffY}
-          topStep={topStep}
-          bottomStep={bottomStep}
-          direction={note.stem}
-          count={flagsFor(note.duration)}
-        />
-      ) : null}
-      {note.articulations.includes("accent") ? (
-        <AccentMark
-          x={note.x}
-          y={
-            note.stem === "up"
-              ? staffY + stepToY(topStep)
-              : staffY + stepToY(bottomStep)
-          }
-          direction={note.stem === "up" ? "up" : "down"}
-        />
-      ) : null}
-      {note.articulations.includes("ghost")
-        ? note.glyphs.map((g, i) => (
-            <GhostParens
-              key={`gh-${i}`}
-              x={note.x}
-              y={staffY + stepToY(g.step)}
-            />
-          ))
-        : null}
-      {note.articulations.includes("flam")
-        ? note.glyphs.map((g, i) => (
-            <FlamGrace
-              key={`fl-${i}`}
-              x={note.x}
-              staffY={staffY}
-              step={g.step}
-              direction={note.stem === "up" ? "up" : "down"}
-            />
-          ))
-        : null}
-      {note.articulations.includes("roll") && note.stem ? (
-        <RollSlashes
-          x={note.x}
-          staffY={staffY}
-          topStep={topStep}
-          bottomStep={bottomStep}
-          direction={note.stem}
-          count={2}
-        />
-      ) : null}
-      {note.articulations.includes("choke")
-        ? note.glyphs.map((g, i) => (
-            <ChokeMark
-              key={`ch-${i}`}
-              x={note.x}
-              y={staffY + stepToY(g.step) - STAFF_SPACE * 1.6}
-            />
-          ))
-        : null}
-      {note.sticking ? (
-        <text
-          x={note.x}
-          y={staffY + STAFF_SPACE * 6.2}
-          textAnchor="middle"
-          className="fill-stone-600 font-bold italic"
-          style={{ fontSize: 10 }}
-        >
-          {note.sticking}
-        </text>
-      ) : null}
-    </g>
-  );
-}
-
-const STEM_LENGTH_SCREEN = STAFF_SPACE * 3.5;
-const BEAM_THICKNESS = STAFF_SPACE * 0.55;
-const BEAM_GAP = STAFF_SPACE * 0.4;
-
-function BeamLine({
-  beam,
-  bar,
-  staffY,
-}: {
-  beam: StaffBeam;
-  bar: StaffBar;
-  staffY: number;
-}) {
-  const start = bar.notes[beam.start];
-  const end = bar.notes[beam.end];
-  if (!start || !end || !start.stem) return null;
-  const direction = start.stem;
-  const stemXOffset =
-    direction === "up"
-      ? STAFF_SPACE * 0.58
-      : -STAFF_SPACE * 0.58;
-  const topStepOf = (n: StaffNote) =>
-    Math.min(...n.glyphs.map((g) => g.step));
-  const bottomStepOf = (n: StaffNote) =>
-    Math.max(...n.glyphs.map((g) => g.step));
-  const tipY = (n: StaffNote) =>
-    direction === "up"
-      ? staffY + stepToY(topStepOf(n)) - STEM_LENGTH_SCREEN
-      : staffY + stepToY(bottomStepOf(n)) + STEM_LENGTH_SCREEN;
-  const x1 = start.x + stemXOffset;
-  const x2 = end.x + stemXOffset;
-  const y1 = tipY(start);
-  const y2 = tipY(end);
-  const beams: React.ReactNode[] = [];
-  for (let i = 0; i < beam.depth; i += 1) {
-    const dy = direction === "up" ? i * BEAM_GAP : -i * BEAM_GAP;
-    beams.push(
-      <line
-        key={i}
-        x1={x1}
-        x2={x2}
-        y1={y1 + dy}
-        y2={y2 + dy}
-        className="stroke-stone-900"
-        strokeWidth={BEAM_THICKNESS}
-        strokeLinecap="butt"
-      />,
-    );
-  }
-  return <g>{beams}</g>;
-}
-
-/**
- * Lines extending the staff above or below for notes that fall outside
- * the five-line range. Each ledger is a short horizontal segment on the
- * staff-line positions between the note and the staff.
- */
 function LedgerLines({
   x,
   staffY,
@@ -540,7 +561,6 @@ function LedgerLines({
   staffY: number;
   step: number;
 }) {
-  // Staff lines live at even integer steps from -4 to 4.
   const needLedgers: number[] = [];
   if (step >= 5) {
     for (let s = 6; s <= step; s += 2) needLedgers.push(s);
