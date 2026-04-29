@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { dongCiDaCi } from "./notation/examples";
-import { naTianWanShang } from "./notation/samples/page03-na-tian-wan-shang";
-import { lanLianHua } from "./notation/samples/page04-lan-lian-hua";
-import { popRock } from "./notation/samples/page07-pop-rock";
-import { rockFusion } from "./notation/samples/page08-rock-fusion";
-import { funkRock } from "./notation/samples/page09-funk-rock";
-import { bluesVariations } from "./notation/samples/page10-blues";
+import { defaultSample, samples } from "./notation/samples";
 import { parseDrumtab } from "./notation/parser";
 import { serializeScore } from "./notation/serialize";
 import { layoutScore } from "./notation/layout";
@@ -40,22 +34,12 @@ import { DocumentList } from "./components/DocumentList";
 import { HotkeyPanel } from "./components/HotkeyPanel";
 import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { HoverClickPopover } from "./components/HoverClickPopover";
-import { Badge, Button, Panel, PanelHeader, Select } from "./components/ui";
+import { Badge, Button, Panel, PanelHeader } from "./components/ui";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
 import { useHistory } from "./lib/useHistory";
 
 type Mode = "source" | "visual";
-
-const samples = [
-  { label: "动次打次", src: dongCiDaCi },
-  { label: "那天晚上 (Page 3)", src: naTianWanShang },
-  { label: "蓝莲花 (Page 4)", src: lanLianHua },
-  { label: "Pop Rock 综合练习 (Page 7)", src: popRock },
-  { label: "Rock Fusion 综合练习 (Page 8)", src: rockFusion },
-  { label: "Funk Rock 综合练习 (Page 9)", src: funkRock },
-  { label: "Blues 节奏变奏 (Page 10)", src: bluesVariations },
-];
 
 function nameToFilename(doc: { name: string; source: string }): string {
   const titleMatch = doc.source.match(/^\s*title:\s*(.+)$/m);
@@ -89,7 +73,7 @@ function loadInitialWorkspace(): {
       {
         id,
         name: "",
-        source: dongCiDaCi,
+        source: defaultSample().source,
         savedAt: Date.now(),
       },
     ],
@@ -312,9 +296,21 @@ export default function App() {
     if (snapshot !== null) applyHistorySnapshot(snapshot);
   }
 
-  function loadSample(src: string) {
-    const result = parseDrumtab(src);
-    writeActiveDocSource(serializeScore(result.score));
+  function handleLoadSample(sampleId: string) {
+    const sample = samples.find((s) => s.id === sampleId);
+    if (!sample) return;
+    // Opening a sample creates a new document rather than overwriting
+    // whatever the user is currently editing.
+    const result = parseDrumtab(sample.source);
+    const id = newId();
+    const doc: DocumentRecord = {
+      id,
+      name: sample.label,
+      source: serializeScore(result.score),
+      savedAt: Date.now(),
+    };
+    setDocuments((docs) => [...docs, doc]);
+    setActiveId(id);
     setTextDraft(null);
     setTextDraftDiagnostics(null);
     setSelectedBar(result.score.sections[0]?.bars.length ? 0 : null);
@@ -421,7 +417,7 @@ export default function App() {
           {
             id: newId(),
             name: "",
-            source: dongCiDaCi,
+            source: defaultSample().source,
             savedAt: Date.now(),
           },
         ];
@@ -512,24 +508,6 @@ export default function App() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Select
-            value=""
-            className="rounded-full text-xs"
-            onChange={(e) => {
-              const found = samples.find((s) => s.label === e.target.value);
-              if (found) loadSample(found.src);
-              e.currentTarget.value = "";
-            }}
-          >
-            <option value="" disabled>
-              Load example…
-            </option>
-            {samples.map((s) => (
-              <option key={s.label} value={s.label}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
           <Button
             variant="danger"
             onClick={() => {
@@ -544,7 +522,7 @@ export default function App() {
                   {
                     id,
                     name: "",
-                    source: dongCiDaCi,
+                    source: defaultSample().source,
                     savedAt: Date.now(),
                   },
                 ]);
@@ -594,6 +572,8 @@ export default function App() {
               onExport={handleExportDoc}
               onExportMidi={handleExportDocMidi}
               onImport={handleImportDoc}
+              samples={samples.map(({ id, label }) => ({ id, label }))}
+              onLoadSample={handleLoadSample}
               onCollapse={() => setSidebarCollapsed(true)}
             />
           </div>

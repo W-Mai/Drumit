@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parseDrumtab } from "../src/notation/parser";
 import { exportScoreToMidi, PPQ, vlq } from "../src/notation/midiExport";
-import { dongCiDaCi } from "../src/notation/examples";
+import { defaultSample } from "../src/notation/samples";
+
+const dongCiDaCi = defaultSample().source;
 
 describe("vlq", () => {
   it("encodes zero as a single byte", () => {

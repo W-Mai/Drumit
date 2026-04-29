@@ -1,4 +1,4 @@
-export const dongCiDaCi = `title: 动次打次
+title: 动次打次
 tempo: 100
 meter: 4/4
 
@@ -13,4 +13,3 @@ meter: 4/4
 
 [B fill]
 | hh: x / x / x / xxxx  bd: o / - / o / -  sn: - / o / - / xxx |
-`;

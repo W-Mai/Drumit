@@ -8,6 +8,11 @@ export interface DocumentSummary {
   source: string;
 }
 
+export interface SampleEntry {
+  id: string;
+  label: string;
+}
+
 interface Props {
   documents: DocumentSummary[];
   activeId: string | null;
@@ -19,6 +24,9 @@ interface Props {
   onExport: (id: string) => void;
   onExportMidi: (id: string) => void;
   onImport: (source: string) => void;
+  /** Available bundled samples; shown as a "Load example…" dropdown. */
+  samples?: SampleEntry[];
+  onLoadSample?: (sampleId: string) => void;
   /** When provided, a collapse pill floats on the top-right of the panel. */
   onCollapse?: () => void;
 }
@@ -34,6 +42,8 @@ export function DocumentList({
   onExport,
   onExportMidi,
   onImport,
+  samples,
+  onLoadSample,
   onCollapse,
 }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -66,7 +76,7 @@ export function DocumentList({
             </button>
           ) : null}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <Button size="xs" onClick={onCreate} title="New document">
             + New
           </Button>
@@ -77,6 +87,27 @@ export function DocumentList({
           >
             ↑ Import
           </Button>
+          {samples && onLoadSample ? (
+            <select
+              value=""
+              onChange={(e) => {
+                const id = e.target.value;
+                if (id) onLoadSample(id);
+                e.currentTarget.value = "";
+              }}
+              title="Load a bundled example"
+              className="h-6 rounded-full border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700 hover:bg-stone-50"
+            >
+              <option value="" disabled>
+                ♪ Example…
+              </option>
+              {samples.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <input
             ref={fileInput}
             type="file"

@@ -1,14 +1,4 @@
-/**
- * Page 9 — Funk Rock 综合练习 (d=90~110, 4/4)
- *
- * Key features:
- * - Ghost notes in parentheses (x) on multiple lanes simultaneously
- * - Dense 16th and 32nd beam groups
- * - Dotted and tied note patterns (.)
- * - Accents >o and rolls ~xx
- * - Section C with double-beat notation (2000 style)
- */
-export const funkRock = `title: Funk Rock 综合练习
+title: Funk Rock 综合练习
 tempo: 100
 meter: 4/4
 
@@ -33,4 +23,3 @@ meter: 4/4
 | hh: xxxx / xxxx / xxxx / xxxx  bd: (o)(x) / (o)(x) / (o)(x) / (o)(x) |
 | hh: xxxx / xxxx / xxxx / xxxx  bd: (o)(o) / - o / (o)(o) / - o |
 | hh: xxxx / xxxx / xxxx / xxxx  bd: (o)(o) / (o)(x) / (o)(x) / (o)(x) |
-`;
