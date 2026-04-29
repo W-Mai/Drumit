@@ -1,0 +1,86 @@
+/**
+ * Staff view uses a half-space-per-step vertical coordinate:
+ *   step  0 → middle line (B4)
+ *   step +1 → half space below the middle line
+ *   step -1 → half space above the middle line
+ *
+ * Percussion clef positions of interest (MVP drum map):
+ *   step -6 = 上加一间 (A5)
+ *   step -5 = 上加一线 (G5)  ← hi-hat / ride
+ *   step -2 = 第四间 (D5)   ← tom high
+ *   step -1 = 第四线 (C5)   ← tom mid
+ *   step  0 = 中线 (B4)
+ *   step  3 = 第二间 (F4)   ← snare
+ *   step  5 = 第一间 (D4)   ← floor tom
+ *   step  6 = 下加一线 (C4) ← kick
+ *   step  7 = 下加一间 (B3) ← hi-hat foot
+ */
+export type Step = number;
+
+export type Duration = "w" | "h" | "q" | "8" | "16" | "32";
+
+export type NoteheadShape =
+  | "solid"
+  | "open"
+  | "x"
+  | "circle-x"
+  | "triangle"
+  | "slash";
+
+export interface StaffGlyph {
+  step: Step;
+  head: NoteheadShape;
+}
+
+export interface StaffNote {
+  x: number;
+  duration: Duration;
+  glyphs: StaffGlyph[];
+  stem: "up" | "down" | null;
+  tuplet?: number;
+}
+
+export interface StaffRest {
+  x: number;
+  duration: Duration;
+  step: Step;
+}
+
+export interface StaffBeam {
+  /** Indices into `StaffBar.notes`; inclusive. */
+  start: number;
+  end: number;
+  /** 1 = 8th, 2 = 16th, 3 = 32nd. */
+  depth: number;
+}
+
+export interface StaffTupletBracket {
+  start: number;
+  end: number;
+  count: number;
+}
+
+export interface StaffBar {
+  index: number;
+  x: number;
+  width: number;
+  notes: StaffNote[];
+  rests: StaffRest[];
+  beams: StaffBeam[];
+  tuplets: StaffTupletBracket[];
+  barlineX: number;
+}
+
+export interface StaffSystem {
+  y: number;
+  bars: StaffBar[];
+}
+
+export interface StaffLayout {
+  width: number;
+  height: number;
+  systems: StaffSystem[];
+  title?: string;
+  tempo?: string;
+  meter: string;
+}
