@@ -657,9 +657,9 @@ export function NoteheadStem({
 }
 
 /**
- * Hand-drawn flags at the stem tip. Multiple flags stack with a small
- * vertical offset. Slight S-curve to feel less mechanical than a
- * straight line.
+ * Filled flag shapes at the stem tip. Each flag is a small curved
+ * triangle hanging off the stem — thicker and more readable than a
+ * plain stroke. Multiple flags stack inward toward the notehead.
  */
 export function NoteheadFlags({
   x,
@@ -668,6 +668,7 @@ export function NoteheadFlags({
   bottomStep,
   direction,
   count,
+  tipYOverride,
 }: {
   x: number;
   staffY: number;
@@ -675,6 +676,8 @@ export function NoteheadFlags({
   bottomStep: number;
   direction: "up" | "down";
   count: number;
+  /** When the stem is pinned by a beam, supply the stem's actual tip Y. */
+  tipYOverride?: number;
 }): ReactNode {
   if (count <= 0) return null;
   const stemX =
@@ -682,26 +685,30 @@ export function NoteheadFlags({
       ? x + NOTEHEAD_HALF_WIDTH
       : x - NOTEHEAD_HALF_WIDTH;
   const tipY =
-    direction === "up"
+    tipYOverride ??
+    (direction === "up"
       ? staffY + stepToY(topStep) - STEM_LENGTH
-      : staffY + stepToY(bottomStep) + STEM_LENGTH;
-  const flagLen = STAFF_SPACE * 1.6;
-  const flagCurve = STAFF_SPACE * 0.9;
+      : staffY + stepToY(bottomStep) + STEM_LENGTH);
+  const flagReach = STAFF_SPACE * 1.3;
+  const flagDrop = STAFF_SPACE * 1.4;
   const sign = direction === "up" ? 1 : -1;
   const paths: ReactNode[] = [];
   for (let i = 0; i < count; i += 1) {
-    const y = tipY + i * STAFF_SPACE * 0.9 * sign;
-    const cx = stemX + flagLen * 0.5;
-    const cy = y + flagCurve * 0.4 * sign;
-    const endX = stemX + flagLen;
-    const endY = y + flagCurve * 1.4 * sign;
+    const y = tipY + i * STAFF_SPACE * 0.85 * sign;
+    // Filled teardrop: stem tip → curve out and down → curve back toward stem
+    const p1x = stemX;
+    const p1y = y;
+    const p2x = stemX + flagReach;
+    const p2y = y + flagDrop * 0.35 * sign;
+    const p3x = stemX + flagReach * 0.7;
+    const p3y = y + flagDrop * 1.1 * sign;
+    const p4x = stemX;
+    const p4y = y + flagDrop * 0.55 * sign;
     paths.push(
       <path
         key={i}
-        d={`M ${stemX} ${y} Q ${cx} ${cy} ${endX} ${endY}`}
-        className="fill-none stroke-stone-900"
-        strokeWidth={1.6}
-        strokeLinecap="round"
+        d={`M ${p1x} ${p1y} Q ${p2x} ${p2y} ${p3x} ${p3y} Q ${p4x + flagReach * 0.2} ${p4y} ${p1x} ${p1y + flagDrop * 0.15 * sign} Z`}
+        className="fill-stone-900"
       />,
     );
   }
