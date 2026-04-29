@@ -18,6 +18,10 @@ interface Props {
   score: Score;
   /** Return the currently rendered chart SVG element, or null if there is none. */
   getSvgElement: () => SVGSVGElement | null;
+  /** Which view is currently visible. When provided, it's appended to the
+   *  export filename (e.g. `chart-staff.svg`) so the two views don't
+   *  overwrite each other on disk. */
+  viewLabel?: string;
 }
 
 type Status = "idle" | "pending" | "error";
@@ -37,11 +41,13 @@ function exportError(
  * `getSvgElement`) rather than re-rendering with `react-dom/server`, so
  * no server runtime is pulled into the client bundle.
  */
-export function ExportMenu({ score, getSvgElement }: Props) {
+export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
   const [status, setStatus] = useState<Status>("idle");
 
-  function filenameFor(ext: string): string {
-    return `${filenameStem(score.title ?? "chart")}.${ext}`;
+  function filenameFor(ext: string, includeView = true): string {
+    const stem = filenameStem(score.title ?? "chart");
+    const suffix = includeView && viewLabel ? `-${viewLabel}` : "";
+    return `${stem}${suffix}.${ext}`;
   }
 
   function getSvg(): string {
@@ -127,7 +133,7 @@ export function ExportMenu({ score, getSvgElement }: Props) {
         const source = serializeScore(score);
         triggerDownload(
           new Blob([source], { type: "text/plain;charset=utf-8" }),
-          filenameFor("drumtab"),
+          filenameFor("drumtab", false),
         );
       },
     },
@@ -140,7 +146,7 @@ export function ExportMenu({ score, getSvgElement }: Props) {
         new Uint8Array(buffer).set(bytes);
         triggerDownload(
           new Blob([buffer], { type: "audio/midi" }),
-          filenameFor("mid"),
+          filenameFor("mid", false),
         );
       },
     },

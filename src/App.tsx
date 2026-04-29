@@ -750,6 +750,7 @@ export default function App() {
               getSvgElement={() =>
                 chartContainer?.querySelector("svg") ?? null
               }
+              viewLabel={viewMode === "staff" ? "staff" : undefined}
             />
           </PanelHeader>
           <div
