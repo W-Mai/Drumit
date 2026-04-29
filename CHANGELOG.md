@@ -11,6 +11,16 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.6]
+
+### Changed
+
+- Export menu now follows the visible view — exporting while Staff mode
+  is on produces a staff SVG / PNG / PDF / HTML, and the filenames gain
+  a `-staff` suffix so they don't collide with Drumit-view exports.
+  `.drumtab` and `.mid` stay suffix-free because they represent the
+  AST, not a rendering.
+
 ## [2026.04.29.5]
 
 ### Added
@@ -239,7 +249,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.5...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.6...HEAD
+[2026.04.29.6]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.5...v2026.04.29.6
 [2026.04.29.5]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.4...v2026.04.29.5
 [2026.04.29.4]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.3...v2026.04.29.4
 [2026.04.29.3]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.2...v2026.04.29.3
