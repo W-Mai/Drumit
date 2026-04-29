@@ -530,8 +530,8 @@ export function PadEditor({
         shift: true,
         handler: () => setStickingAtCursor(currentInstrument, "L"),
       },
-      // Division: Shift+digit sets the current beat's lane division.
-      // Matched by physical key `code` so it works across keyboard layouts.
+      // Division: Alt/Option + digit sets the current beat's lane division.
+      // Alt is chosen over Shift because Shift+1 collides with `!` (choke).
       ...([
         ["Digit1", 1], // 1/4 (whole beat)
         ["Digit2", 2], // 1/8
@@ -541,7 +541,7 @@ export function PadEditor({
         ["Digit8", 8], // 1/32
       ] as Array<[string, number]>).map(([code, d]) => ({
         code,
-        shift: true,
+        alt: true,
         handler: () =>
           onSetDivision(clampedCursor.beatIndex, currentInstrument, d),
       })),
@@ -1631,7 +1631,7 @@ function CursorStatusBar({
         Tab: Auto-advance {autoAdvance ? "ON" : "OFF"}
       </button>
       <span className="text-stone-400">
-        {"← → slot · ↑ ↓ lane · Home/End · ⌘←/→ bar · 1-9 inst · Del clear · ⇧+>/g/f/r/! mods · ⇧R/⇧L stick · ⇧+digit div"}
+        {"← → slot · ↑ ↓ lane · Home/End · ⌘←/→ bar · 1-9 inst · Del clear · >/g/f/r/! mods · ⇧R/⇧L stick · ⌥+digit div"}
       </span>
     </div>
   );
