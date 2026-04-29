@@ -11,6 +11,17 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.5]
+
+### Added
+
+- **Staff view is interactive** — click any bar to seek the transport;
+  playback now paints the current bar emerald and the current beat with
+  a lighter emerald stripe, matching the Drumit view.
+- `data-bar-index` / `data-beat-rect[data-beat-index]` markers on the
+  staff SVG so future embedded players can drive highlights the same way
+  Drumit does.
+
 ## [2026.04.29.4]
 
 Staff view phase 2 — the full-detail pass.
@@ -228,7 +239,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.4...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.5...HEAD
+[2026.04.29.5]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.4...v2026.04.29.5
 [2026.04.29.4]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.3...v2026.04.29.4
 [2026.04.29.3]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.2...v2026.04.29.3
 [2026.04.29.2]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.1...v2026.04.29.2
