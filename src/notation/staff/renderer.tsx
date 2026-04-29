@@ -269,8 +269,11 @@ function VoicePaint({
   staffY: number;
 }) {
   const direction: "up" | "down" = voice.position === "upper" ? "up" : "down";
-  // Compute the shared beam line (one per primary run). Only level-1
-  // beams pin the stems; sub-beams sit alongside.
+  // Beam y for a primary run. Standard practice: pin the beam near the
+  // anchor note's default stem tip and let other stems in the run vary
+  // by a small amount, rather than extending every stem to reach the
+  // most-outlying note. For drum parts we anchor to the nearest-to-staff
+  // note's default tip so beams sit close to the staff, not far below/above it.
   const stemTipY = new Map<number, number>();
   const beamedNoteIndices = new Set<number>();
   for (const beam of voice.beams) {
@@ -287,8 +290,12 @@ function VoicePaint({
         tipYs.push(staffY + stepToY(bottomStep) + STEM_LENGTH_SCREEN);
       }
     }
+    // Anchor on the closest-to-staff tip (min on stem-down so the beam
+    // doesn't plunge; max on stem-up so it doesn't sky-rocket). This
+    // keeps beams hugging the staff instead of being dragged far out
+    // by a single low kick or high crash in the run.
     const beamY =
-      direction === "up" ? Math.min(...tipYs) : Math.max(...tipYs);
+      direction === "up" ? Math.max(...tipYs) : Math.min(...tipYs);
     for (let i = beam.start; i <= beam.end; i += 1) stemTipY.set(i, beamY);
   }
   return (
