@@ -34,6 +34,7 @@ import { DocumentList } from "./components/DocumentList";
 import { HotkeyPanel } from "./components/HotkeyPanel";
 import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { HoverClickPopover } from "./components/HoverClickPopover";
+import { ExportMenu } from "./components/ExportMenu";
 import { Badge, Button, Panel, PanelHeader } from "./components/ui";
 import type { Score } from "./notation/types";
 import { cn } from "./lib/utils";
@@ -609,6 +610,7 @@ export default function App() {
             >
               {showLabels ? "Hide labels" : "Show labels"}
             </Button>
+            <ExportMenu score={score} showLabels={showLabels} />
           </PanelHeader>
           <div className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-4">
             {hasErrors ? (
