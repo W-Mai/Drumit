@@ -210,6 +210,7 @@ function collectVoice(
         existing.hits.push(h.hit);
         existing.mappings.push(h.mapping);
         existing.hitDivisions.push(h.groupEffDivision);
+        if (h.groupTuplet && !existing.tuplet) existing.tuplet = h.groupTuplet;
       } else {
         byTick.set(tick, {
           beatIndex,
@@ -218,6 +219,7 @@ function collectVoice(
           hits: [h.hit],
           mappings: [h.mapping],
           hitDivisions: [h.groupEffDivision],
+          tuplet: h.groupTuplet,
         });
       }
     }
@@ -273,6 +275,7 @@ function collectVoice(
         glyphs,
         articulations: [...artSet],
         sticking,
+        tuplet: r.tuplet,
       });
       noteBeatIndex.push(beatIndex);
       noteFinest.push(finest);
@@ -280,7 +283,7 @@ function collectVoice(
   }
 
   const beams = computeBeams(notes, noteBeatIndex, noteFinest);
-  const tuplets: StaffTupletBracket[] = [];
+  const tuplets = computeTuplets(notes);
 
   return {
     position,
@@ -289,6 +292,35 @@ function collectVoice(
     beams,
     tuplets,
   };
+}
+
+function computeTuplets(notes: StaffNote[]): StaffTupletBracket[] {
+  const out: StaffTupletBracket[] = [];
+  let start = -1;
+  let count = 0;
+  for (let i = 0; i < notes.length; i += 1) {
+    const t = notes[i].tuplet;
+    if (!t) {
+      if (start !== -1 && i - 1 > start) {
+        out.push({ start, end: i - 1, count });
+      }
+      start = -1;
+      count = 0;
+      continue;
+    }
+    if (start === -1) {
+      start = i;
+      count = t;
+    } else if (t !== count) {
+      out.push({ start, end: i - 1, count });
+      start = i;
+      count = t;
+    }
+  }
+  if (start !== -1 && notes.length - 1 > start) {
+    out.push({ start, end: notes.length - 1, count });
+  }
+  return out;
 }
 
 /** Round an effective division up to the nearest notation-friendly value
