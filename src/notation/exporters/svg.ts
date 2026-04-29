@@ -101,13 +101,14 @@ function neutralizeTransientClasses(svg: string): string {
 
 /**
  * Drop `<rect>` elements that only exist as interaction hit-boxes or
- * playhead highlight slots. They carry `data-beat-rect` / `data-bar-highlight`
- * attributes; outside the app they have no purpose and some renderers
- * draw them as faint grey borders, which looks like spurious barlines.
+ * playhead highlight slots. React's SSR emits these as `<rect …></rect>`
+ * (not self-closing), so the regex has to cover both the self-closing
+ * form AND the explicit closing tag form. Matching only the opening
+ * would leave `</rect>` behind and break XML nesting.
  */
 function stripInteractionLayers(svg: string): string {
   return svg.replace(
-    /<rect\b[^>]*\bdata-(?:beat-rect|bar-highlight)=[^>]*\/?>/g,
+    /<rect\b[^>]*\bdata-(?:beat-rect|bar-highlight)=[^>]*(?:\/>|><\/rect>)/g,
     "",
   );
 }

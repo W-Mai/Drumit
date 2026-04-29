@@ -11,6 +11,29 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.8]
+
+Staff view polish — this pass tightens a handful of visual details
+against Weinberg 1994 PAS conventions.
+
+### Added
+
+- **`%` repeat-previous-bar** renders the dedicated single-measure
+  repeat glyph (`𝄎`) instead of all-rests.
+
+### Changed
+
+- **Rests** now use the SMuFL Unicode glyphs (`𝄽 𝄾 𝄿 𝅀`) for canonical
+  shapes instead of the hand-rolled zig-zag / stick-and-flag drawings.
+- **Percussion clef** thickened from stroke-2.5 to stroke-4 butt caps
+  with a tighter gap.
+- **Ghost-note parentheses** shrunk so they hug the notehead.
+- **Beam vertical spacing** tightened from 0.4 → 0.35 staff space.
+- **Exports** now strip the `data-beat-rect` / `data-bar-highlight`
+  interaction overlays so no spurious per-beat grey dividers appear in
+  SVG / PNG / static HTML exports. Playable HTML keeps them (its
+  embedded script drives live highlights).
+
 ## [2026.04.29.7]
 
 ### Fixed

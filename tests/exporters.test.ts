@@ -72,16 +72,24 @@ describe("postProcessSvg", () => {
   });
 
   it("strips interaction hit-box rects (data-beat-rect / data-bar-highlight) from exports", () => {
-    const input = `<svg><rect data-bar-highlight="true" class="fill-transparent"/><rect data-beat-rect="true" data-beat-index="0" class="fill-transparent"/><rect class="fill-stone-900"/></svg>`;
+    // React SSR emits rects with an explicit </rect> close tag; match both
+    // that form and the self-closing one.
+    const input = `<svg><rect data-bar-highlight="true" class="fill-transparent"></rect><rect data-beat-rect="true" data-beat-index="0" class="fill-transparent"/><rect class="fill-stone-900"/></svg>`;
     const out = postProcessSvg(input);
     expect(out).not.toContain("data-bar-highlight");
     expect(out).not.toContain("data-beat-rect");
+    // No stray </rect> tags left behind by a partial strip — opens must
+    // equal self-closed + paired.
+    const opens = (out.match(/<rect\b/g) ?? []).length;
+    const selfCloses = (out.match(/<rect\b[^>]*\/>/g) ?? []).length;
+    const paired = (out.match(/<\/rect>/g) ?? []).length;
+    expect(opens).toBe(selfCloses + paired);
     // The non-interaction rect survives.
     expect(out).toContain('class="fill-stone-900"');
   });
 
   it("keeps interaction rects when stripInteraction is false (for playable HTML)", () => {
-    const input = `<svg><rect data-beat-rect="true" data-beat-index="0" class="fill-transparent"/></svg>`;
+    const input = `<svg><rect data-beat-rect="true" data-beat-index="0" class="fill-transparent"></rect></svg>`;
     const out = postProcessSvg(input, undefined, { stripInteraction: false });
     expect(out).toContain("data-beat-rect");
   });
