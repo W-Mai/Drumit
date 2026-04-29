@@ -231,32 +231,105 @@ function BarView({
         </text>
       ) : (
         <>
-          {beats.map((beat) => (
-            <Fragment key={`beat-${bar.index}-${beat.index}`}>
-              {beat.beams.map((b, i) => (
-                <line
-                  key={`beam-${i}`}
-                  x1={b.x1}
-                  x2={b.x2}
-                  y1={b.y}
-                  y2={b.y}
-                  className="stroke-stone-700"
-                  strokeWidth={1}
-                />
-              ))}
-              {beat.tuplets.map((t, li) => (
-                <text
-                  key={`tuplet-${li}`}
-                  x={t.x}
-                  y={t.y}
-                  textAnchor="middle"
-                  className="fill-stone-700 text-[9px] font-extrabold"
-                >
-                  {t.number}
-                </text>
-              ))}
-            </Fragment>
-          ))}
+          {beats.map((beat) => {
+            // For each tuplet, find the deepest beam on the same rowGroup
+            // and embed the number into it: the beam line splits around the
+            // number and the glyph sits on the beam's baseline.
+            const tupletByRow = new Map<
+              string,
+              { number: number; x: number }
+            >();
+            for (const t of beat.tuplets) {
+              const existing = tupletByRow.get(t.rowGroup);
+              // Prefer the first one per row (they're emitted bottom-up).
+              if (!existing) tupletByRow.set(t.rowGroup, t);
+            }
+
+            // Choose the host beam per rowGroup: the one with the max depth.
+            const hostBeamIdx = new Map<string, number>();
+            beat.beams.forEach((b, i) => {
+              const cur = hostBeamIdx.get(b.rowGroup);
+              if (cur === undefined || beat.beams[cur].depth < b.depth) {
+                hostBeamIdx.set(b.rowGroup, i);
+              }
+            });
+
+            const GAP_HALF = 5; // px — half width of the notch around the number
+
+            return (
+              <Fragment key={`beat-${bar.index}-${beat.index}`}>
+                {beat.beams.map((b, i) => {
+                  const t = tupletByRow.get(b.rowGroup);
+                  const isHost = hostBeamIdx.get(b.rowGroup) === i;
+                  if (!t || !isHost) {
+                    return (
+                      <line
+                        key={`beam-${i}`}
+                        x1={b.x1}
+                        x2={b.x2}
+                        y1={b.y}
+                        y2={b.y}
+                        className="stroke-stone-700"
+                        strokeWidth={1}
+                      />
+                    );
+                  }
+                  // Split into two segments around the number.
+                  const left = Math.min(t.x - GAP_HALF, b.x2);
+                  const right = Math.max(t.x + GAP_HALF, b.x1);
+                  return (
+                    <Fragment key={`beam-${i}`}>
+                      {left > b.x1 ? (
+                        <line
+                          x1={b.x1}
+                          x2={left}
+                          y1={b.y}
+                          y2={b.y}
+                          className="stroke-stone-700"
+                          strokeWidth={1}
+                        />
+                      ) : null}
+                      {right < b.x2 ? (
+                        <line
+                          x1={right}
+                          x2={b.x2}
+                          y1={b.y}
+                          y2={b.y}
+                          className="stroke-stone-700"
+                          strokeWidth={1}
+                        />
+                      ) : null}
+                      <text
+                        x={t.x}
+                        y={b.y + 3}
+                        textAnchor="middle"
+                        className="fill-stone-700 text-[9px] font-extrabold"
+                      >
+                        {t.number}
+                      </text>
+                    </Fragment>
+                  );
+                })}
+                {/* Tuplets without a host beam fallback (rare — e.g. a single-note tuplet). */}
+                {beat.tuplets
+                  .filter((t) => {
+                    const idx = hostBeamIdx.get(t.rowGroup);
+                    return idx === undefined;
+                  })
+                  .map((t, li) => (
+                    <text
+                      key={`tuplet-fallback-${li}`}
+                      x={t.x}
+                      y={t.y}
+                      textAnchor="middle"
+                      className="fill-stone-700 text-[9px] font-extrabold"
+                    >
+                      {t.number}
+                    </text>
+                  ))}
+              </Fragment>
+            );
+          })}
 
           {bar.hits.map((laid, i) => (
             <HitGlyph key={`hit-${i}`} laid={laid} />
