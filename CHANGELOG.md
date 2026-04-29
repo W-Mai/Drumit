@@ -2,13 +2,54 @@
 
 All notable changes to this project are documented here.
 
-Version numbers follow **CalVer** as `YYYY.MM.DD`, with git tags prefixed `v`
-(e.g. `v2026.04.29`). Bumps happen whenever we publish to the live demo; a
-CalVer release may include features, fixes, or both.
+Version numbers follow **CalVer** as `YYYY.MM.DD` with git tags prefixed `v`
+(e.g. `v2026.04.29`). Multiple releases on the same day get a `.N` suffix
+(`v2026.04.29.1`). Bumps happen whenever we publish to the live demo; a
+release may include features, fixes, or both.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
+
+## [2026.04.29.1]
+
+Same-day follow-up focusing on exports + chart hygiene.
+
+### Added
+
+- **Export menu in the Preview panel** — hover/click popover with seven
+  formats: SVG, PNG, PDF, static HTML, playable HTML, `.drumtab`, MIDI
+- **Playable HTML** embeds the full Drumit runtime (parser + scheduler +
+  Web Audio synth, esbuild-bundled to ~6.6 kB gzipped). Features in the
+  exported page:
+  - Play / Pause / Stop
+  - BPM slider (40–260, real-time)
+  - Metronome click toggle
+  - Loop-current-bar toggle
+  - Click any bar to seek; playhead and current-beat highlighting
+    stay in sync through the embedded `PlaybackController`
+- `bun run samples:generate` + `bun run player:bundle` scripts
+- Bundled samples extracted to `/samples/*.drumtab` at the repo root,
+  loaded via `import.meta.glob`. Load-example moved into DocumentList.
+
+### Changed
+
+- `showLabels` now renders instrument names once per row (not per bar)
+  with full words (Cymbal / Tom / Snare / Kick); row-groups sharing a
+  y-coordinate (e.g. Snare + Kick) merge into a combined label.
+- Browser exporters read the live DOM SVG instead of re-running
+  `react-dom/server`; production bundle shrunk from 506 kB → 319 kB.
+- PDF export switched from `window.open + document.write` (popup-blocked
+  on Safari, blank-preview on Chrome) to a hidden iframe + Blob URL.
+
+### Fixed
+
+- Transient selection / playhead classes (`fill-amber-200/60`,
+  `fill-emerald-100/70`, `fill-emerald-300/40`) are neutralised to
+  `fill-transparent` in exports so unspecified-fill SVG elements no
+  longer render as solid black blocks.
+- `react` and `react-dom` are declared as runtime dependencies (they
+  were only implicitly present in `node_modules`, which broke CI).
 
 ## [2026.04.29]
 
@@ -87,5 +128,6 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.1...HEAD
+[2026.04.29.1]: https://github.com/W-Mai/Drumit/compare/v2026.04.29...v2026.04.29.1
 [2026.04.29]: https://github.com/W-Mai/Drumit/releases/tag/v2026.04.29
