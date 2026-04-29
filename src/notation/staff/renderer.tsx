@@ -255,8 +255,22 @@ function BarShell({
           strokeWidth={1}
         />
       )}
-      <VoicePaint voice={bar.upper} staffY={staffY} />
-      <VoicePaint voice={bar.lower} staffY={staffY} />
+      {bar.repeatPrevious ? (
+        <text
+          x={bar.x + bar.width / 2}
+          y={staffY + stepToY(0) + STAFF_SPACE * 1.2}
+          textAnchor="middle"
+          className="fill-stone-900"
+          style={{ fontSize: STAFF_SPACE * 3.6 }}
+        >
+          𝄎
+        </text>
+      ) : (
+        <>
+          <VoicePaint voice={bar.upper} staffY={staffY} />
+          <VoicePaint voice={bar.lower} staffY={staffY} />
+        </>
+      )}
     </g>
   );
 }
@@ -454,7 +468,7 @@ function NoteMarker({
 
 const STEM_LENGTH_SCREEN = STAFF_SPACE * 3.5;
 const BEAM_THICKNESS = STAFF_SPACE * 0.55;
-const BEAM_GAP = STAFF_SPACE * 0.4;
+const BEAM_GAP = STAFF_SPACE * 0.35;
 
 function BeamLine({
   beam,

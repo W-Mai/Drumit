@@ -111,8 +111,13 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
   const beatWidth = width / beatsPerBar;
   const beats = bar.beats.length > 0 ? bar.beats : fillEmptyBeats(beatsPerBar);
 
-  const upper = collectVoice("upper", beats, beatsPerBar, x, beatWidth);
-  const lower = collectVoice("lower", beats, beatsPerBar, x, beatWidth);
+  const isRepeatPrev = !!bar.repeatPrevious;
+  const upper = isRepeatPrev
+    ? emptyVoice("upper")
+    : collectVoice("upper", beats, beatsPerBar, x, beatWidth);
+  const lower = isRepeatPrev
+    ? emptyVoice("lower")
+    : collectVoice("lower", beats, beatsPerBar, x, beatWidth);
 
   return {
     index: barIndex,
@@ -127,7 +132,12 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     repeatTimes: bar.repeatEnd?.times,
     ending: bar.ending,
     navigationLabel: bar.navigation ? navigationLabel(bar.navigation) : undefined,
+    repeatPrevious: isRepeatPrev,
   };
+}
+
+function emptyVoice(position: VoicePosition): StaffVoice {
+  return { position, notes: [], rests: [], beams: [], tuplets: [] };
 }
 
 function collectVoice(

@@ -103,6 +103,9 @@ export interface StaffBar {
   ending?: "1" | "2";
   /** Rendered navigation label, e.g. "D.C. al Fine" or "𝄋". */
   navigationLabel?: string;
+  /** True when this bar is a "%" (repeat the previous bar) placeholder.
+   *  Renderer draws the single-measure-repeat symbol instead of notes. */
+  repeatPrevious?: boolean;
 }
 
 export interface StaffSystem {
