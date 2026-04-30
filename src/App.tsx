@@ -910,11 +910,14 @@ export default function App() {
                       : s,
                   )
                 }
-                onInsertSectionAfter={(label) =>
+                onInsertSectionAfter={(label) => {
                   applyScoreUpdate((s) =>
                     insertSectionAfterBar(s, clampedSelectedBar, label),
-                  )
-                }
+                  );
+                  // Move the cursor onto the first bar of the new section
+                  // so the user can start editing it immediately.
+                  setSelectedBar((i) => (i === null ? null : i + 1));
+                }}
                 onDeleteSection={() =>
                   applyScoreUpdate((s) =>
                     selectedSectionInfo

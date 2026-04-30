@@ -77,14 +77,31 @@ export function insertSectionAfterBar(
   if (!loc) return next;
   const source = next.sections[loc.sectionIndex];
   const splitAt = loc.barIndex + 1;
+  const beatCount = Math.max(1, score.meter.beats);
+
   if (splitAt >= source.bars.length) {
-    // Nothing to split off — append a new empty-ish section instead.
-    next.sections.splice(loc.sectionIndex + 1, 0, { label, bars: [] });
+    // Nothing to split off — seed the new section with a single empty
+    // bar so the user can click into it and start editing. A zero-bar
+    // section has no visible target in the preview and is impossible
+    // to select.
+    next.sections.splice(loc.sectionIndex + 1, 0, {
+      label,
+      bars: [freshEmptyBar(beatCount)],
+    });
     return next;
   }
   const tail = source.bars.splice(splitAt);
   next.sections.splice(loc.sectionIndex + 1, 0, { label, bars: tail });
   return next;
+}
+
+function freshEmptyBar(beatCount: number): Bar {
+  return {
+    beats: Array.from({ length: beatCount }, () => emptyBeat()),
+    repeatCount: 1,
+    repeatPrevious: false,
+    source: "",
+  };
 }
 
 /**

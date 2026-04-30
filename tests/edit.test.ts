@@ -297,13 +297,18 @@ describe("section edits", () => {
     expect(next.sections[1].bars).toHaveLength(2);
   });
 
-  it("insertSectionAfterBar appends an empty section when splitting after the last bar", () => {
+  it("insertSectionAfterBar appends a seeded section when splitting after the last bar", () => {
+    // A zero-bar section would be invisible in the preview, so we seed
+    // one blank bar the user can immediately click into.
     const { score } = loadBar(
       `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
     );
     const next = insertSectionAfterBar(score, 0, "B");
     expect(next.sections).toHaveLength(2);
-    expect(next.sections[1].bars).toHaveLength(0);
+    expect(next.sections[1].bars).toHaveLength(1);
+    const seeded = next.sections[1].bars[0];
+    expect(seeded.beats).toHaveLength(4);
+    expect(seeded.beats.every((b) => b.lanes.length === 0)).toBe(true);
   });
 
   it("deleteSection merges bars into the previous section", () => {
