@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import type { Score } from "../notation/types";
 import type { EngineKind } from "./PlaybackBar";
@@ -19,6 +20,8 @@ import {
 import { computeExpandedBarStartTime } from "../notation/scheduler";
 
 type ViewMode = "drumit" | "staff";
+
+const MIN_VISIBLE_BARS = 4;
 
 export interface PerformViewProps {
   score: Score;
@@ -77,6 +80,7 @@ export function PerformView({
   const stageRef = useRef<HTMLDivElement | null>(null);
 
   useFullscreenLifecycle(rootRef, onExit);
+  const forceRotate = useForceLandscapeRotation();
 
   // Expanded score + full single-row layout (very wide SVG).
   const expanded = useMemo(() => expandScore(score), [score]);
@@ -103,44 +107,55 @@ export function PerformView({
     [expanded, fullScoreWidth],
   );
 
-  // Observe the stage's on-screen width so we can centre / left-third
-  // the playhead in the *visible* area.
-  const [stageWidth, setStageWidth] = useState(0);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
-    setStageWidth(el.clientWidth);
+    setStageSize({ width: el.clientWidth, height: el.clientHeight });
     const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) setStageWidth(entry.contentRect.width);
+      for (const entry of entries) {
+        setStageSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const stageWidth = stageSize.width;
+  const stageHeight = stageSize.height;
 
-  // Reticle sits at 1/3 from the left edge of the stage — "read ahead"
-  // like a book rather than dead-centre.
+  // Scale so the chart fills ~90% of stage height, but cap it so at
+  // least MIN_VISIBLE_BARS bars fit in the viewport horizontally.
+  const chartScale = useMemo(() => {
+    if (fullLayout.height <= 0 || stageHeight <= 0 || stageWidth <= 0) return 1;
+    const fitHeight = (stageHeight * 0.9) / fullLayout.height;
+    const barLayoutWidth = 44 * expanded.meter.beats + 20 + 24;
+    const fitWidth = stageWidth / (MIN_VISIBLE_BARS * barLayoutWidth);
+    return Math.max(1, Math.min(fitHeight, fitWidth));
+  }, [fullLayout.height, stageHeight, stageWidth, expanded.meter.beats]);
+
   const reticleX = stageWidth / 3;
 
-  // Compute the scroll offset that places the current beat's x under
-  // the reticle. Falls back to the first bar when there's no cursor.
   const playheadX = useMemo(
     () => computePlayheadX(fullLayout, expanded, cursor),
     [fullLayout, expanded, cursor],
   );
-  const scrollX = Math.max(0, playheadX - reticleX);
+  // scrollX is in screen pixels; playheadX is in unscaled layout units.
+  const scrollX = Math.max(0, playheadX * chartScale - reticleX);
 
   const handleStageClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      // Translate click → absolute SVG x → beat → time → seek.
       const host = stageRef.current;
       if (!host) return;
       const rect = host.getBoundingClientRect();
       const xWithinStage = e.clientX - rect.left;
-      const targetSvgX = xWithinStage + scrollX;
+      const targetSvgX = (xWithinStage + scrollX) / chartScale;
       const time = xToTime(fullLayout, expanded, targetSvgX);
       if (time !== null) onSeekTime(time);
     },
-    [fullLayout, expanded, scrollX, onSeekTime],
+    [fullLayout, expanded, scrollX, chartScale, onSeekTime],
   );
 
   const handleSeekExpanded = useCallback(
@@ -153,6 +168,15 @@ export function PerformView({
   const focusedExpandedBar = cursor?.expandedBarIndex ?? 0;
   const readout = `Bar ${focusedExpandedBar + 1} / ${totalExpandedBars}`;
 
+  const rotatedStyle: React.CSSProperties = forceRotate
+    ? {
+        transform: "rotate(90deg) translate(0, -100vw)",
+        transformOrigin: "top left",
+        width: "100vh",
+        height: "100vw",
+      }
+    : {};
+
   return (
     <div
       ref={rootRef}
@@ -162,6 +186,7 @@ export function PerformView({
         paddingLeft: "env(safe-area-inset-left)",
         paddingRight: "env(safe-area-inset-right)",
         paddingBottom: "env(safe-area-inset-bottom)",
+        ...rotatedStyle,
       }}
     >
       {/* Top bar */}
@@ -203,7 +228,7 @@ export function PerformView({
       {/* Scrolling stage */}
       <div
         ref={stageRef}
-        className="relative min-h-0 flex-1 overflow-hidden bg-stone-900"
+        className="relative flex min-h-0 flex-1 items-center overflow-hidden bg-stone-900"
         onClick={handleStageClick}
         role="region"
         aria-label="Perform stage"
@@ -213,11 +238,13 @@ export function PerformView({
           <div
             className="will-change-transform"
             style={{
-              transform: `translateX(${-scrollX}px)`,
+              transform: `translateX(${-scrollX}px) scale(${chartScale})`,
+              transformOrigin: "left center",
               transition: isPlaying
                 ? "transform 120ms linear"
                 : "transform 280ms ease-out",
               width: fullLayout.width,
+              flexShrink: 0,
             }}
           >
             <DrumChart
@@ -233,17 +260,13 @@ export function PerformView({
           </div>
         ) : null}
 
-        {/* Vertical reticle */}
         {stageWidth > 0 ? (
           <div
-            className="pointer-events-none absolute top-0 bottom-0 w-px bg-amber-400/70"
+            className="pointer-events-none absolute top-0 bottom-0 w-0.5 bg-amber-400/80 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
             style={{ left: reticleX }}
             data-testid="perform-reticle"
           >
-            <div
-              className="absolute left-1/2 -translate-x-1/2 -translate-y-1 rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-stone-950"
-              style={{ top: 0 }}
-            >
+            <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-b bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-stone-950">
               ▾
             </div>
           </div>
@@ -289,12 +312,12 @@ function computePlayheadX(
   const bar = flatBars[cursor.expandedBarIndex];
   if (!bar) return defaultX + (flatBars[0].x ?? 0);
 
-  // x of the current beat's left edge (SVG absolute).
+  // beats[i].x is already a SVG-absolute coordinate (set by layoutScore
+  // as `bar.x + innerLeft + i * beatWidth`), so we do NOT add bar.x.
   const beat = bar.beats[Math.max(0, Math.min(bar.beats.length - 1, cursor.beatIndex))];
   if (!beat) return bar.x;
-  // Fractional offset inside the beat via wall-clock time. Inline meter
-  // per bar is not handled here — score-level tempo/meter is accurate
-  // for ~all current scores. Can be tightened when it matters.
+  // Interpolate within the beat via wall-clock time so the reticle
+  // slides smoothly between beats instead of snapping.
   const bpm = expanded.tempo?.bpm || 100;
   const secondsPerBeat = 60 / bpm;
   const barStartTime = computeExpandedBarStartTime(expanded, cursor.expandedBarIndex);
@@ -303,7 +326,7 @@ function computePlayheadX(
     0,
     Math.min(1, (cursor.time - beatStartTime) / secondsPerBeat),
   );
-  return bar.x + beat.x + beat.width * fraction;
+  return beat.x + beat.width * fraction;
 }
 
 /**
@@ -318,7 +341,7 @@ function xToTime(
 ): number | null {
   const flatBars = layout.rows.flat();
   if (flatBars.length === 0) return null;
-  // Find the bar whose span contains x.
+  // Find the bar whose span contains x (bar.x/width are SVG-absolute).
   let target = flatBars[flatBars.length - 1];
   for (const b of flatBars) {
     if (x < b.x + b.width) {
@@ -327,20 +350,49 @@ function xToTime(
     }
   }
   const expandedIdx = target.index - 1;
-  const beats = target.beats;
-  // Locate which beat box x lives in.
+  const beats = target.beats; // beats[i].x is already SVG-absolute.
   let beatIdx = 0;
   for (let i = 0; i < beats.length; i += 1) {
-    const leftEdge = target.x + beats[i].x;
-    if (x >= leftEdge) beatIdx = i;
+    if (x >= beats[i].x) beatIdx = i;
   }
   const beat = beats[beatIdx];
-  const localX = x - (target.x + beat.x);
-  const fraction = Math.max(0, Math.min(1, localX / Math.max(1, beat.width)));
+  const fraction = Math.max(
+    0,
+    Math.min(1, (x - beat.x) / Math.max(1, beat.width)),
+  );
   const bpm = expanded.tempo?.bpm || 100;
   const secondsPerBeat = 60 / bpm;
   const barStart = computeExpandedBarStartTime(expanded, expandedIdx);
   return barStart + beatIdx * secondsPerBeat + fraction * secondsPerBeat;
+}
+
+// CSS-rotate 90° on portrait touch devices; stand down when the user
+// physically rotates so we don't double-rotate.
+function useForceLandscapeRotation(): boolean {
+  return useSyncExternalStore(
+    subscribeViewport,
+    getShouldForceRotate,
+    () => false,
+  );
+}
+
+function subscribeViewport(onChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("resize", onChange);
+  window.addEventListener("orientationchange", onChange);
+  return () => {
+    window.removeEventListener("resize", onChange);
+    window.removeEventListener("orientationchange", onChange);
+  };
+}
+
+function getShouldForceRotate(): boolean {
+  if (typeof window === "undefined") return false;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const isCoarse =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches;
+  return isPortrait && isCoarse;
 }
 
 /* ─────────────────────────────────────────────────────────────────────

@@ -25,6 +25,22 @@ beforeEach(() => {
   }).requestFullscreen = function () {
     return Promise.resolve();
   };
+  // jsdom lacks matchMedia; stub a never-matches implementation so
+  // the force-rotation hook's subscribe/getSnapshot don't blow up.
+  if (!window.matchMedia) {
+    (window as unknown as { matchMedia: (q: string) => MediaQueryList }).matchMedia =
+      (query: string) =>
+        ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false,
+        }) as unknown as MediaQueryList;
+  }
 });
 
 afterEach(() => {

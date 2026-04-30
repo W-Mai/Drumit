@@ -220,10 +220,17 @@ export class PlaybackController {
     } else if (this.state === "paused") {
       this.pauseTime = clamped;
       this.pendingStartTime = null;
+      this.emitCursor(clamped);
     } else {
-      // idle: remember for the next play() without perturbing state.
+      // idle: next play() resumes here; UI still wants the cursor now.
       this.pendingStartTime = clamped;
+      this.emitCursor(clamped);
     }
+  }
+
+  private emitCursor(time: number): void {
+    const pos = this.positionAt(time);
+    this.cursorListeners.forEach((fn) => fn({ ...pos, time }));
   }
 
   /* ------------ transport ------------ */
