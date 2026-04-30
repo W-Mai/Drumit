@@ -8,42 +8,50 @@ meter: 4/4
 # / separates beats
 
 [Intro]
-| hh: x / x / x / x   sn: x / - / x / - |
+| hh: oo / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
 | % |
 | % |
-| hh: x / x / x / xx  bd: o / - / o . o  sn: - / o / o / - |
+| hh: oo / oo / - / -  bd: o- / -o / o- / -  sn: - / x- / -x / x-  t2: - / - / - / -o |
 
 [A]
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+|: cr: o- / - / - / -  hh: -o / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
+@segno
+| hh: oo / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
 | % |
 | % |
 | % |
 | % |
-| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
 | % |
-| % |
-| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / xox |
+| bd: o- / -o / o- / -  sn: - , -x / x- / -x / xx , -  t2: - / - / - / -o | [1]
+| bd: o- / -o / o- / -  sn: - , -x / x- / - , -x / x , xx | [2]
 
 [B]
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| cr: o- / - / - / -  hh: -o / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
+| hh: oo / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
 | % |
 | % |
 | % |
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / o / o |
 | % |
 | % |
-| % |
+| hh: oo / oo / - / -  bd: o- / -o / o- / -  sn: - / x- / -x / x-  t2: - / - / - / -o | [1]
+| hh: oo / oo / - / -  bd: o- / -o / o / -  sn: - / x- / - / x,xx :| [2]
+@to-coda
 
 [Solo]
-| hh: x / x / x / x   bd: o / - / o / -  sn: - / o / - / o |
+| cr: o- / - / - / -  hh: -o / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
+| hh: oo / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
 | % |
 | % |
 | % |
 | % |
-| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / o / - |
 | % |
-| % |
-| hh: x / x / x / xx  bd: o / - / o / -  sn: - / o / xox |
+| hh: oo / oo / - / -  bd: o- / -o / o- / -  sn: - / x- / -x / x |
+@ds al coda
 
-[End]
-| bd: o / - / - / - |
+[尾]
+| hh: oo / oo / oo / oo  bd: o- / -o / o- / -  sn: - / x- / - / x- |
+@coda
+| % |
+| % |
+| bd: o- / -o / -o / -o  sn: -x / -- / x- / x- |
+| bd: o / - / - / -  cr: o / - / - / - |
