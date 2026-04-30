@@ -262,21 +262,22 @@ function BarView({
       ) : null}
 
       {/* "×pass/total" badge on the active bar when it's a repeat that
-          plays more than once. Helps the user track which iteration
-          they're on without switching to Expand view. */}
+          plays more than once. Placed on the right of the bar header
+          band (same horizontal strip as the bar.index label on the
+          left) so it doesn't overlap the note rows that start below. */}
       {isPlayhead && repeatPass && repeatPass.total > 1 ? (
         <g>
           <rect
             x={x + width - 30}
-            y={y + 2}
+            y={y}
             width={30}
             height={14}
-            rx={4}
+            rx={3}
             fill="#1c1917"
           />
           <text
             x={x + width - 15}
-            y={y + 12}
+            y={y + 10}
             textAnchor="middle"
             fill="#fde68a"
             fontSize={9}

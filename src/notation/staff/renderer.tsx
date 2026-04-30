@@ -267,15 +267,15 @@ function BarShell({
         <g>
           <rect
             x={bar.x + bar.width - 30}
-            y={barTop - 4}
+            y={staffY - STAFF_SPACE * 2.2}
             width={30}
             height={14}
-            rx={4}
+            rx={3}
             fill="#1c1917"
           />
           <text
             x={bar.x + bar.width - 15}
-            y={barTop + 6}
+            y={staffY - STAFF_SPACE * 2.2 + 10}
             textAnchor="middle"
             fill="#fde68a"
             fontSize={9}
