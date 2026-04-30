@@ -97,9 +97,13 @@ describe("scheduler", () => {
     );
     const ordered = events.slice().sort((a, b) => a.time - b.time);
     const [plain, accent, ghost] = ordered;
-    expect(hitVelocity(plain.hit)).toBe(96);
+    expect(hitVelocity(plain.hit)).toBe(80);
     expect(hitVelocity(accent.hit)).toBe(120);
     expect(hitVelocity(ghost.hit)).toBe(40);
+    // Make the spread explicit: accents must be clearly louder than plain,
+    // and ghosts clearly softer. +40 / -40 guarantees ≈3.5 dB / -6 dB gaps.
+    expect(hitVelocity(accent.hit) - hitVelocity(plain.hit)).toBeGreaterThanOrEqual(40);
+    expect(hitVelocity(plain.hit) - hitVelocity(ghost.hit)).toBeGreaterThanOrEqual(40);
   });
 });
 

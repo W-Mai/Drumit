@@ -56,6 +56,19 @@ export class SynthEngine implements PlaybackEngine {
       velocity: vel,
       onNode: (n) => this.activeNodes.push(n),
     });
+    // Accent punch: short bright noise transient layered on top so
+    // accented hits stand out not just louder but brighter. Triggers
+    // on any velocity ≥ 110 (accent maps to 120).
+    if (event.velocity >= 110) {
+      accentPunch({
+        ctx: this.ctx,
+        master: this.masterGain,
+        noiseBuffer: this.noiseBuffer,
+        time: t,
+        velocity: vel,
+        onNode: (n) => this.activeNodes.push(n),
+      });
+    }
   }
 
   stop(): void {
@@ -218,6 +231,29 @@ function crashVoice(c: VoiceCtx) {
   noise.connect(hp).connect(g).connect(c.master);
   noise.start(c.time);
   noise.stop(c.time + decay);
+  c.onNode(noise);
+}
+
+/**
+ * Extra bright transient layered on top of the main voice for accented
+ * hits. A fast noise burst (~40 ms, 3–6 kHz bandpass) gives the ear a
+ * perceptible "slap" even when the underlying voice's gain bump alone
+ * would be subtle.
+ */
+function accentPunch(c: VoiceCtx) {
+  const decay = 0.05;
+  const noise = c.ctx.createBufferSource();
+  noise.buffer = c.noiseBuffer;
+  const bp = c.ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 4500;
+  bp.Q.value = 0.8;
+  const g = c.ctx.createGain();
+  g.gain.setValueAtTime(0.35 * c.velocity, c.time);
+  g.gain.exponentialRampToValueAtTime(0.001, c.time + decay);
+  noise.connect(bp).connect(g).connect(c.master);
+  noise.start(c.time);
+  noise.stop(c.time + decay + 0.02);
   c.onNode(noise);
 }
 

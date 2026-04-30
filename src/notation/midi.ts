@@ -40,10 +40,17 @@ export const gmDrumMap: Record<Instrument, number> = {
  * Derive a MIDI velocity (0–127) for a given hit. Ghost notes are softer,
  * accents hit harder, everything else is in the mid-upper range.
  */
+/**
+ * Map a Hit to a MIDI velocity (0–127). Widened from the earlier
+ * 40 / 96 / 120 spread because +24 velocity (≈ +1.8 dB in linear gain)
+ * wasn't audibly distinct from a normal hit. The new 40 / 80 / 120
+ * spread puts accents at +3.5 dB and ghosts at −6 dB relative to a
+ * default hit — both clearly perceptible.
+ */
 export function hitVelocity(hit: Hit): number {
   if (hit.articulations.includes("ghost")) return 40;
   if (hit.articulations.includes("accent")) return 120;
-  return 96;
+  return 80;
 }
 
 /**
