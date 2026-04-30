@@ -11,6 +11,19 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.9]
+
+### Changed
+
+- **Accents are now audibly louder and brighter.** Velocity spread
+  widened from 40 / 96 / 120 to **40 / 80 / 120** — the old 24-velocity
+  accent jump worked out to only ~1.8 dB, essentially imperceptible.
+  The new spread gives accents ≈ +3.5 dB over a normal hit and ghosts
+  ≈ −6 dB below.
+- SynthEngine layers a short bright noise transient (~40 ms bandpass at
+  ~4.5 kHz) on every hit with velocity ≥ 110, so accents come through
+  as a distinct "slap" rather than just a slightly louder tap.
+
 ## [2026.04.29.8]
 
 Staff view polish — this pass tightens a handful of visual details
@@ -301,7 +314,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.8...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.9...HEAD
+[2026.04.29.9]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.8...v2026.04.29.9
 [2026.04.29.8]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.7...v2026.04.29.8
 [2026.04.29.7]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.6...v2026.04.29.7
 [2026.04.29.6]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.5...v2026.04.29.6
