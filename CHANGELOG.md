@@ -11,6 +11,24 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.01.1]
+
+🎉 劳动节快乐！May Day release — go rehearse something noisy.
+
+### Changed
+
+- Perform-view chips use **long-press (450ms)** to open the pass
+  picker instead of a tiny `▾` button that was hard to tap and kept
+  getting clipped by the mini-map's overflow. Short taps still seek.
+  A soft amber ring marks chips that have multiple passes worth
+  picking.
+
+### Fixed
+
+- Pass popover now renders into the fullscreen element when Perform
+  view is fullscreen — previously the modal painted under the
+  fullscreen surface and was invisible.
+
 ## [2026.04.30.3]
 
 ### Fixed
