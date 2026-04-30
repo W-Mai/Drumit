@@ -16,6 +16,12 @@ export type EngineKind = "synth" | "sample" | "midi";
 interface Props {
   score: Score;
   startBar?: number;
+  /**
+   * Absolute time (seconds) to start from, taking precedence over
+   * `startBar`. The expanded preview uses this because its bar indices
+   * live in the unrolled timeline that doesn't map 1:1 to source bars.
+   */
+  startTimeOverride?: number;
   onCursor?: (pos: { barIndex: number; beatIndex: number }) => void;
   onStop?: () => void;
   onEngineChange?: (kind: EngineKind) => void;
@@ -24,6 +30,7 @@ interface Props {
 export function PlaybackBar({
   score,
   startBar,
+  startTimeOverride,
   onCursor,
   onStop,
   onEngineChange,
@@ -143,13 +150,19 @@ export function PlaybackBar({
     controller.setTempo(tempoOverride);
   }, [controller, tempoOverride]);
   useEffect(() => {
-    if (typeof startBar === "number") {
+    if (typeof startTimeOverride === "number") {
+      // Expanded-preview path: drive the cursor by absolute time.
+      // Loop from an expanded bar isn't meaningful (the loop endpoints
+      // live in source-bar space), so we just clear any existing loop.
+      controller.setLoop(null);
+      controller.setStartTime(startTimeOverride);
+    } else if (typeof startBar === "number") {
       controller.setLoop(
         loopEnabled ? { startBar, endBar: startBar } : null,
       );
       controller.setStartBar(startBar);
     }
-  }, [controller, loopEnabled, startBar]);
+  }, [controller, loopEnabled, startBar, startTimeOverride]);
 
   // Final cleanup on unmount.
   useEffect(() => {

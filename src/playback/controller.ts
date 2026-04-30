@@ -53,6 +53,13 @@ export class PlaybackController {
   private state: PlaybackState = "idle";
   /** Seconds into the score where playback should resume from. */
   private pauseTime = 0;
+  /**
+   * If set while idle, the next play() will begin from this time rather
+   * than `startBar`. Cleared the moment playback starts. Lets callers
+   * seek by wall-clock time (used by expanded preview) without leaving
+   * the controller in a bogus "paused" state.
+   */
+  private pendingStartTime: number | null = null;
   /** wall-clock `performance.now()` at last `play()`. */
   private startedAt = 0;
   /** Cached play-session `startOffset` (in score time). */
@@ -157,6 +164,7 @@ export class PlaybackController {
   /** Move the play head without stopping. */
   setStartBar(startBar: number): void {
     this.startBar = startBar;
+    this.pendingStartTime = null;
     if (this.state === "playing") {
       this.teardownScheduling();
       this.pauseTime = this.computeBarTime(startBar);
@@ -165,6 +173,27 @@ export class PlaybackController {
       this.beginPlayback(this.pauseTime);
     } else if (this.state === "paused") {
       this.pauseTime = this.computeBarTime(startBar);
+    }
+  }
+
+  /**
+   * Move the play head to an absolute time. Used by the expanded-preview
+   * mode, where a visually-selected bar maps to a point in the unrolled
+   * timeline that doesn't line up with any single source-bar boundary.
+   */
+  setStartTime(seconds: number): void {
+    const clamped = Math.max(0, Math.min(this.totalDuration, seconds));
+    if (this.state === "playing") {
+      this.teardownScheduling();
+      this.pauseTime = clamped;
+      this.pendingStartTime = null;
+      this.beginPlayback(this.pauseTime);
+    } else if (this.state === "paused") {
+      this.pauseTime = clamped;
+      this.pendingStartTime = null;
+    } else {
+      // idle: remember for the next play() without perturbing state.
+      this.pendingStartTime = clamped;
     }
   }
 
@@ -177,9 +206,12 @@ export class PlaybackController {
     const resumeFrom =
       this.state === "paused"
         ? this.pauseTime
-        : this.loop
-          ? this.computeBarTime(this.loop.startBar)
-          : this.computeBarTime(this.startBar);
+        : this.pendingStartTime !== null
+          ? this.pendingStartTime
+          : this.loop
+            ? this.computeBarTime(this.loop.startBar)
+            : this.computeBarTime(this.startBar);
+    this.pendingStartTime = null;
 
     this.beginPlayback(resumeFrom);
   }
@@ -214,6 +246,7 @@ export class PlaybackController {
   stop(): void {
     this.teardownScheduling();
     this.pauseTime = 0;
+    this.pendingStartTime = null;
     if (this.state !== "idle") this.setState("idle");
   }
 

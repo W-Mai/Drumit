@@ -185,6 +185,51 @@ describe("PlaybackController — transport", () => {
     ctrl.stop();
   });
 
+  it("setStartTime while idle seeks without leaving idle state", async () => {
+    // 60bpm 4/4 → 4s per bar. Two bars: bd bar then sn bar.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    const { engine, scheduled } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    ctrl.setStartTime(4); // jump to the start of bar 2
+    expect(ctrl.getState()).toBe("idle");
+    await ctrl.play();
+    const instruments = new Set(scheduled.map((s) => s.event.hit.instrument));
+    expect(instruments).toEqual(new Set(["snare"]));
+    ctrl.stop();
+  });
+
+  it("setStartTime while playing jumps seamlessly to the new time", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    const { engine, scheduled } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    await ctrl.play();
+    scheduled.length = 0;
+    ctrl.setStartTime(4);
+    expect(ctrl.getState()).toBe("playing");
+    const instruments = new Set(scheduled.map((s) => s.event.hit.instrument));
+    expect(instruments).toEqual(new Set(["snare"]));
+    ctrl.stop();
+  });
+
+  it("setStartBar clears a pending setStartTime", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    const { engine, scheduled } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    ctrl.setStartTime(4); // would jump to bar 2
+    ctrl.setStartBar(0); // overrides back to bar 1
+    await ctrl.play();
+    const instruments = new Set(scheduled.map((s) => s.event.hit.instrument));
+    // Both bars in the schedule since we play from bar 0.
+    expect(instruments).toEqual(new Set(["kick", "snare"]));
+    ctrl.stop();
+  });
+
   it("pause records current time; resume continues from there", async () => {
     const { score } = parseDrumtab(
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,

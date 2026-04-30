@@ -1,6 +1,22 @@
 import type { Bar, Score, Section } from "./types";
 import { expandPlayOrder } from "./scheduler";
 
+/**
+ * Given a source-bar index (flat, across all sections), return the
+ * position in the expanded (linearised) bar sequence where it first
+ * appears. Returns 0 if the source bar never plays (malformed score)
+ * so UIs never land on a negative index.
+ */
+export function findExpandedIndexForSourceBar(
+  score: Score,
+  sourceBarIndex: number,
+): number {
+  const flat = score.sections.flatMap((s) => s.bars);
+  const order = expandPlayOrder(flat);
+  const at = order.findIndex((o) => o.barIndex === sourceBarIndex);
+  return at < 0 ? 0 : at;
+}
+
 export function expandScore(score: Score): Score {
   const flatBars = score.sections.flatMap((s) => s.bars);
   const order = expandPlayOrder(flatBars);

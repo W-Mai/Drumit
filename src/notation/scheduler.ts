@@ -108,6 +108,49 @@ export function schedule(
 }
 
 /**
+ * For a score in its compact form, compute the wall-clock start time (in
+ * seconds) of the Nth bar in its *expanded* (linearised) form.
+ *
+ * Example: `|: A B :| x2` expands to A B A B. `expandedBarIndex = 2`
+ * points at the second A — its start time is 2 × (bar duration), not 0.
+ *
+ * Used by the preview's Expand mode so clicking an expanded bar can
+ * resume playback from the exact point in the timeline that the user
+ * visually selected, including all the repeats / jumps that precede it.
+ */
+export function computeExpandedBarStartTime(
+  score: Score,
+  expandedBarIndex: number,
+  options: ScheduleOptions = {},
+): number {
+  if (expandedBarIndex <= 0) return 0;
+  const bpm =
+    options.tempoOverride && options.tempoOverride > 0
+      ? options.tempoOverride
+      : score.tempo?.bpm || options.defaultBpm || 100;
+  const secondsPerBeat = 60 / bpm;
+
+  const flatBars: Bar[] = [];
+  for (const section of score.sections) {
+    for (const bar of section.bars) flatBars.push(bar);
+  }
+  const order = expandPlayOrder(flatBars);
+
+  let cursor = 0;
+  const limit = Math.min(expandedBarIndex, order.length);
+  for (let i = 0; i < limit; i += 1) {
+    const bar = flatBars[order[i].barIndex];
+    if (!bar) continue;
+    const beats = bar.meter?.beats ?? score.meter.beats;
+    // `repeatCount` here is the legacy "xN on a plain bar" multiplier,
+    // which still contributes to elapsed time when present.
+    const repeats = Math.max(1, bar.repeatCount);
+    cursor += beats * secondsPerBeat * repeats;
+  }
+  return cursor;
+}
+
+/**
  * Compute the actual bar playback order for a flat list of bars, expanding
  * `|: ... :| xN` repeats, honoring `[1.` / `[2.` endings, and jumping on
  * D.C. / D.S. / (to) Coda / Fine.

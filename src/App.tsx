@@ -3,7 +3,8 @@ import { defaultSample, samples } from "./notation/samples";
 import { parseDrumtab } from "./notation/parser";
 import { serializeScore } from "./notation/serialize";
 import { layoutScore } from "./notation/layout";
-import { expandScore } from "./notation/expand";
+import { expandScore, findExpandedIndexForSourceBar } from "./notation/expand";
+import { computeExpandedBarStartTime } from "./notation/scheduler";
 import { DrumChart } from "./notation/renderer";
 import { validateScore } from "./notation/validate";
 import { exportScoreToMidi } from "./notation/midiExport";
@@ -199,6 +200,16 @@ export default function App() {
   } | null>(null);
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [expandedPreview, setExpandedPreview] = useState(false);
+  // Selection inside the expanded (linearised) view. Kept separate from
+  // `selectedBar` because its indices live in a different space — they
+  // point into the unrolled bar sequence, which doesn't map 1:1 back
+  // onto source bars used by the editor / bar clipboard.
+  const [expandedSelectedBar, setExpandedSelectedBar] = useState<number | null>(
+    0,
+  );
+  const [expandedSelectionEnd, setExpandedSelectionEnd] = useState<
+    number | null
+  >(null);
 
   const [chartContainer, setChartContainer] =
     useState<HTMLDivElement | null>(null);
@@ -267,12 +278,14 @@ export default function App() {
   }
 
   function handleCopyBars() {
+    if (expandedPreview) return;
     if (!selectionRange) return;
     const bars = extractBars(score, selectionRange[0], selectionRange[1]);
     void writeBarsToClipboard(bars);
   }
 
   function handleCutBars() {
+    if (expandedPreview) return;
     if (!selectionRange) return;
     const bars = extractBars(score, selectionRange[0], selectionRange[1]);
     void writeBarsToClipboard(bars);
@@ -285,6 +298,7 @@ export default function App() {
   }
 
   function handleDeleteBars() {
+    if (expandedPreview) return;
     if (!selectionRange) return;
     const [lo, hi] = selectionRange;
     applyScoreUpdate((s) => deleteBars(s, lo, hi));
@@ -303,7 +317,19 @@ export default function App() {
     chartContainer?.focus();
   }
 
+  function handleExpandedBarClick(index: number, shiftKey?: boolean) {
+    if (shiftKey && expandedSelectedBar !== null) {
+      setExpandedSelectionEnd(index);
+    } else {
+      setExpandedSelectionEnd(null);
+      setExpandedSelectedBar(index);
+    }
+    // No focus park: clipboard hotkeys are a no-op in expanded mode
+    // because the bar clipboard operates on source bars.
+  }
+
   async function handlePasteBars() {
+    if (expandedPreview) return;
     const bars = await readBarsFromClipboard();
     if (!bars || bars.length === 0) return;
     if (selectedBar === null) return;
@@ -942,6 +968,11 @@ export default function App() {
         <PlaybackBar
           score={score}
           startBar={clampedSelectedBar ?? 0}
+          startTimeOverride={
+            expandedPreview && expandedSelectedBar !== null
+              ? computeExpandedBarStartTime(score, expandedSelectedBar)
+              : undefined
+          }
           onCursor={(p) =>
             setPlayCursor({ barIndex: p.barIndex, beatIndex: p.beatIndex })
           }
@@ -960,7 +991,23 @@ export default function App() {
           >
             <Button
               variant={expandedPreview ? "primary" : "secondary"}
-              onClick={() => setExpandedPreview((v) => !v)}
+              onClick={() => {
+                setExpandedPreview((v) => {
+                  const next = !v;
+                  if (next && clampedSelectedBar !== null) {
+                    // Seed the expanded selection at the first occurrence
+                    // of the currently-selected source bar, so the user's
+                    // place in the score doesn't jump when toggling.
+                    const seeded = findExpandedIndexForSourceBar(
+                      score,
+                      clampedSelectedBar,
+                    );
+                    setExpandedSelectedBar(seeded);
+                    setExpandedSelectionEnd(null);
+                  }
+                  return next;
+                });
+              }}
               title={
                 expandedPreview
                   ? "Show compact view (repeat marks, endings, D.C./D.S.)"
@@ -1003,9 +1050,15 @@ export default function App() {
             ) : viewMode === "staff" ? (
               <StaffView
                 score={displayScore}
-                selectedBarIndex={expandedPreview ? null : clampedSelectedBar}
-                selectionEnd={expandedPreview ? null : selectionEnd}
-                onSelectBar={expandedPreview ? undefined : handleBarClick}
+                selectedBarIndex={
+                  expandedPreview ? expandedSelectedBar : clampedSelectedBar
+                }
+                selectionEnd={
+                  expandedPreview ? expandedSelectionEnd : selectionEnd
+                }
+                onSelectBar={
+                  expandedPreview ? handleExpandedBarClick : handleBarClick
+                }
                 playCursor={expandedPreview ? null : playCursor}
                 playheadEngine={engineKind}
               />
@@ -1013,9 +1066,15 @@ export default function App() {
               <DrumChart
                 layout={layout}
                 showLabels={showLabels}
-                selectedBarIndex={expandedPreview ? null : clampedSelectedBar}
-                selectionEnd={expandedPreview ? null : selectionEnd}
-                onSelectBar={expandedPreview ? undefined : handleBarClick}
+                selectedBarIndex={
+                  expandedPreview ? expandedSelectedBar : clampedSelectedBar
+                }
+                selectionEnd={
+                  expandedPreview ? expandedSelectionEnd : selectionEnd
+                }
+                onSelectBar={
+                  expandedPreview ? handleExpandedBarClick : handleBarClick
+                }
                 playCursor={expandedPreview ? null : playCursor}
                 playheadEngine={engineKind}
               />
@@ -1120,6 +1179,15 @@ export default function App() {
                 spellCheck={false}
                 className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 outline-none"
               />
+            ) : expandedPreview ? (
+              <div className="grid min-h-[280px] place-items-center p-6 text-center text-sm text-stone-500">
+                <div>
+                  <p>Editing is disabled in the expanded preview.</p>
+                  <p className="mt-1 text-xs text-stone-400">
+                    Switch back to the compact view to edit bars.
+                  </p>
+                </div>
+              </div>
             ) : selectedBarData && clampedSelectedBar !== null ? (
               <PadEditor
                 bar={selectedBarData}
