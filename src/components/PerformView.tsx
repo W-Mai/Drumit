@@ -82,13 +82,8 @@ export function PerformView({
   useFullscreenLifecycle(rootRef, onExit);
   const forceRotate = useForceLandscapeRotation();
 
-  // Expanded score + full single-row layout (very wide SVG).
   const expanded = useMemo(() => expandScore(score), [score]);
-  const expandedBars = useMemo(
-    () => expanded.sections.flatMap((s) => s.bars),
-    [expanded],
-  );
-  const totalExpandedBars = expandedBars.length;
+
 
   // Force layoutScore into a single row by giving it a width big enough
   // to fit every bar. The exact bar width is controlled by the bar's
@@ -166,7 +161,13 @@ export function PerformView({
   );
 
   const focusedExpandedBar = cursor?.expandedBarIndex ?? 0;
-  const readout = `Bar ${focusedExpandedBar + 1} / ${totalExpandedBars}`;
+  const chipMeta = useMemo(() => buildChipMeta(score), [score]);
+  const focusedChip = chipMeta[focusedExpandedBar];
+  const readout = focusedChip
+    ? focusedChip.total > 1
+      ? `Bar ${focusedChip.sourceIndex + 1} · ×${focusedChip.pass}/${focusedChip.total}`
+      : `Bar ${focusedChip.sourceIndex + 1}`
+    : `Bar ${focusedExpandedBar + 1}`;
 
   const rotatedStyle: React.CSSProperties = forceRotate
     ? {
@@ -216,7 +217,7 @@ export function PerformView({
 
       {/* Mini-map */}
       <MiniMap
-        score={score}
+        chips={chipMeta}
         fullScoreWidth={fullScoreWidth}
         playheadX={playheadX}
         stageWidth={stageWidth}
@@ -467,7 +468,7 @@ function useFullscreenLifecycle(
  * ───────────────────────────────────────────────────────────────────── */
 
 interface MiniMapProps {
-  score: Score;
+  chips: ChipMeta[];
   fullScoreWidth: number;
   playheadX: number;
   stageWidth: number;
@@ -477,7 +478,7 @@ interface MiniMapProps {
 }
 
 function MiniMap({
-  score,
+  chips,
   fullScoreWidth,
   playheadX,
   stageWidth,
@@ -485,7 +486,6 @@ function MiniMap({
   focusedExpandedBar,
   onSeekExpanded,
 }: MiniMapProps) {
-  const chips = useMemo(() => buildChipMeta(score), [score]);
   const chipRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   // Auto-scroll the focused chip into view within the mini-map.
@@ -647,7 +647,7 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
         ref={ref}
         type="button"
         onClick={onSeek}
-        aria-label={`Bar ${chip.expandedIndex + 1}${hasMultiplePasses ? ` pass ${chip.pass} of ${chip.total}` : ""}`}
+        aria-label={`Bar ${chip.sourceIndex + 1}${hasMultiplePasses ? ` pass ${chip.pass} of ${chip.total}` : ""}`}
         className={`flex h-8 min-w-9 flex-col items-center justify-center rounded px-1 text-[10px] font-semibold leading-none tabular-nums transition ${
           active
             ? "bg-amber-400 text-stone-950"
@@ -657,7 +657,7 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
         data-active={active || undefined}
         data-expanded-index={chip.expandedIndex}
       >
-        <span>{chip.expandedIndex + 1}</span>
+        <span>{chip.sourceIndex + 1}</span>
         {hasMultiplePasses ? (
           <span className="text-[8px] leading-none opacity-80">
             ×{chip.pass}/{chip.total}
@@ -671,7 +671,7 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
             e.stopPropagation();
             setPopoverOpen((v) => !v);
           }}
-          aria-label={`Pick pass for bar ${chip.expandedIndex + 1}`}
+          aria-label={`Pick pass for bar ${chip.sourceIndex + 1}`}
           aria-expanded={popoverOpen}
           aria-controls={popoverId}
           className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-stone-700 text-[9px] font-bold hover:bg-stone-600"
