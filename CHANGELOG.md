@@ -29,6 +29,8 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 - Staff view draws a **whole rest** for any bar with no notes in
   either voice (instead of 4 quarter rests). Applies to cleared bars
   and to `|  |` bars loaded from source.
+- Drumit view draws a **∅** glyph in bars with no hits so cleared /
+  silent bars read as intentional (not as forgotten pattern).
 
 ### Fixed
 
