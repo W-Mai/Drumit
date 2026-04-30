@@ -71,7 +71,11 @@ export interface LaidOutBar {
   x: number;
   y: number;
   width: number;
+  /** This bar's own natural height (depends on which rows it uses). */
   height: number;
+  /** Max height among all bars in the same row — keeps the playhead
+   *  box a stable size across the row. */
+  rowMaxHeight: number;
   /** Y for every row group actually used in this bar. */
   rowY: Partial<Record<RowGroup, number>>;
   /** Ordered list of row groups used in this bar, from top to bottom. */
@@ -108,14 +112,14 @@ export interface LayoutOptions {
 
 export const BAR_CONTENT_TOP = 20;
 export const ROW_HEIGHT = 28; // vertical space per voicing row (note head + beam band)
-export const ROW_GAP = 36;
-export const SECTION_GAP_BEFORE = 32;
-export const SECTION_HEADER_HEIGHT = 28;
+export const ROW_GAP = 16;
+export const SECTION_GAP_BEFORE = 20;
+export const SECTION_HEADER_HEIGHT = 24;
 /** The top band reserved for title / tempo / meter. */
 export const HEADER_BAND_HEIGHT = 44;
 
 const MIN_BEAT_WIDTH = 44;
-const BAR_GAP_X = 24;
+const BAR_GAP_X = 0;
 
 /**
  * Fixed top-to-bottom order of voicing rows (the "lanes" visible in a bar).
@@ -181,6 +185,7 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     const flushRow = () => {
       if (!rowBars.length) return;
       const rowMaxHeight = Math.max(...rowBars.map((b) => b.height));
+      for (const b of rowBars) b.rowMaxHeight = rowMaxHeight;
       rows.push(rowBars);
       rowBars = [];
       y += rowMaxHeight + ROW_GAP;
@@ -330,6 +335,7 @@ function layoutBar(
     y,
     width,
     height: barHeight,
+    rowMaxHeight: barHeight,
     rowY,
     rowGroups,
     beats,

@@ -221,7 +221,8 @@ function BarView({
   repeatPass?: { pass: number; total: number } | null;
   onSelect?: (shiftKey: boolean) => void;
 }) {
-  const { x, y, width, height, rowGroups, rowY, beats } = bar;
+  const { x, y, width, rowMaxHeight, rowGroups, rowY, beats } = bar;
+  const height = rowMaxHeight;
   const firstRowY = rowY[rowGroups[0]] ?? y + 20;
   const lastRowY = rowY[rowGroups[rowGroups.length - 1]] ?? firstRowY;
   const barlineTop = firstRowY - 12;
@@ -235,11 +236,11 @@ function BarView({
       data-bar-index={bar.index - 1}
     >
       <rect
-        x={x - 8}
+        x={x}
         y={y + 2}
-        width={width + 16}
+        width={width}
         height={height - 4}
-        rx={8}
+        rx={4}
         className={
           isPlayhead
             ? `${playhead.bar}`
