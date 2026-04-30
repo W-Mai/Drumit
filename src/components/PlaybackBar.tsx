@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 import type { Score } from "../notation/types";
 import {
   PlaybackController,
@@ -13,15 +19,29 @@ import { Badge, Button, Field, Select, TextInput } from "./ui";
 
 export type EngineKind = "synth" | "sample" | "midi";
 
+/**
+ * Imperative handle exposed to parents for transport control that
+ * shouldn't be driven by prop identity. Mainly: seeking only when the
+ * user explicitly asks for it (clicking a bar, using a hotkey) rather
+ * than as a side effect of unrelated state changes (toggling between
+ * compact and expanded preview, which used to yank the playhead back
+ * to the selection).
+ */
+export interface PlaybackBarHandle {
+  seekToBar(barIndex: number): void;
+  seekToTime(seconds: number): void;
+}
+
 interface Props {
   score: Score;
-  startBar?: number;
   /**
-   * Absolute time (seconds) to start from, taking precedence over
-   * `startBar`. The expanded preview uses this because its bar indices
-   * live in the unrolled timeline that doesn't map 1:1 to source bars.
+   * Source-bar index to treat as the loop start (and the initial
+   * play-from bar on first mount). Changes to this prop while the
+   * controller exists only update the loop configuration — they no
+   * longer move the playhead. Use the imperative `seekToBar` /
+   * `seekToTime` handle for that.
    */
-  startTimeOverride?: number;
+  startBar?: number;
   onCursor?: (pos: {
     barIndex: number;
     beatIndex: number;
@@ -31,14 +51,10 @@ interface Props {
   onEngineChange?: (kind: EngineKind) => void;
 }
 
-export function PlaybackBar({
-  score,
-  startBar,
-  startTimeOverride,
-  onCursor,
-  onStop,
-  onEngineChange,
-}: Props) {
+export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function PlaybackBar(
+  { score, startBar, onCursor, onStop, onEngineChange },
+  ref,
+) {
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [tempoOverride, setTempoOverride] = useState<number>(0);
   const [metronome, setMetronome] = useState(false);
@@ -153,20 +169,29 @@ export function PlaybackBar({
   useEffect(() => {
     controller.setTempo(tempoOverride);
   }, [controller, tempoOverride]);
+  // Keep the loop window in sync with the current selection (startBar).
+  // This does NOT move the playhead — seeking is imperative now (see
+  // the PlaybackBarHandle ref below). That way changing the Preview
+  // mode or selection while playing doesn't yank playback back to the
+  // selected bar.
   useEffect(() => {
-    if (typeof startTimeOverride === "number") {
-      // Expanded-preview path: drive the cursor by absolute time.
-      // Loop from an expanded bar isn't meaningful (the loop endpoints
-      // live in source-bar space), so we just clear any existing loop.
-      controller.setLoop(null);
-      controller.setStartTime(startTimeOverride);
-    } else if (typeof startBar === "number") {
+    if (typeof startBar === "number") {
       controller.setLoop(
         loopEnabled ? { startBar, endBar: startBar } : null,
       );
-      controller.setStartBar(startBar);
+    } else {
+      controller.setLoop(null);
     }
-  }, [controller, loopEnabled, startBar, startTimeOverride]);
+  }, [controller, loopEnabled, startBar]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      seekToBar: (barIndex: number) => controller.setStartBar(barIndex),
+      seekToTime: (seconds: number) => controller.setStartTime(seconds),
+    }),
+    [controller],
+  );
 
   // Final cleanup on unmount.
   useEffect(() => {
@@ -348,4 +373,4 @@ export function PlaybackBar({
       ) : null}
     </div>
   );
-}
+});

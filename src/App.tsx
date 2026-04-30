@@ -31,7 +31,11 @@ import {
   toggleSlot,
 } from "./notation/edit";
 import { PadEditor } from "./components/PadEditor";
-import { PlaybackBar, type EngineKind } from "./components/PlaybackBar";
+import {
+  PlaybackBar,
+  type EngineKind,
+  type PlaybackBarHandle,
+} from "./components/PlaybackBar";
 import { useHotkeys } from "./lib/useHotkeys";
 import {
   clearWorkspace,
@@ -215,6 +219,12 @@ export default function App() {
   const [chartContainer, setChartContainer] =
     useState<HTMLDivElement | null>(null);
 
+  // Imperative seek handle — PlaybackBar used to seek whenever its
+  // `startBar` / `startTimeOverride` props changed, which tangled the
+  // Compact/Expand toggle into the transport. Now seeking only happens
+  // when the user explicitly selects a bar.
+  const playbackRef = useRef<PlaybackBarHandle | null>(null);
+
   const lastScrolledBar = useRef<number | null>(null);
   useEffect(() => {
     if (!chartContainer || !playCursor) {
@@ -319,6 +329,9 @@ export default function App() {
     } else {
       setSelectionEnd(null);
       setSelectedBar(index);
+      // Plain click = seek. Shift-click extends the selection and
+      // shouldn't move the playhead.
+      playbackRef.current?.seekToBar(index);
     }
     // Park focus inside the Preview scope so scoped hotkeys fire.
     chartContainer?.focus();
@@ -330,6 +343,10 @@ export default function App() {
     } else {
       setExpandedSelectionEnd(null);
       setExpandedSelectedBar(index);
+      // Map the expanded-sequence index to wall-clock time and seek.
+      playbackRef.current?.seekToTime(
+        computeExpandedBarStartTime(score, index),
+      );
     }
     // No focus park: clipboard hotkeys are a no-op in expanded mode
     // because the bar clipboard operates on source bars.
@@ -984,13 +1001,9 @@ export default function App() {
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 pb-[calc(3.25rem+env(safe-area-inset-bottom))] lg:pb-0">
         <PlaybackBar
+          ref={playbackRef}
           score={score}
           startBar={clampedSelectedBar ?? 0}
-          startTimeOverride={
-            expandedPreview && expandedSelectedBar !== null
-              ? computeExpandedBarStartTime(score, expandedSelectedBar)
-              : undefined
-          }
           onCursor={(p) =>
             setPlayCursor({
               barIndex: p.barIndex,
