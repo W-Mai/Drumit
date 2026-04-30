@@ -116,6 +116,11 @@ music club. His charts were simple, direct, and easy to read; pick one
 up and you could play it. This project is basically an attempt to port
 that hand-written feel onto a screen.
 
+The bundled drum samples come from
+[Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums)
+(CC0 1.0), performed by Austin McMahon at Virtuosity Musical Instruments
+and packaged by Versilian Studios & Karoryfer Samples.
+
 ## License
 
 [MIT](./LICENSE) © 2026 W-Mai

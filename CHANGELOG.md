@@ -18,17 +18,18 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 - **`SampleEngine`** — third playback engine alongside Synth and MIDI.
   Plays real drum samples from `public/samples/*.ogg` via
   `AudioBufferSourceNode`. Selectable from the Engine dropdown in the
-  PlaybackBar; shows `loading samples…` while fetching and
-  `no samples installed — silent` when the directory is empty.
-- `scripts/fetch-samples.ts` — scaffold for downloading a CC0 sample
-  set (URL list still TODO — we scouted a few sources but none had
-  stable public preview URLs without an API key). Drop your own `.ogg`
-  files into `public/samples/` in the meantime; missing files make
-  only the corresponding instrument silent, the rest keep playing.
+  PlaybackBar; shows `loading samples…` while fetching.
+- **13 CC0 drum samples** from [Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums)
+  (CC0 1.0), 188.8 kB total as OGG Opus. Kicks in immediately when you
+  pick the Samples engine — no download step, the files are bundled.
+- `scripts/fetch-samples.ts` — regenerate the sample set. Pulls flac
+  from the Virtuosity Drums repo, runs ffmpeg (silence trim + loudnorm
+  + fade-out), writes `.ogg` into `public/samples/`. Users can also
+  drop their own `.ogg` files with matching names to override.
 
 ### Notes
 
-- Velocity layers deferred. MVP maps velocity to gain, like Synth.
+- Velocity layers deferred. MVP maps hit velocity to gain.
 - The playable-HTML export still uses Synth (doesn't bundle samples).
 
 ## [2026.04.29.10]

@@ -101,6 +101,11 @@ Bun + Vite + React 19 + TypeScript 6 + Tailwind v4 + Vitest。
 他的谱面简单、直接、好读，真正做到了拿起就能打。
 这个项目本质上就是想把那种手写谱的体验搬到屏幕上。
 
+内置的鼓采样来自
+[Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums)
+（CC0 1.0），由 Austin McMahon 在 Virtuosity Musical Instruments
+录制，Versilian Studios 与 Karoryfer Samples 后期处理。
+
 ## 协议
 
 [MIT](./LICENSE) © 2026 W-Mai
