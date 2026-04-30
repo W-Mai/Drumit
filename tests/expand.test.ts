@@ -3,7 +3,9 @@ import { parseDrumtab } from "../src/notation/parser";
 import {
   expandScore,
   findExpandedIndexForSourceBar,
+  findExpandedIndicesForSourceBar,
   repeatPassForCursor,
+  sliceExpandedForPerform,
 } from "../src/notation/expand";
 import { computeExpandedBarStartTime } from "../src/notation/scheduler";
 
@@ -152,5 +154,72 @@ describe("repeatPassForCursor", () => {
     const { score } = parseDrumtab(src);
     expect(repeatPassForCursor(score, 1, 1)).toEqual({ pass: 1, total: 2 });
     expect(repeatPassForCursor(score, 1, 4)).toEqual({ pass: 2, total: 2 });
+  });
+});
+
+describe("findExpandedIndicesForSourceBar", () => {
+  it("lists every expanded position of a repeated source bar", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o |\n| sn: o / o / o / o :| x3`,
+    );
+    // Expanded order: [0,1, 0,1, 0,1] x3. Source 0 at 0,2,4; source 1 at 1,3,5.
+    expect(findExpandedIndicesForSourceBar(score, 0)).toEqual([0, 2, 4]);
+    expect(findExpandedIndicesForSourceBar(score, 1)).toEqual([1, 3, 5]);
+  });
+
+  it("returns an empty list for bars that never play", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    expect(findExpandedIndicesForSourceBar(score, 99)).toEqual([]);
+  });
+});
+
+describe("sliceExpandedForPerform", () => {
+  function barsFrom(score: { sections: { bars: unknown[] }[] }) {
+    return score.sections.flatMap((s) => s.bars);
+  }
+
+  it("returns a centred window around the focused bar", () => {
+    // Expand to 8 linear bars.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x8`,
+    );
+    const expanded = expandScore(score);
+    const result = sliceExpandedForPerform(expanded, 4, 3);
+    // windowSize=3, centre=4 → [3, 4, 5], offset=3
+    expect(result.offset).toBe(3);
+    expect(barsFrom(result.score)).toHaveLength(3);
+  });
+
+  it("slides the window left when the focus is near the end", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x8`,
+    );
+    const expanded = expandScore(score);
+    // focus = 7 (last bar), windowSize = 4 → should return [4,5,6,7], offset=4
+    const result = sliceExpandedForPerform(expanded, 7, 4);
+    expect(result.offset).toBe(4);
+    expect(barsFrom(result.score)).toHaveLength(4);
+  });
+
+  it("clamps the window to the start when focus is 0", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x8`,
+    );
+    const expanded = expandScore(score);
+    const result = sliceExpandedForPerform(expanded, 0, 4);
+    expect(result.offset).toBe(0);
+    expect(barsFrom(result.score)).toHaveLength(4);
+  });
+
+  it("handles windowSize larger than the bar count gracefully", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
+    );
+    const expanded = expandScore(score);
+    const result = sliceExpandedForPerform(expanded, 0, 10);
+    expect(result.offset).toBe(0);
+    expect(barsFrom(result.score)).toHaveLength(2);
   });
 });

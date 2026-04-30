@@ -30,6 +30,7 @@ export type EngineKind = "synth" | "sample" | "midi";
 export interface PlaybackBarHandle {
   seekToBar(barIndex: number): void;
   seekToTime(seconds: number): void;
+  togglePlay(): void;
 }
 
 interface Props {
@@ -49,10 +50,11 @@ interface Props {
   }) => void;
   onStop?: () => void;
   onEngineChange?: (kind: EngineKind) => void;
+  onStateChange?: (state: PlaybackState) => void;
 }
 
 export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function PlaybackBar(
-  { score, startBar, onCursor, onStop, onEngineChange },
+  { score, startBar, onCursor, onStop, onEngineChange, onStateChange },
   ref,
 ) {
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
@@ -149,7 +151,10 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
 
   // Subscribe to controller events.
   useEffect(() => {
-    const offState = controller.onStateChange(setPlayState);
+    const offState = controller.onStateChange((s) => {
+      setPlayState(s);
+      onStateChange?.(s);
+    });
     const offCursor = controller.onCursor((p) => onCursor?.(p));
     const offEnd = controller.onEnd(() => onStop?.());
     return () => {
@@ -157,7 +162,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       offCursor();
       offEnd();
     };
-  }, [controller, onCursor, onStop]);
+  }, [controller, onCursor, onStop, onStateChange]);
 
   // Push external option changes into the controller (no restart).
   useEffect(() => {
@@ -189,6 +194,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
     () => ({
       seekToBar: (barIndex: number) => controller.setStartBar(barIndex),
       seekToTime: (seconds: number) => controller.setStartTime(seconds),
+      togglePlay: () => controller.togglePlay(),
     }),
     [controller],
   );

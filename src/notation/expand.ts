@@ -18,6 +18,63 @@ export function findExpandedIndexForSourceBar(
 }
 
 /**
+ * Every position in the expanded play-order that resolves to a given
+ * source bar. `findExpandedIndicesForSourceBar(score, 0) = [0, 4, 8]`
+ * when `|: A :| x3` plays bar 0 three times at expanded positions
+ * 0, 4, 8 (e.g. with a B bar in between). Used by the Perform view's
+ * pass picker to jump to a specific iteration.
+ */
+export function findExpandedIndicesForSourceBar(
+  score: Score,
+  sourceBarIndex: number,
+): number[] {
+  const flat = score.sections.flatMap((s) => s.bars);
+  const order = expandPlayOrder(flat);
+  const out: number[] = [];
+  order.forEach((o, idx) => {
+    if (o.barIndex === sourceBarIndex) out.push(idx);
+  });
+  return out;
+}
+
+/**
+ * Carve a windowed slice out of an already-expanded score, centred on
+ * the given expanded-bar index. Used by the Perform view to feed
+ * `layoutScore` with just the N bars currently on-screen instead of
+ * the entire timeline.
+ *
+ * Returns the window as a single-section score plus `offset` (the
+ * expanded index of the first bar in the window), so the caller can
+ * translate cursor positions between the window coords and the full
+ * expanded timeline.
+ */
+export function sliceExpandedForPerform(
+  expandedScore: Score,
+  centerExpandedBarIndex: number,
+  windowSize: number,
+): { score: Score; offset: number } {
+  const allBars = expandedScore.sections.flatMap((s) => s.bars);
+  if (allBars.length === 0) {
+    return { score: expandedScore, offset: 0 };
+  }
+  const size = Math.min(windowSize, allBars.length);
+  const half = Math.floor(size / 2);
+  let start = Math.max(0, centerExpandedBarIndex - half);
+  const end = Math.min(allBars.length, start + size);
+  // If the window would run past the end, slide it left so it stays full.
+  start = Math.max(0, end - size);
+  return {
+    score: {
+      ...expandedScore,
+      sections: [
+        { label: expandedScore.sections[0]?.label ?? "", bars: allBars.slice(start, end) },
+      ],
+    },
+    offset: start,
+  };
+}
+
+/**
  * Given a play cursor position, report which pass (1-indexed) of the
  * enclosing source bar is currently active and the total number of
  * passes that source bar will receive.

@@ -11,6 +11,16 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- **Perform view** — a fullscreen single-row rehearsal mode, opened
+  from the 🎭 Perform button in the Preview panel header. The chart
+  auto-windows to 3–5 bars around the current position (wider screens
+  show more), and the bottom chip strip lets you tap any bar to seek.
+  For repeated bars a `▾` popover lets you pick exactly which pass to
+  jump to. On mobile the view requests fullscreen and (when the
+  browser permits) locks landscape orientation.
+
 ## [2026.04.30.1]
 
 ### Added

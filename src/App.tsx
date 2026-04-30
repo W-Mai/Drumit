@@ -35,11 +35,13 @@ import {
   toggleSlot,
 } from "./notation/edit";
 import { PadEditor } from "./components/PadEditor";
+import { PerformView } from "./components/PerformView";
 import {
   PlaybackBar,
   type EngineKind,
   type PlaybackBarHandle,
 } from "./components/PlaybackBar";
+import type { PlaybackState } from "./playback/controller";
 import { useHotkeys } from "./lib/useHotkeys";
 import {
   clearWorkspace,
@@ -228,6 +230,12 @@ export default function App() {
   // Compact/Expand toggle into the transport. Now seeking only happens
   // when the user explicitly selects a bar.
   const playbackRef = useRef<PlaybackBarHandle | null>(null);
+
+  // Perform view state and the play state PlaybackBar pushes back up —
+  // PerformView needs to show the right transport icon and doesn't own
+  // the controller itself.
+  const [performMode, setPerformMode] = useState(false);
+  const [playState, setPlayState] = useState<PlaybackState>("idle");
 
   const lastScrolledBar = useRef<number | null>(null);
   useEffect(() => {
@@ -1029,6 +1037,7 @@ export default function App() {
           }
           onStop={() => setPlayCursor(null)}
           onEngineChange={setEngineKind}
+          onStateChange={setPlayState}
         />
 
         <Panel className="flex min-h-0 flex-[55_55_0%] flex-col">
@@ -1040,6 +1049,14 @@ export default function App() {
               </span>
             }
           >
+            <Button
+              variant="secondary"
+              onClick={() => setPerformMode(true)}
+              title="Open perform view (fullscreen single-row rehearsal mode)"
+            >
+              <span className="sm:hidden">🎭</span>
+              <span className="hidden sm:inline">Perform</span>
+            </Button>
             <Button
               variant={expandedPreview ? "primary" : "secondary"}
               onClick={() => {
@@ -1386,6 +1403,18 @@ export default function App() {
         </div>
       </section>
       </div>
+      {performMode ? (
+        <PerformView
+          score={score}
+          cursor={playCursor}
+          viewMode={viewMode}
+          engineKind={engineKind}
+          isPlaying={playState === "playing"}
+          onSeekTime={(s) => playbackRef.current?.seekToTime(s)}
+          onTogglePlay={() => playbackRef.current?.togglePlay()}
+          onExit={() => setPerformMode(false)}
+        />
+      ) : null}
     </div>
     </HotkeyContextProvider>
   );
