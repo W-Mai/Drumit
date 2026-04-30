@@ -169,7 +169,15 @@ describe("edit operations — bar-level actions", () => {
     const bar = next.sections[0].bars[1];
     expect(bar.repeatPrevious).toBe(false);
     expect(bar.repeatHint).toBeUndefined();
-    expect(bar.beats.length).toBeGreaterThan(0);
+    expect(bar.beats.length).toBe(4);
+  });
+
+  it("setBarRepeatPrevious(null) seeds the right beat count for non-4/4 meters", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 3/4\n[A]\n| bd: o / o / o |\n| % |`,
+    );
+    const next = setBarRepeatPrevious(score, 1, null);
+    expect(next.sections[0].bars[1].beats).toHaveLength(3);
   });
 });
 

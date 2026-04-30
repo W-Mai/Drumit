@@ -69,12 +69,13 @@ export function setBarRepeatPrevious(
   globalIndex: number,
   hint: RepeatHint | null,
 ): Score {
+  const beatCount = Math.max(1, score.meter.beats);
   return updateBar(score, globalIndex, (bar) => {
     if (hint === null) {
       bar.repeatPrevious = false;
       bar.repeatHint = undefined;
       if (bar.beats.length === 0) {
-        bar.beats = Array.from({ length: 4 }, () => emptyBeat());
+        bar.beats = Array.from({ length: beatCount }, () => emptyBeat());
       }
     } else {
       bar.repeatPrevious = true;
