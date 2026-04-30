@@ -22,11 +22,22 @@ import type {
 } from "./types";
 
 const HEADER_HEIGHT = 42;
-const STAFF_TOP_PAD = 20;
+/** Space between the title row and the first staff. Must clear the
+ *  tallest over-staff decoration on the top system:
+ *    - tuplet brackets over hi-hat (step −5) extend ~45 px above the
+ *      hi-hat y position → needs ≈ 50 px free above the staff top
+ *    - ending brackets ~18 px, navigation text ~6 px
+ *  Using 72 px keeps everything clear of the title row. */
+const STAFF_TOP_PAD = 72;
 const STAFF_SPACE = 10;
 const STAFF_HEIGHT = STAFF_SPACE * 4;
-const SYSTEM_VERTICAL_PAD = STAFF_SPACE * 4;
+/** Vertical buffer below a system to hold sticking letters (≈62 px
+ *  below staff top at STAFF_SPACE * 6.2) plus stem tails. */
+const SYSTEM_VERTICAL_PAD = STAFF_SPACE * 7;
 const STAFF_ROW_HEIGHT = STAFF_HEIGHT + SYSTEM_VERTICAL_PAD;
+/** Extra padding below the last system so content never reaches the
+ *  viewBox bottom edge (sticking labels, stem tails, flag curls). */
+const BOTTOM_PAD = STAFF_SPACE * 2;
 const CLEF_PLUS_METER_WIDTH = 48;
 
 export interface StaffLayoutOptions {
@@ -76,7 +87,7 @@ export function layoutStaff(
 
   return {
     width: options.width,
-    height: y,
+    height: y + BOTTOM_PAD,
     systems,
     title: score.title,
     tempo: score.tempo ? `♩ = ${score.tempo.bpm}` : undefined,
