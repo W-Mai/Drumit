@@ -11,6 +11,33 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.10]
+
+### Added
+
+- **Silent bar** concept. New `Bar.empty` flag, Silent chip next to
+  Pattern / % in the Drumit editor. Serializes as `|  |`, plays as a
+  whole-bar rest, renders as a whole rest on staff view and a "silent"
+  italic label on Drumit view. Toggling between Pattern ↔ Silent keeps
+  the bar's notes around so nothing is lost on flip-flop.
+- **Section editing** in Drumit mode. PadEditor now has a Section
+  strip above the bar header with Rename / Split / Delete actions.
+  Splitting creates a new section starting at the next bar; deleting
+  merges its bars into the previous section.
+
+### Fixed
+
+- Staff view vertical padding increased so tuplet brackets above the
+  staff and sticking labels below no longer get clipped by the viewBox
+  or overlap the title row. Verified across all 7 bundled samples.
+- Converting a `%` repeat-previous bar back to Pattern now seeds the
+  correct beat count for non-4/4 meters (was hard-coded to 4).
+- `setBarRepeatPrevious` preserves the bar's notes when switching to
+  `%`, so `Pattern → % → Pattern` round-trips the content.
+- Parser accepts a truly-empty bar body (`|  |`) as a silent bar
+  instead of erroring — necessary for round-tripping the new
+  empty/silent state.
+
 ## [2026.04.29.9]
 
 ### Changed
@@ -314,7 +341,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.9...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.10...HEAD
+[2026.04.29.10]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.9...v2026.04.29.10
 [2026.04.29.9]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.8...v2026.04.29.9
 [2026.04.29.8]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.7...v2026.04.29.8
 [2026.04.29.7]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.6...v2026.04.29.7
