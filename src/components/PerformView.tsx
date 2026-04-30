@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import type { Score } from "../notation/types";
 import type { EngineKind } from "./PlaybackBar";
 import { DrumChart } from "../notation/renderer";
@@ -628,6 +629,8 @@ interface BarChipProps {
   onPickPass(passExpandedIdx: number): void;
 }
 
+const LONG_PRESS_MS = 450;
+
 const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
   { chip, active, onSeek, onPickPass },
   ref,
@@ -635,6 +638,30 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
   const [popoverOpen, setPopoverOpen] = useState(false);
   const hasMultiplePasses = chip.total > 1;
   const popoverId = useId();
+
+  // Long-press opens the pass picker; short tap just seeks. The
+  // long-press timer is cancelled by pointerup/cancel/leave; the
+  // "suppress click" ref makes sure the click that fires after the
+  // long-press doesn't also trigger a seek.
+  const timerRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const startLongPress = () => {
+    if (!hasMultiplePasses) return;
+    clearTimer();
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      suppressClickRef.current = true;
+      setPopoverOpen(true);
+    }, LONG_PRESS_MS);
+  };
+  const clearTimer = () => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+  useEffect(() => () => clearTimer(), []);
 
   return (
     <div className="relative shrink-0">
@@ -646,13 +673,32 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
       <button
         ref={ref}
         type="button"
-        onClick={onSeek}
-        aria-label={`Bar ${chip.sourceIndex + 1}${hasMultiplePasses ? ` pass ${chip.pass} of ${chip.total}` : ""}`}
-        className={`flex h-8 min-w-9 flex-col items-center justify-center rounded px-1 text-[10px] font-semibold leading-none tabular-nums transition ${
+        onClick={(e) => {
+          if (suppressClickRef.current) {
+            e.preventDefault();
+            suppressClickRef.current = false;
+            return;
+          }
+          onSeek();
+        }}
+        onPointerDown={startLongPress}
+        onPointerUp={clearTimer}
+        onPointerLeave={clearTimer}
+        onPointerCancel={clearTimer}
+        onContextMenu={(e) => {
+          // Long-press on mobile can trigger the native context menu;
+          // suppress it since we already have our popover flow.
+          if (hasMultiplePasses) e.preventDefault();
+        }}
+        aria-label={`Bar ${chip.sourceIndex + 1}${hasMultiplePasses ? ` pass ${chip.pass} of ${chip.total} — long-press to pick pass` : ""}`}
+        aria-haspopup={hasMultiplePasses ? "menu" : undefined}
+        aria-controls={hasMultiplePasses ? popoverId : undefined}
+        className={`flex h-8 min-w-9 flex-col items-center justify-center rounded px-1 text-[10px] font-semibold leading-none tabular-nums transition select-none ${
           active
             ? "bg-amber-400 text-stone-950"
             : "bg-stone-800 text-stone-200 hover:bg-stone-700"
-        }`}
+        } ${hasMultiplePasses ? "ring-1 ring-amber-400/40" : ""}`}
+        style={{ touchAction: "manipulation" }}
         data-testid="bar-chip"
         data-active={active || undefined}
         data-expanded-index={chip.expandedIndex}
@@ -664,49 +710,82 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
           </span>
         ) : null}
       </button>
-      {hasMultiplePasses ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setPopoverOpen((v) => !v);
-          }}
-          aria-label={`Pick pass for bar ${chip.sourceIndex + 1}`}
-          aria-expanded={popoverOpen}
-          aria-controls={popoverId}
-          className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-stone-700 text-[9px] font-bold hover:bg-stone-600"
-          data-testid="bar-chip-passes"
-        >
-          ▾
-        </button>
-      ) : null}
       {popoverOpen && hasMultiplePasses ? (
-        <div
+        <PassPopover
           id={popoverId}
-          role="menu"
-          data-testid="bar-chip-popover"
-          className="absolute top-full left-1/2 z-[1] mt-1 flex -translate-x-1/2 gap-0.5 rounded-lg bg-stone-800 p-1 shadow-lg"
-        >
+          chip={chip}
+          onDismiss={() => setPopoverOpen(false)}
+          onPickPass={(idx) => {
+            setPopoverOpen(false);
+            onPickPass(idx);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+});
+
+function PassPopover({
+  id,
+  chip,
+  onDismiss,
+  onPickPass,
+}: {
+  id: string;
+  chip: ChipMeta;
+  onDismiss(): void;
+  onPickPass(passExpandedIdx: number): void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onDismiss();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onDismiss]);
+
+  // Portal target must live inside the current fullscreen element,
+  // otherwise a popover rendered under <body> is invisible whenever
+  // PerformView is fullscreen.
+  const target =
+    (typeof document !== "undefined" && document.fullscreenElement) ||
+    (typeof document !== "undefined" ? document.body : null);
+  if (!target) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-stone-950/60 backdrop-blur-sm"
+      onClick={onDismiss}
+    >
+      <div
+        id={id}
+        role="menu"
+        data-testid="bar-chip-popover"
+        className="flex flex-col items-center gap-3 rounded-2xl bg-stone-900 px-5 py-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-xs font-semibold text-stone-300">
+          Bar {chip.sourceIndex + 1} · pick pass
+        </div>
+        <div className="flex gap-2">
           {chip.allPasses.map((passExpandedIdx, i) => (
             <button
               key={passExpandedIdx}
               type="button"
               role="menuitem"
-              onClick={() => {
-                setPopoverOpen(false);
-                onPickPass(passExpandedIdx);
-              }}
-              className={`grid h-6 w-6 place-items-center rounded text-[10px] font-bold tabular-nums ${
+              onClick={() => onPickPass(passExpandedIdx)}
+              className={`grid h-12 w-12 place-items-center rounded-lg text-base font-bold tabular-nums ${
                 passExpandedIdx === chip.expandedIndex
                   ? "bg-amber-400 text-stone-950"
-                  : "bg-stone-700 text-stone-200 hover:bg-stone-600"
+                  : "bg-stone-800 text-stone-200 hover:bg-stone-700"
               }`}
             >
               {i + 1}
             </button>
           ))}
         </div>
-      ) : null}
-    </div>
+      </div>
+    </div>,
+    target as Element,
   );
-});
+}

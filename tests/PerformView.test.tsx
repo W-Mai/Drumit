@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { parseDrumtab } from "../src/notation/parser";
 import { PerformView } from "../src/components/PerformView";
 
@@ -116,34 +116,40 @@ describe("PerformView", () => {
     expect(onSeekTime).toHaveBeenCalledWith(4);
   });
 
-  it("opens a pass popover and seeks to the chosen pass", () => {
-    // |: A :| x3 → 3 expanded positions at t = 0, 4, 8 (60 bpm).
-    const { score } = parseDrumtab(
-      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
-    );
-    const onSeekTime = vi.fn();
-    render(
-      <PerformView
-        score={score}
-        cursor={null}
-        viewMode="drumit"
-        engineKind="synth"
-        isPlaying={false}
-        onSeekTime={onSeekTime}
-        onTogglePlay={() => {}}
-        onExit={() => {}}
-      />,
-    );
-    const passButtons = screen.getAllByTestId("bar-chip-passes");
-    // Each of the 3 chips has a pass picker because total=3 > 1.
-    expect(passButtons).toHaveLength(3);
-    fireEvent.click(passButtons[0]);
-    const popover = screen.getByTestId("bar-chip-popover");
-    const picks = popover.querySelectorAll("button");
-    expect(picks).toHaveLength(3);
-    fireEvent.click(picks[2]); // 3rd pass
-    // Source bar 0's third pass in |:A:| x3 is expanded index 2 → t=8s.
-    expect(onSeekTime).toHaveBeenCalledWith(8);
+  it("long-pressing a chip opens the pass popover and picks a pass", () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+      );
+      const onSeekTime = vi.fn();
+      render(
+        <PerformView
+          score={score}
+          cursor={null}
+          viewMode="drumit"
+          engineKind="synth"
+          isPlaying={false}
+          onSeekTime={onSeekTime}
+          onTogglePlay={() => {}}
+          onExit={() => {}}
+        />,
+      );
+      const chips = screen.getAllByTestId("bar-chip");
+      fireEvent.pointerDown(chips[0]);
+      act(() => {
+        vi.advanceTimersByTime(500); // > LONG_PRESS_MS
+      });
+      fireEvent.pointerUp(chips[0]);
+      const popover = screen.getByTestId("bar-chip-popover");
+      const picks = popover.querySelectorAll("button");
+      expect(picks).toHaveLength(3);
+      fireEvent.click(picks[2]);
+      // |:A:| x3 → bar 0 third pass is expanded idx 2, t=8s.
+      expect(onSeekTime).toHaveBeenCalledWith(8);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("calls onExit when the ✕ button is clicked", () => {
