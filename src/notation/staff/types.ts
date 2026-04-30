@@ -106,6 +106,8 @@ export interface StaffBar {
   /** True when this bar is a "%" (repeat the previous bar) placeholder.
    *  Renderer draws the single-measure-repeat symbol instead of notes. */
   repeatPrevious?: boolean;
+  /** True when this bar is explicitly silent. Renderer draws a whole rest. */
+  empty?: boolean;
 }
 
 export interface StaffSystem {

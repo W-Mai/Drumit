@@ -52,10 +52,20 @@ export function schedule(
   for (const { barIndex } of playOrder) {
     const bar = flatBars[barIndex];
     const barToPlay = bar.repeatPrevious ? lastBar : bar;
-    if (!barToPlay) continue;
 
     const meterBeats = bar.meter?.beats ?? score.meter.beats;
     const beatsPerBar = meterBeats;
+    const barDuration = beatsPerBar * secondsPerBeat;
+
+    // Empty bars (explicit whole-bar rest) and bars whose repeat target
+    // is missing still consume time so the cursor stays in sync with
+    // metronome / playhead, they just emit no events.
+    if (!barToPlay || bar.empty) {
+      const repeatsSilent = Math.max(1, bar.repeatCount);
+      cursor += barDuration * repeatsSilent;
+      if (!bar.repeatPrevious) lastBar = bar;
+      continue;
+    }
 
     // Single-bar repeat count (the `x3` on a plain bar, kept for back-compat)
     const repeats = Math.max(1, bar.repeatCount);

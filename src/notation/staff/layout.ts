@@ -112,12 +112,14 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
   const beats = bar.beats.length > 0 ? bar.beats : fillEmptyBeats(beatsPerBar);
 
   const isRepeatPrev = !!bar.repeatPrevious;
-  const upper = isRepeatPrev
-    ? emptyVoice("upper")
-    : collectVoice("upper", beats, beatsPerBar, x, beatWidth);
-  const lower = isRepeatPrev
-    ? emptyVoice("lower")
-    : collectVoice("lower", beats, beatsPerBar, x, beatWidth);
+  const isEmpty = !!bar.empty;
+  const renderVoices = !isRepeatPrev && !isEmpty;
+  const upper = renderVoices
+    ? collectVoice("upper", beats, beatsPerBar, x, beatWidth)
+    : emptyVoice("upper");
+  const lower = renderVoices
+    ? collectVoice("lower", beats, beatsPerBar, x, beatWidth)
+    : emptyVoice("lower");
 
   return {
     index: barIndex,
@@ -133,6 +135,7 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     ending: bar.ending,
     navigationLabel: bar.navigation ? navigationLabel(bar.navigation) : undefined,
     repeatPrevious: isRepeatPrev,
+    empty: isEmpty,
   };
 }
 

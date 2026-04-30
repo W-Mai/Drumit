@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { parseDrumtab } from "../src/notation/parser";
+import { serializeScore } from "../src/notation/serialize";
 import {
   deleteBar,
   insertBarAfter,
+  setBarEmpty,
   setBarRepeatPrevious,
   setLaneDivision,
   setGroupDivision,
@@ -151,14 +153,29 @@ describe("edit operations — bar-level actions", () => {
     expect(sn).toBeDefined();
   });
 
-  it("setBarRepeatPrevious converts a pattern bar into a repeat", () => {
+  it("setBarRepeatPrevious converts a pattern bar into a repeat, preserving its notes for restoration", () => {
     const { score } = loadBar(
       `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
     );
+    const originalBeats = score.sections[0].bars[1].beats;
     const next = setBarRepeatPrevious(score, 1, "dot");
-    expect(next.sections[0].bars[1].repeatPrevious).toBe(true);
-    expect(next.sections[0].bars[1].repeatHint).toBe("dot");
-    expect(next.sections[0].bars[1].beats).toHaveLength(0);
+    const bar = next.sections[0].bars[1];
+    expect(bar.repeatPrevious).toBe(true);
+    expect(bar.repeatHint).toBe("dot");
+    // Beats stay intact so toggling back to Pattern restores content.
+    expect(bar.beats).toEqual(originalBeats);
+  });
+
+  it("toggling Pattern → % → Pattern round-trips the bar's content", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: - / o / - / o |`,
+    );
+    const original = score.sections[0].bars[1];
+    const toRepeat = setBarRepeatPrevious(score, 1, "plain");
+    const backToPattern = setBarRepeatPrevious(toRepeat, 1, null);
+    const restored = backToPattern.sections[0].bars[1];
+    expect(restored.repeatPrevious).toBe(false);
+    expect(restored.beats).toEqual(original.beats);
   });
 
   it("setBarRepeatPrevious(null) turns a repeat back into an empty pattern bar", () => {
@@ -178,6 +195,52 @@ describe("edit operations — bar-level actions", () => {
     );
     const next = setBarRepeatPrevious(score, 1, null);
     expect(next.sections[0].bars[1].beats).toHaveLength(3);
+  });
+});
+
+describe("setBarEmpty", () => {
+  it("marks a bar as silent and clears %", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |`,
+    );
+    const next = setBarEmpty(score, 1, true);
+    const bar = next.sections[0].bars[1];
+    expect(bar.empty).toBe(true);
+    expect(bar.repeatPrevious).toBe(false);
+  });
+
+  it("toggling Pattern → Silent → Pattern round-trips the bar's content", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: - / o / - / o |`,
+    );
+    const original = score.sections[0].bars[1];
+    const silent = setBarEmpty(score, 1, true);
+    const back = setBarEmpty(silent, 1, false);
+    const restored = back.sections[0].bars[1];
+    expect(restored.empty).toBe(false);
+    expect(restored.beats).toEqual(original.beats);
+  });
+
+  it("% and Silent are mutually exclusive", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
+    );
+    const empty = setBarEmpty(score, 1, true);
+    expect(empty.sections[0].bars[1].empty).toBe(true);
+    const asPercent = setBarRepeatPrevious(empty, 1, "plain");
+    expect(asPercent.sections[0].bars[1].empty).toBe(false);
+    expect(asPercent.sections[0].bars[1].repeatPrevious).toBe(true);
+  });
+
+  it("silent bars round-trip through serialize + parse", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
+    );
+    const silent = setBarEmpty(score, 1, true);
+    const text = serializeScore(silent);
+    expect(text).toMatch(/\|\s+\|/);
+    const reparsed = parseDrumtab(text).score;
+    expect(reparsed.sections[0].bars[1].empty).toBe(true);
   });
 });
 

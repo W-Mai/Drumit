@@ -33,6 +33,7 @@ interface Props {
   totalBars: number;
   beatsPerBar: number;
   onSetRepeat: (hint: RepeatHint | null) => void;
+  onSetEmpty: (empty: boolean) => void;
   onToggleRepeatStart: () => void;
   onToggleRepeatEnd: () => void;
   onCycleEnding: () => void;
@@ -230,6 +231,7 @@ export function PadEditor({
   totalBars,
   beatsPerBar,
   onSetRepeat,
+  onSetEmpty,
   onToggleRepeatStart,
   onToggleRepeatEnd,
   onCycleEnding,
@@ -568,6 +570,7 @@ export function PadEditor({
         barResolution={barResolution}
         onChangeResolution={setBarResolution}
         onSetRepeat={onSetRepeat}
+        onSetEmpty={onSetEmpty}
         onToggleRepeatStart={onToggleRepeatStart}
         onToggleRepeatEnd={onToggleRepeatEnd}
         onCycleEnding={onCycleEnding}
@@ -575,7 +578,11 @@ export function PadEditor({
         onDelete={onDelete}
       />
 
-      {bar.repeatPrevious ? (
+      {bar.empty ? (
+        <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-sm text-stone-500">
+          This bar is silent. Click <b>Pattern</b> to add notes.
+        </div>
+      ) : bar.repeatPrevious ? (
         <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-sm text-stone-500">
           This bar repeats the previous one. Click <b>Pattern</b> to add
           content.
@@ -636,6 +643,7 @@ function BarHeader({
   barResolution,
   onChangeResolution,
   onSetRepeat,
+  onSetEmpty,
   onToggleRepeatStart,
   onToggleRepeatEnd,
   onCycleEnding,
@@ -648,12 +656,14 @@ function BarHeader({
   barResolution: Resolution;
   onChangeResolution: (r: Resolution) => void;
   onSetRepeat: (hint: RepeatHint | null) => void;
+  onSetEmpty: (empty: boolean) => void;
   onToggleRepeatStart: () => void;
   onToggleRepeatEnd: () => void;
   onCycleEnding: () => void;
   onInsertAfter: () => void;
   onDelete: () => void;
 }) {
+  const isPattern = !bar.repeatPrevious && !bar.empty;
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -662,14 +672,22 @@ function BarHeader({
             Bar {barIndex + 1} / {totalBars}
           </div>
           <div className="mt-0.5 font-mono text-xs text-stone-600">
-            {bar.repeatPrevious
-              ? `repeat${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
-              : `${bar.beats.length} beats`}
+            {bar.empty
+              ? "silent"
+              : bar.repeatPrevious
+                ? `repeat${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
+                : `${bar.beats.length} beats`}
           </div>
         </div>
 
         <ChipGroup>
-          <Chip active={!bar.repeatPrevious} onClick={() => onSetRepeat(null)}>
+          <Chip
+            active={isPattern}
+            onClick={() => {
+              if (bar.empty) onSetEmpty(false);
+              else if (bar.repeatPrevious) onSetRepeat(null);
+            }}
+          >
             Pattern
           </Chip>
           <Chip
@@ -677,6 +695,13 @@ function BarHeader({
             onClick={() => onSetRepeat("plain")}
           >
             %
+          </Chip>
+          <Chip
+            active={!!bar.empty}
+            onClick={() => onSetEmpty(true)}
+            title="Explicit whole-bar rest"
+          >
+            Silent
           </Chip>
         </ChipGroup>
 

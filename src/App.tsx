@@ -11,6 +11,7 @@ import {
   deleteBar,
   insertBarAfter,
   setBarRepeatPrevious,
+  setBarEmpty,
   toggleBarRepeatEnd,
   toggleBarRepeatStart,
   setGroupDivision,
@@ -886,6 +887,11 @@ export default function App() {
                 onSetRepeat={(hint) =>
                   applyScoreUpdate((s) =>
                     setBarRepeatPrevious(s, clampedSelectedBar, hint),
+                  )
+                }
+                onSetEmpty={(empty) =>
+                  applyScoreUpdate((s) =>
+                    setBarEmpty(s, clampedSelectedBar, empty),
                   )
                 }
                 onToggleRepeatStart={() =>

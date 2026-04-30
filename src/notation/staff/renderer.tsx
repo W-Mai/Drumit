@@ -255,7 +255,13 @@ function BarShell({
           strokeWidth={1}
         />
       )}
-      {bar.repeatPrevious ? (
+      {bar.empty ? (
+        <Rest
+          x={bar.x + bar.width / 2}
+          staffY={staffY}
+          duration="w"
+        />
+      ) : bar.repeatPrevious ? (
         <text
           x={bar.x + bar.width / 2}
           y={staffY + stepToY(0) + STAFF_SPACE * 1.2}

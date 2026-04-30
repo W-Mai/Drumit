@@ -402,7 +402,16 @@ function BarView({
         </text>
       ) : null}
 
-      {bar.repeatPrevious ? (
+      {bar.empty ? (
+        <text
+          x={x + width / 2}
+          y={(firstRowY + lastRowY) / 2 + 6}
+          textAnchor="middle"
+          className="fill-stone-400 text-[13px] font-semibold italic tracking-wider"
+        >
+          silent
+        </text>
+      ) : bar.repeatPrevious ? (
         <text
           x={x + width / 2}
           y={(firstRowY + lastRowY) / 2 + 14}

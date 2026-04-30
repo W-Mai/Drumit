@@ -214,6 +214,14 @@ function parseBar(
 
   const laneMatches = [...effectiveBody.matchAll(/([a-zA-Z][\w-]*)\s*:/g)];
   if (laneMatches.length === 0) {
+    // Truly empty bar body (`|  |`) is a valid "silent bar" — flag it
+    // and leave the beat array empty; renderers draw a whole rest for
+    // this. Gibberish inside the bar (e.g. `| no content |`) still
+    // errors because the user obviously meant *something*.
+    if (effectiveBody.trim() === "") {
+      bar.empty = true;
+      return bar;
+    }
     diagnostics.push(
       error(lineNumber, "Bar must contain at least one lane, like hh: x x x x."),
     );
