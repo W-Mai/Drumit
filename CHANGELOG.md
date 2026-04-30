@@ -11,6 +11,15 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.30.3]
+
+### Fixed
+
+- Perform-view chips and top readout now show the source bar number
+  with the pass iteration underneath (`3` + `×2/3`), not the raw
+  unrolled index. Matches how drummers actually refer to their place
+  in the chart.
+
 ## [2026.04.30.2]
 
 ### Added
