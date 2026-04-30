@@ -171,4 +171,11 @@ describe("DrumChart", () => {
     const crossPath = svg.match(/<path[^>]*d="M [^"]*L [^"]*M [^"]*L [^"]*"/);
     expect(crossPath).not.toBeNull();
   });
+
+  it("draws ∅ for a bar with no hits", () => {
+    const svg = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n|  |`,
+    );
+    expect(svg).toContain("∅");
+  });
 });

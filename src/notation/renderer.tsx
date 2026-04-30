@@ -411,6 +411,15 @@ function BarView({
         >
           ∕
         </text>
+      ) : bar.hits.length === 0 ? (
+        <text
+          x={x + width / 2}
+          y={(firstRowY + lastRowY) / 2 + 8}
+          textAnchor="middle"
+          className="fill-stone-400 text-[28px] font-semibold"
+        >
+          ∅
+        </text>
       ) : (
         <>
           {beats.map((beat) => {
