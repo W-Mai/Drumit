@@ -7,7 +7,7 @@ import type { PlaybackEvent } from "../notation/scheduler";
  */
 export interface PlaybackEngine {
   readonly name: string;
-  readonly kind: "midi" | "synth";
+  readonly kind: "midi" | "synth" | "sample";
 
   /** Resume or initialize the engine (e.g. AudioContext.resume()). */
   ensureReady(): Promise<void>;

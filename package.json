@@ -12,6 +12,7 @@
     "test": "vitest run",
     "check": "tsc -b --noEmit",
     "samples:generate": "bun run scripts/generate-samples.ts",
+    "samples:fetch": "bun run scripts/fetch-samples.ts",
     "player:bundle": "bun run scripts/build-player.ts"
   },
   "devDependencies": {

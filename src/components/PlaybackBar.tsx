@@ -7,10 +7,11 @@ import {
 import type { PlaybackEngine } from "../playback/engine";
 import { SynthEngine } from "../playback/synthEngine";
 import { MidiEngine } from "../playback/midiEngine";
+import { SampleEngine } from "../playback/sampleEngine";
 import { useHotkeys } from "../lib/useHotkeys";
 import { Badge, Button, Field, Select, TextInput } from "./ui";
 
-type EngineKind = "synth" | "midi";
+type EngineKind = "synth" | "sample" | "midi";
 
 interface Props {
   score: Score;
@@ -67,11 +68,38 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Swap engine whenever engineKind changes.
+  const [samplesLoaded, setSamplesLoaded] = useState(false);
+  const [samplesLoading, setSamplesLoading] = useState(false);
+
+  // Swap engine whenever engineKind changes. Sample loading status is
+  // pushed via an async IIFE so the setState calls happen after the
+  // effect body returns (satisfies react-hooks/set-state-in-effect).
   useEffect(() => {
-    const next: PlaybackEngine =
-      engineKind === "midi" ? new MidiEngine() : new SynthEngine();
+    let cancelled = false;
+    let next: PlaybackEngine;
+    if (engineKind === "midi") {
+      next = new MidiEngine();
+    } else if (engineKind === "sample") {
+      const sampleEngine = new SampleEngine();
+      next = sampleEngine;
+      void (async () => {
+        if (cancelled) return;
+        setSamplesLoading(true);
+        setSamplesLoaded(false);
+        try {
+          await sampleEngine.ensureReady();
+          if (!cancelled) setSamplesLoaded(sampleEngine.loadedCount > 0);
+        } finally {
+          if (!cancelled) setSamplesLoading(false);
+        }
+      })();
+    } else {
+      next = new SynthEngine();
+    }
     controller.setEngine(next);
+    return () => {
+      cancelled = true;
+    };
   }, [engineKind, controller]);
 
   // Apply MIDI port selection whenever it changes (on the current engine).
@@ -207,9 +235,20 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
           onChange={(e) => setEngineKind(e.target.value as EngineKind)}
         >
           <option value="synth">Synth (internal)</option>
+          <option value="sample">Samples (WAV)</option>
           {midiAvailable ? <option value="midi">Web MIDI</option> : null}
         </Select>
       </Field>
+
+      {engineKind === "sample" ? (
+        <span className="text-[11px] text-stone-500">
+          {samplesLoading
+            ? "loading samples…"
+            : samplesLoaded
+              ? null
+              : "no samples installed — silent"}
+        </span>
+      ) : null}
 
       {engineKind === "midi" ? (
         <Field label="Port:">
