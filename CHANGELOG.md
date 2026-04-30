@@ -22,7 +22,9 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 - **Section editing** in Drumit mode. PadEditor now has a Section
   strip above the bar header with Rename / Split / Delete actions.
   Splitting creates a new section starting at the next bar; deleting
-  merges its bars into the previous section.
+  merges its bars into the previous section. Splitting after the last
+  bar seeds the fresh section with one empty bar so it's immediately
+  clickable, and the cursor auto-jumps into it.
 
 ### Changed
 
