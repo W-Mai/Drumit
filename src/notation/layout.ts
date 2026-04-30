@@ -79,8 +79,6 @@ export interface LaidOutBar {
   beats: LaidOutBeat[];
   hits: LaidOutHit[];
   repeatPrevious: boolean;
-  /** Explicit whole-bar silence — renders as a whole rest. */
-  empty?: boolean;
   repeatCount: number;
   repeatStart?: boolean;
   repeatEnd?: { times: number };
@@ -337,7 +335,6 @@ function layoutBar(
     beats,
     hits,
     repeatPrevious: bar.repeatPrevious,
-    empty: bar.empty,
     repeatCount: bar.repeatCount,
     repeatStart: bar.repeatStart,
     repeatEnd: bar.repeatEnd,

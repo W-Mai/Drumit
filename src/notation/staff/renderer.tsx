@@ -255,13 +255,7 @@ function BarShell({
           strokeWidth={1}
         />
       )}
-      {bar.empty ? (
-        <Rest
-          x={bar.x + bar.width / 2}
-          staffY={staffY}
-          duration="w"
-        />
-      ) : bar.repeatPrevious ? (
+      {bar.repeatPrevious ? (
         <text
           x={bar.x + bar.width / 2}
           y={staffY + stepToY(0) + STAFF_SPACE * 1.2}
@@ -271,6 +265,11 @@ function BarShell({
         >
           𝄎
         </text>
+      ) : bar.upper.notes.length === 0 && bar.lower.notes.length === 0 ? (
+        // No notes in either voice → draw a whole-bar rest (space/half/quarter
+        // rests would visually lie about the structure). Appears any time a
+        // bar has no hits, whether freshly cleared or loaded as |  |.
+        <Rest x={bar.x + bar.width / 2} staffY={staffY} duration="w" />
       ) : (
         <>
           <VoicePaint voice={bar.upper} staffY={staffY} />

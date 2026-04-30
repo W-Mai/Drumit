@@ -214,12 +214,12 @@ function parseBar(
 
   const laneMatches = [...effectiveBody.matchAll(/([a-zA-Z][\w-]*)\s*:/g)];
   if (laneMatches.length === 0) {
-    // Truly empty bar body (`|  |`) is a valid "silent bar" — flag it
-    // and leave the beat array empty; renderers draw a whole rest for
-    // this. Gibberish inside the bar (e.g. `| no content |`) still
+    // Truly empty bar body (`|  |`) is a valid silent bar — seed it
+    // with `expectedBeats` beats of silence so downstream layout and
+    // playback iterate a proper meter-sized structure. Gibberish still
     // errors because the user obviously meant *something*.
     if (effectiveBody.trim() === "") {
-      bar.empty = true;
+      bar.beats = Array.from({ length: expectedBeats }, () => ({ lanes: [] }));
       return bar;
     }
     diagnostics.push(

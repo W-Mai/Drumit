@@ -39,11 +39,6 @@ export function serializeBar(bar: Bar): string {
     return `${openMark} ${repeatSymbol(bar.repeatHint)} ${closeMark}${suffix}`;
   }
 
-  // Explicitly-silent bar serializes as `|  |`.
-  if (bar.empty) {
-    return `${openMark}  ${closeMark}${suffix}`;
-  }
-
   let body = "";
 
   if (bar.meter) {

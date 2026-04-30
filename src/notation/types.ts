@@ -102,13 +102,6 @@ export interface Bar {
   /** Marks a "repeat previous bar" placeholder */
   repeatPrevious: boolean;
   /**
-   * Explicit whole-bar silence. When true the bar plays nothing and
-   * renders as a whole rest (not a `%` repeat). Distinct from a bar
-   * whose lanes happen to contain only `null` slots — the flag is the
-   * authoring intent, not an emergent property.
-   */
-  empty?: boolean;
-  /**
    * Variant of the repeat mark as seen in the handwritten PDF:
    *   plain = `%`
    *   dot   = `%.` (小变化 / 重音?)

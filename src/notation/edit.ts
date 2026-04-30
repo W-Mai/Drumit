@@ -139,8 +139,6 @@ export function setBarRepeatPrevious(
     } else {
       bar.repeatPrevious = true;
       bar.repeatHint = hint;
-      // Mutually exclusive with the explicit-silence flag.
-      bar.empty = false;
       // Intentionally do NOT clear bar.beats — serializer outputs `| % |`
       // regardless (ignoring beats), and the editor can restore them when
       // the user toggles back to Pattern.
@@ -149,28 +147,17 @@ export function setBarRepeatPrevious(
 }
 
 /**
- * Mark / unmark a bar as explicitly silent (a whole-bar rest). Mutually
- * exclusive with `repeatPrevious`; both cleared when `empty` is turned on.
+ * Empty the bar: strip every lane so nothing plays and nothing draws
+ * (except the meter-sized run of empty beats). Keeps the bar itself
+ * and its structural flags (repeat markers, ending, navigation) so a
+ * surrounding section's timing isn't disturbed.
  */
-export function setBarEmpty(
-  score: Score,
-  globalIndex: number,
-  empty: boolean,
-): Score {
+export function clearBar(score: Score, globalIndex: number): Score {
   const beatCount = Math.max(1, score.meter.beats);
   return updateBar(score, globalIndex, (bar) => {
-    if (empty) {
-      bar.empty = true;
-      bar.repeatPrevious = false;
-      bar.repeatHint = undefined;
-      // Keep bar.beats around so toggling back to Pattern restores the
-      // previous notes, same contract as the % toggle above.
-    } else {
-      bar.empty = false;
-      if (bar.beats.length === 0) {
-        bar.beats = Array.from({ length: beatCount }, () => emptyBeat());
-      }
-    }
+    bar.repeatPrevious = false;
+    bar.repeatHint = undefined;
+    bar.beats = Array.from({ length: beatCount }, () => emptyBeat());
   });
 }
 
