@@ -67,6 +67,13 @@ interface Props {
   onSelectBar?: (index: number, shiftKey?: boolean) => void;
   playCursor?: { barIndex: number; beatIndex: number } | null;
   playheadEngine?: "synth" | "sample" | "midi";
+  /**
+   * Which pass of a repeated bar is currently playing, used to draw
+   * a `×N/M` badge on the active playhead bar. Only meaningful when
+   * `total > 1`; callers should not pass it in the expanded view
+   * (every bar there is unique).
+   */
+  repeatPass?: { pass: number; total: number } | null;
 }
 
 export function DrumChart({
@@ -77,6 +84,7 @@ export function DrumChart({
   onSelectBar,
   playCursor,
   playheadEngine = "synth",
+  repeatPass,
 }: Props) {
   const selectionLo =
     selectedBarIndex === null || selectedBarIndex === undefined
@@ -178,6 +186,7 @@ export function DrumChart({
               isPlayhead={isPlayhead}
               playBeatIndex={isPlayhead ? playCursor?.beatIndex : undefined}
               playheadEngine={playheadEngine}
+              repeatPass={isPlayhead ? repeatPass : null}
               onSelect={
                 onSelectBar
                   ? (shiftKey) => onSelectBar(globalIdx, shiftKey)
@@ -199,6 +208,7 @@ function BarView({
   isPlayhead,
   playBeatIndex,
   playheadEngine = "synth",
+  repeatPass,
   onSelect,
 }: {
   bar: LaidOutBar;
@@ -208,6 +218,7 @@ function BarView({
   isPlayhead?: boolean;
   playBeatIndex?: number;
   playheadEngine?: "synth" | "sample" | "midi";
+  repeatPass?: { pass: number; total: number } | null;
   onSelect?: (shiftKey: boolean) => void;
 }) {
   const { x, y, width, height, rowGroups, rowY, beats } = bar;
@@ -248,6 +259,30 @@ function BarView({
           height={barlineBottom - barlineTop}
           className={playhead.beat}
         />
+      ) : null}
+
+      {/* "×pass/total" badge on the active bar when it's a repeat that
+          plays more than once. Helps the user track which iteration
+          they're on without switching to Expand view. */}
+      {isPlayhead && repeatPass && repeatPass.total > 1 ? (
+        <g>
+          <rect
+            x={x + width - 26}
+            y={y + 2}
+            width={28}
+            height={14}
+            rx={4}
+            className="fill-stone-900"
+          />
+          <text
+            x={x + width - 12}
+            y={12}
+            textAnchor="middle"
+            className="fill-amber-200 text-[9px] font-bold tabular-nums"
+          >
+            ×{repeatPass.pass}/{repeatPass.total}
+          </text>
+        </g>
       ) : null}
 
       {/* Per-beat invisible overlays so embedded players can highlight the

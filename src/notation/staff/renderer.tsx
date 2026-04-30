@@ -42,6 +42,8 @@ interface Props {
   onSelectBar?: (index: number, shiftKey?: boolean) => void;
   playCursor?: { barIndex: number; beatIndex: number } | null;
   playheadEngine?: PlayheadEngine;
+  /** Pass counter shown on the playhead bar; see DrumChart's prop. */
+  repeatPass?: { pass: number; total: number } | null;
 }
 
 const PLAYHEAD_PALETTE: Record<PlayheadEngine, { bar: string; beat: string }> =
@@ -71,6 +73,7 @@ export function StaffView({
   onSelectBar,
   playCursor,
   playheadEngine = "synth",
+  repeatPass = null,
 }: Props) {
   const selectionLo =
     selectedBarIndex === null
@@ -149,6 +152,7 @@ export function StaffView({
             onSelectBar={onSelectBar}
             playCursor={playCursor}
             playheadEngine={playheadEngine}
+            repeatPass={repeatPass}
           />
         </g>
       ))}
@@ -163,6 +167,7 @@ function SystemBars({
   onSelectBar,
   playCursor,
   playheadEngine,
+  repeatPass,
 }: {
   system: StaffSystem;
   selectionLo: number | null;
@@ -170,33 +175,36 @@ function SystemBars({
   onSelectBar?: (index: number, shiftKey?: boolean) => void;
   playCursor?: { barIndex: number; beatIndex: number } | null;
   playheadEngine: PlayheadEngine;
+  repeatPass: { pass: number; total: number } | null;
 }) {
   const staffY = system.y;
   return (
     <>
-      {system.bars.map((bar) => (
-        <BarShell
-          key={bar.index}
-          bar={bar}
-          staffY={staffY}
-          selected={
-            selectionLo !== null &&
-            selectionHi !== null &&
-            bar.index >= selectionLo &&
-            bar.index <= selectionHi
-          }
-          isPlayhead={playCursor?.barIndex === bar.index}
-          playBeatIndex={
-            playCursor?.barIndex === bar.index ? playCursor.beatIndex : undefined
-          }
-          playheadEngine={playheadEngine}
-          onSelect={
-            onSelectBar
-              ? (shiftKey) => onSelectBar(bar.index, shiftKey)
-              : undefined
-          }
-        />
-      ))}
+      {system.bars.map((bar) => {
+        const isPlayhead = playCursor?.barIndex === bar.index;
+        return (
+          <BarShell
+            key={bar.index}
+            bar={bar}
+            staffY={staffY}
+            selected={
+              selectionLo !== null &&
+              selectionHi !== null &&
+              bar.index >= selectionLo &&
+              bar.index <= selectionHi
+            }
+            isPlayhead={isPlayhead}
+            playBeatIndex={isPlayhead ? playCursor?.beatIndex : undefined}
+            playheadEngine={playheadEngine}
+            repeatPass={isPlayhead ? repeatPass : null}
+            onSelect={
+              onSelectBar
+                ? (shiftKey) => onSelectBar(bar.index, shiftKey)
+                : undefined
+            }
+          />
+        );
+      })}
     </>
   );
 }
@@ -208,6 +216,7 @@ function BarShell({
   isPlayhead,
   playBeatIndex,
   playheadEngine,
+  repeatPass,
   onSelect,
 }: {
   bar: StaffBar;
@@ -216,6 +225,7 @@ function BarShell({
   isPlayhead?: boolean;
   playBeatIndex?: number;
   playheadEngine: PlayheadEngine;
+  repeatPass?: { pass: number; total: number } | null;
   onSelect?: (shiftKey: boolean) => void;
 }) {
   const barTop = staffY - STAFF_SPACE * 0.5;
@@ -252,6 +262,27 @@ function BarShell({
           height={barHeight}
           className={playhead.beat}
         />
+      ) : null}
+      {isPlayhead && repeatPass && repeatPass.total > 1 ? (
+        <g>
+          <rect
+            x={bar.x + bar.width - 30}
+            y={barTop - 4}
+            width={30}
+            height={14}
+            rx={4}
+            className="fill-stone-900"
+          />
+          <text
+            x={bar.x + bar.width - 15}
+            y={barTop + 6}
+            textAnchor="middle"
+            className="fill-amber-200 font-bold tabular-nums"
+            style={{ fontSize: 9 }}
+          >
+            ×{repeatPass.pass}/{repeatPass.total}
+          </text>
+        </g>
       ) : null}
       {Array.from({ length: bar.beats }, (_, i) => (
         <rect

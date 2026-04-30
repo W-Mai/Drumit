@@ -17,6 +17,41 @@ export function findExpandedIndexForSourceBar(
   return at < 0 ? 0 : at;
 }
 
+/**
+ * Given a play cursor position, report which pass (1-indexed) of the
+ * enclosing source bar is currently active and the total number of
+ * passes that source bar will receive.
+ *
+ *   { pass: 2, total: 3 }  → currently on the 2nd of 3 repeats
+ *   { pass: 1, total: 1 }  → bar only plays once; UIs should not show
+ *                             a "×N" badge in that case
+ *
+ * Returns `null` if the expanded index doesn't resolve (malformed
+ * input), so callers can just skip rendering in that edge case.
+ */
+export function repeatPassForCursor(
+  score: Score,
+  sourceBarIndex: number,
+  expandedBarIndex: number,
+): { pass: number; total: number } | null {
+  const flat = score.sections.flatMap((s) => s.bars);
+  const order = expandPlayOrder(flat);
+  const occurrences: number[] = [];
+  order.forEach((o, idx) => {
+    if (o.barIndex === sourceBarIndex) occurrences.push(idx);
+  });
+  if (occurrences.length === 0) return null;
+  // Largest occurrence ≤ expandedBarIndex — same "nearest past" rule
+  // the cursor uses.
+  let pass = 0;
+  for (let i = 0; i < occurrences.length; i += 1) {
+    if (occurrences[i] <= expandedBarIndex) pass = i + 1;
+    else break;
+  }
+  if (pass === 0) return null;
+  return { pass, total: occurrences.length };
+}
+
 export function expandScore(score: Score): Score {
   const flatBars = score.sections.flatMap((s) => s.bars);
   const order = expandPlayOrder(flatBars);

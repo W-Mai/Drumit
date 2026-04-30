@@ -3,7 +3,11 @@ import { defaultSample, samples } from "./notation/samples";
 import { parseDrumtab } from "./notation/parser";
 import { serializeScore } from "./notation/serialize";
 import { layoutScore } from "./notation/layout";
-import { expandScore, findExpandedIndexForSourceBar } from "./notation/expand";
+import {
+  expandScore,
+  findExpandedIndexForSourceBar,
+  repeatPassForCursor,
+} from "./notation/expand";
 import { computeExpandedBarStartTime } from "./notation/scheduler";
 import { DrumChart } from "./notation/renderer";
 import { validateScore } from "./notation/validate";
@@ -512,6 +516,18 @@ export default function App() {
       ? { barIndex: playCursor.expandedBarIndex, beatIndex: playCursor.beatIndex }
       : { barIndex: playCursor.barIndex, beatIndex: playCursor.beatIndex };
   }, [playCursor, expandedPreview]);
+
+  // Which pass of a repeated bar is currently sounding — only useful in
+  // compact view (where a source bar can occupy a single on-screen slot
+  // yet play multiple times). Expanded view shows every pass on its own.
+  const viewRepeatPass = useMemo(() => {
+    if (expandedPreview || !playCursor) return null;
+    return repeatPassForCursor(
+      score,
+      playCursor.barIndex,
+      playCursor.expandedBarIndex,
+    );
+  }, [expandedPreview, playCursor, score]);
 
   const layout = useMemo(
     () =>
@@ -1096,6 +1112,7 @@ export default function App() {
                 }
                 playCursor={viewPlayCursor}
                 playheadEngine={engineKind}
+                repeatPass={viewRepeatPass}
               />
             ) : (
               <DrumChart
@@ -1112,6 +1129,7 @@ export default function App() {
                 }
                 playCursor={viewPlayCursor}
                 playheadEngine={engineKind}
+                repeatPass={viewRepeatPass}
               />
             )}
           </div>

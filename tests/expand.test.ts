@@ -3,6 +3,7 @@ import { parseDrumtab } from "../src/notation/parser";
 import {
   expandScore,
   findExpandedIndexForSourceBar,
+  repeatPassForCursor,
 } from "../src/notation/expand";
 import { computeExpandedBarStartTime } from "../src/notation/scheduler";
 
@@ -114,5 +115,42 @@ describe("computeExpandedBarStartTime", () => {
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o |\n| sn: o / o / o / o | [1]\n| sn: o / - / - / - :| [2]`,
     );
     expect(computeExpandedBarStartTime(score, 3)).toBeCloseTo(12, 3);
+  });
+});
+
+describe("repeatPassForCursor", () => {
+  it("tracks the current pass out of total occurrences", () => {
+    // |: A B :| x2 → expanded [A(0), B(1), A(2), B(3)]. Source bar 0
+    // appears at expanded 0 and 2.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o |\n| sn: o / o / o / o :|`,
+    );
+    expect(repeatPassForCursor(score, 0, 0)).toEqual({ pass: 1, total: 2 });
+    expect(repeatPassForCursor(score, 0, 1)).toEqual({ pass: 1, total: 2 });
+    expect(repeatPassForCursor(score, 0, 2)).toEqual({ pass: 2, total: 2 });
+    expect(repeatPassForCursor(score, 0, 3)).toEqual({ pass: 2, total: 2 });
+  });
+
+  it("reports total=1 for bars that play once (callers should hide the badge)", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    expect(repeatPassForCursor(score, 0, 0)).toEqual({ pass: 1, total: 1 });
+  });
+
+  it("returns null for bars that never play", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    expect(repeatPassForCursor(score, 99, 0)).toBeNull();
+  });
+
+  it("handles D.C. al Fine (a bar playing on different passes)", () => {
+    // Bars 0, 1(@fine), 2(@dc). Expanded [0, 1, 2, 0, 1]. Source 1 at
+    // expanded 1 and 4.
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |\n@fine\n| sn: o / - / - / - |\n@dc al fine`;
+    const { score } = parseDrumtab(src);
+    expect(repeatPassForCursor(score, 1, 1)).toEqual({ pass: 1, total: 2 });
+    expect(repeatPassForCursor(score, 1, 4)).toEqual({ pass: 2, total: 2 });
   });
 });
