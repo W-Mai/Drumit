@@ -11,6 +11,47 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.30.1]
+
+### Added
+
+- **Expanded preview toggle** (Compact ↔ Expand button next to
+  Drumit/Staff). The expanded view unrolls `|: :| xN`, 1st/2nd endings
+  and D.C./D.S. jumps into a single linear section so you can see
+  the full timeline at a glance. Read-only — switch back to Compact
+  to edit.
+- **Click-to-seek inside the expanded view** — clicking any expanded
+  bar starts playback at that precise wall-clock position, including
+  all the repeats and jumps that precede it.
+- **Playback cursor on a unified timeline** — playhead and auto-scroll
+  now track both the source bar (for compact view) and the expanded
+  position (for expand view) through a single wall-clock coordinate.
+  Fixes the expand-mode cursor that used to freeze on the original
+  source bar.
+- **"×pass/total" badge** on the active bar in compact view when a
+  repeated bar is sounding (e.g. `×2/3` on the second iteration of a
+  `|: … :| x3`).
+- **Auto-scroll Preview** follows the playhead into view as it
+  advances bar-by-bar.
+- **Engine-specific playhead colours** — synth is emerald, samples
+  sky-blue, MIDI rose-pink — matching the engine swatches in the
+  PlaybackBar.
+- **Bar-level clipboard** (`⌘C` / `⌘X` / `⌘V` / `⌫`) scoped to the
+  Preview panel, with Shift+Arrow / Shift+click range selection. The
+  editor panel keeps its own clipboard semantics.
+
+### Fixed
+
+- Toggling Compact/Expand while playing no longer yanks the playhead
+  back to the selection. Seeking is now imperative — only a plain
+  click on a bar (not shift-click, not toggling views) moves the
+  playhead.
+- `beatIndex` in the play cursor advances beat-by-beat even on sparse
+  patterns (e.g. a lone bass drum on beat 1) instead of lingering on 0
+  until the next hit fires. Side effect of the cursor timeline rewrite.
+- Cursor no longer freezes on whatever bar happened to emit the last
+  event when playing through silent sections.
+
 ## [2026.04.29.11]
 
 ### Added
