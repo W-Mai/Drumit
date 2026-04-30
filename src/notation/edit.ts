@@ -45,6 +45,62 @@ export function updateBar(
   return next;
 }
 
+/**
+ * Rename a section by index. `label` may be any free-form string — the
+ * serializer wraps it in `[ ]`, so callers should strip any stray
+ * brackets before passing it in.
+ */
+export function renameSection(
+  score: Score,
+  sectionIndex: number,
+  label: string,
+): Score {
+  const next = cloneScore(score);
+  const section = next.sections[sectionIndex];
+  if (!section) return next;
+  section.label = label;
+  return next;
+}
+
+/**
+ * Split the section that contains `globalBarIndex` after that bar, moving
+ * the remaining bars into a new section with the given label. No-op if
+ * the bar is the last of its section (there's nothing to move).
+ */
+export function insertSectionAfterBar(
+  score: Score,
+  globalBarIndex: number,
+  label: string,
+): Score {
+  const next = cloneScore(score);
+  const loc = locateBar(next, globalBarIndex);
+  if (!loc) return next;
+  const source = next.sections[loc.sectionIndex];
+  const splitAt = loc.barIndex + 1;
+  if (splitAt >= source.bars.length) {
+    // Nothing to split off — append a new empty-ish section instead.
+    next.sections.splice(loc.sectionIndex + 1, 0, { label, bars: [] });
+    return next;
+  }
+  const tail = source.bars.splice(splitAt);
+  next.sections.splice(loc.sectionIndex + 1, 0, { label, bars: tail });
+  return next;
+}
+
+/**
+ * Delete a section; its bars fold into the preceding section (or the
+ * following one if it's the first). No-op when there's only one section.
+ */
+export function deleteSection(score: Score, sectionIndex: number): Score {
+  const next = cloneScore(score);
+  if (next.sections.length <= 1) return next;
+  const removed = next.sections.splice(sectionIndex, 1)[0];
+  if (!removed) return next;
+  const mergeTarget = next.sections[sectionIndex - 1] ?? next.sections[0];
+  mergeTarget.bars.push(...removed.bars);
+  return next;
+}
+
 export function insertBarAfter(score: Score, globalIndex: number): Score {
   const next = cloneScore(score);
   const loc = locateBar(next, globalIndex);

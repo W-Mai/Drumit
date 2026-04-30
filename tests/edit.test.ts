@@ -3,7 +3,10 @@ import { parseDrumtab } from "../src/notation/parser";
 import { serializeScore } from "../src/notation/serialize";
 import {
   deleteBar,
+  deleteSection,
   insertBarAfter,
+  insertSectionAfterBar,
+  renameSection,
   setBarEmpty,
   setBarRepeatPrevious,
   setLaneDivision,
@@ -274,5 +277,55 @@ describe("edit operations — chained mutations are immutable", () => {
     expect(g1.slots[0]).not.toBeNull();
     expect(g1.slots[1]).toBeNull();
     expect(g1.slots[2]).not.toBeNull();
+  });
+});
+
+describe("section edits", () => {
+  it("renameSection updates the label", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const next = renameSection(score, 0, "Intro");
+    expect(next.sections[0].label).toBe("Intro");
+  });
+
+  it("insertSectionAfterBar splits the current section at a bar boundary", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / - / o / - |\n| bd: - / o / - / o |`,
+    );
+    // Split after bar 0 (global index 0) into new section "B".
+    const next = insertSectionAfterBar(score, 0, "B");
+    expect(next.sections).toHaveLength(2);
+    expect(next.sections[0].label).toBe("A");
+    expect(next.sections[0].bars).toHaveLength(1);
+    expect(next.sections[1].label).toBe("B");
+    expect(next.sections[1].bars).toHaveLength(2);
+  });
+
+  it("insertSectionAfterBar appends an empty section when splitting after the last bar", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const next = insertSectionAfterBar(score, 0, "B");
+    expect(next.sections).toHaveLength(2);
+    expect(next.sections[1].bars).toHaveLength(0);
+  });
+
+  it("deleteSection merges bars into the previous section", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n[B]\n| sn: - / o / - / o |`,
+    );
+    expect(score.sections).toHaveLength(2);
+    const next = deleteSection(score, 1);
+    expect(next.sections).toHaveLength(1);
+    expect(next.sections[0].bars).toHaveLength(2);
+  });
+
+  it("deleteSection is a no-op when there's only one section", () => {
+    const { score } = loadBar(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const next = deleteSection(score, 0);
+    expect(next.sections).toHaveLength(1);
   });
 });

@@ -32,6 +32,14 @@ interface Props {
   barIndex: number; // global
   totalBars: number;
   beatsPerBar: number;
+  /** Label of the section that owns this bar. */
+  sectionLabel: string;
+  /** True iff this bar is the first bar of its section (so the Section
+   *  strip can surface the label prominently). */
+  isFirstBarOfSection: boolean;
+  onRenameSection: (label: string) => void;
+  onInsertSectionAfter: (label: string) => void;
+  onDeleteSection: () => void;
   onSetRepeat: (hint: RepeatHint | null) => void;
   onSetEmpty: (empty: boolean) => void;
   onToggleRepeatStart: () => void;
@@ -230,6 +238,11 @@ export function PadEditor({
   barIndex,
   totalBars,
   beatsPerBar,
+  sectionLabel,
+  isFirstBarOfSection,
+  onRenameSection,
+  onInsertSectionAfter,
+  onDeleteSection,
   onSetRepeat,
   onSetEmpty,
   onToggleRepeatStart,
@@ -563,6 +576,13 @@ export function PadEditor({
 
   return (
     <div className="flex flex-col gap-4">
+      <SectionStrip
+        label={sectionLabel}
+        isFirstBarOfSection={isFirstBarOfSection}
+        onRename={onRenameSection}
+        onInsertAfter={onInsertSectionAfter}
+        onDelete={onDeleteSection}
+      />
       <BarHeader
         barIndex={barIndex}
         totalBars={totalBars}
@@ -635,6 +655,84 @@ export function PadEditor({
 /* ------------------------------------------------------------------ */
 /* Bar header                                                          */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Pill above BarHeader showing the current section label with quick
+ * actions to rename, split (create a new section starting at the next
+ * bar), or delete. Only the label is always visible; actions live in
+ * a small toolbar next to it.
+ */
+function SectionStrip({
+  label,
+  isFirstBarOfSection,
+  onRename,
+  onInsertAfter,
+  onDelete,
+}: {
+  label: string;
+  isFirstBarOfSection: boolean;
+  onRename: (label: string) => void;
+  onInsertAfter: (label: string) => void;
+  onDelete: () => void;
+}) {
+  function promptRename() {
+    const next = window.prompt("Section name", label);
+    if (next !== null && next.trim() !== "" && next !== label) {
+      onRename(next.trim());
+    }
+  }
+  function promptSplit() {
+    const next = window.prompt(
+      "Start a new section after this bar.\nName for the new section:",
+      "",
+    );
+    if (next !== null && next.trim() !== "") {
+      onInsertAfter(next.trim());
+    }
+  }
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-stone-200 bg-stone-50 px-3 py-1.5">
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            "rounded bg-stone-900 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-100",
+            !isFirstBarOfSection && "opacity-60",
+          )}
+          title={
+            isFirstBarOfSection
+              ? "First bar of this section"
+              : "Section this bar belongs to (first bar elsewhere)"
+          }
+        >
+          [{label || "—"}]
+        </span>
+        <span className="text-[10px] font-semibold tracking-wide text-stone-500 uppercase">
+          Section
+        </span>
+      </div>
+      <div className="flex gap-1">
+        <Button size="xs" onClick={promptRename} title="Rename this section">
+          ✎ Rename
+        </Button>
+        <Button
+          size="xs"
+          onClick={promptSplit}
+          title="Start a new section at the next bar"
+        >
+          + Split
+        </Button>
+        <Button
+          size="xs"
+          variant="danger"
+          onClick={onDelete}
+          title="Merge this section's bars into the previous one"
+        >
+          × Section
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function BarHeader({
   barIndex,

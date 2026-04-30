@@ -12,6 +12,10 @@ import {
   insertBarAfter,
   setBarRepeatPrevious,
   setBarEmpty,
+  renameSection,
+  insertSectionAfterBar,
+  deleteSection,
+  locateBar,
   toggleBarRepeatEnd,
   toggleBarRepeatStart,
   setGroupDivision,
@@ -262,6 +266,17 @@ export default function App() {
       count += section.bars.length;
     }
     return null;
+  }, [score, clampedSelectedBar]);
+
+  const selectedSectionInfo = useMemo(() => {
+    if (clampedSelectedBar === null) return null;
+    const loc = locateBar(score, clampedSelectedBar);
+    if (!loc) return null;
+    return {
+      sectionIndex: loc.sectionIndex,
+      label: score.sections[loc.sectionIndex].label,
+      isFirstBarOfSection: loc.barIndex === 0,
+    };
   }, [score, clampedSelectedBar]);
 
   // Per-document undo/redo history. Keyed by document id so switching
@@ -884,6 +899,29 @@ export default function App() {
                 barIndex={clampedSelectedBar}
                 totalBars={totalBars}
                 beatsPerBar={score.meter.beats}
+                sectionLabel={selectedSectionInfo?.label ?? ""}
+                isFirstBarOfSection={
+                  selectedSectionInfo?.isFirstBarOfSection ?? false
+                }
+                onRenameSection={(label) =>
+                  applyScoreUpdate((s) =>
+                    selectedSectionInfo
+                      ? renameSection(s, selectedSectionInfo.sectionIndex, label)
+                      : s,
+                  )
+                }
+                onInsertSectionAfter={(label) =>
+                  applyScoreUpdate((s) =>
+                    insertSectionAfterBar(s, clampedSelectedBar, label),
+                  )
+                }
+                onDeleteSection={() =>
+                  applyScoreUpdate((s) =>
+                    selectedSectionInfo
+                      ? deleteSection(s, selectedSectionInfo.sectionIndex)
+                      : s,
+                  )
+                }
                 onSetRepeat={(hint) =>
                   applyScoreUpdate((s) =>
                     setBarRepeatPrevious(s, clampedSelectedBar, hint),
