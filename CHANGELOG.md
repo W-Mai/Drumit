@@ -15,15 +15,20 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- **Silent bar** concept. New `Bar.empty` flag, Silent chip next to
-  Pattern / % in the Drumit editor. Serializes as `|  |`, plays as a
-  whole-bar rest, renders as a whole rest on staff view and a "silent"
-  italic label on Drumit view. Toggling between Pattern ↔ Silent keeps
-  the bar's notes around so nothing is lost on flip-flop.
+- **Clear bar** action in the Drumit editor — a `⌫ Clear` button next
+  to Insert / Delete in the BarHeader strips every lane from the bar,
+  leaving meter-sized empty beats behind. Useful for starting over on
+  a pattern without having to delete-then-insert.
 - **Section editing** in Drumit mode. PadEditor now has a Section
   strip above the bar header with Rename / Split / Delete actions.
   Splitting creates a new section starting at the next bar; deleting
   merges its bars into the previous section.
+
+### Changed
+
+- Staff view draws a **whole rest** for any bar with no notes in
+  either voice (instead of 4 quarter rests). Applies to cleared bars
+  and to `|  |` bars loaded from source.
 
 ### Fixed
 
@@ -34,9 +39,8 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
   correct beat count for non-4/4 meters (was hard-coded to 4).
 - `setBarRepeatPrevious` preserves the bar's notes when switching to
   `%`, so `Pattern → % → Pattern` round-trips the content.
-- Parser accepts a truly-empty bar body (`|  |`) as a silent bar
-  instead of erroring — necessary for round-tripping the new
-  empty/silent state.
+- Parser accepts a truly-empty bar body (`|  |`) as a valid empty bar
+  (seeded with N silent beats) instead of erroring.
 
 ## [2026.04.29.9]
 
