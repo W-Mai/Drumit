@@ -418,7 +418,7 @@ function extractTuplet(raw: string): { tuplet?: number; body: string } {
  * So `o. -` splits a beat 3:1; `o.. -` splits 7:1. Returns null when
  * no dots exist so the caller keeps the flat shape.
  */
-function maybeExpandDotted(
+export function maybeExpandDotted(
   slots: Array<Hit | null>,
 ): LaneGroup[] | null {
   const dots = slots.map((s) => s?.dots ?? 0);

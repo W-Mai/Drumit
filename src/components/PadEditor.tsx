@@ -87,6 +87,11 @@ interface Props {
     sticking: "R" | "L" | null,
     groupIndex?: number,
   ) => void;
+  onCycleDots: (
+    beatIndex: number,
+    instrument: Instrument,
+    slotIndex: number,
+  ) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -256,6 +261,7 @@ export function PadEditor({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
+  onCycleDots,
   onNextBar,
   onPrevBar,
 }: Props) {
@@ -475,6 +481,26 @@ export function PadEditor({
     );
   }
 
+  function cycleDotsAtCursor(instrument: Instrument) {
+    // cycleDots only supports simple (non-`,`-split) lanes for now; it
+    // addresses the slot by its flat position within the beat.
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === instrument,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    // `,`-split lanes expose slots via `beat-group-slot` columns with a
+    // groupIndex > 0. Those aren't supported for dot cycling yet.
+    if (col.kind !== "beat-slot") return;
+    onCycleDots(
+      clampedCursor.beatIndex,
+      instrument,
+      col.slotIndex,
+    );
+  }
+
   async function copyBarSourceToClipboard() {
     try {
       await navigator.clipboard?.writeText(serialized);
@@ -581,6 +607,11 @@ export function PadEditor({
       shift: true,
       handler: () => setStickingAtCursor(currentInstrument, "L"),
     },
+    {
+      key: ".",
+      description: "Cycle dotted value (0 → 1 → 2 → 0)",
+      handler: () => cycleDotsAtCursor(currentInstrument),
+    },
     // Division: Alt/Option + digit sets the current beat's lane division.
     // Alt is chosen over Shift because Shift+1 collides with `!` (choke).
     ...(
@@ -660,6 +691,7 @@ export function PadEditor({
           onToggleSlot={onToggleSlot}
           onToggleArticulation={onToggleArticulation}
           onSetSticking={onSetSticking}
+          onCycleDots={onCycleDots}
         />
         </>
       )}
@@ -890,6 +922,7 @@ function StepGrid({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
+  onCycleDots,
 }: {
   bar: Bar;
   beatsPerBar: number;
@@ -904,6 +937,7 @@ function StepGrid({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
+  onCycleDots: Props["onCycleDots"];
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
@@ -947,6 +981,7 @@ function StepGrid({
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
+            onCycleDots={onCycleDots}
           />
         ))}
 
@@ -984,6 +1019,7 @@ function InstrumentRow({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
+  onCycleDots,
 }: {
   bar: Bar;
   beatsPerBar: number;
@@ -998,6 +1034,7 @@ function InstrumentRow({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
+  onCycleDots: Props["onCycleDots"];
 }) {
   return (
     <>
@@ -1053,6 +1090,7 @@ function InstrumentRow({
             onToggleSlot={onToggleSlot}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
+            onCycleDots={onCycleDots}
             barResolution={barResolution}
           />
         );
@@ -1080,6 +1118,7 @@ function LaneBeatCell({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
+  onCycleDots,
 }: {
   plan: LaneBeatPlan;
   bar: Bar;
@@ -1098,6 +1137,7 @@ function LaneBeatCell({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
+  onCycleDots: Props["onCycleDots"];
 }) {
   return (
     <div
@@ -1137,6 +1177,7 @@ function LaneBeatCell({
               onToggleSlot={onToggleSlot}
               onToggleArticulation={onToggleArticulation}
               onSetSticking={onSetSticking}
+              onCycleDots={onCycleDots}
             />
           );
         })}
@@ -1170,6 +1211,7 @@ function StepCell({
   onToggleSlot,
   onToggleArticulation,
   onSetSticking,
+  onCycleDots,
 }: {
   bar: Bar;
   instrument: Instrument;
@@ -1180,6 +1222,7 @@ function StepCell({
   onToggleSlot: Props["onToggleSlot"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
+  onCycleDots: Props["onCycleDots"];
   cursorState?: "cell" | "beat" | "lane" | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1284,6 +1327,12 @@ function StepCell({
               address.groupIndex,
             );
           }}
+          onCycleDots={() => {
+            if (!hit) return;
+            if (column.kind !== "beat-slot") return;
+            onCycleDots(plan.beatIndex, instrument, column.slotIndex);
+          }}
+          canDot={!!hit && column.kind === "beat-slot"}
         />
       </FloatingMenu>
     </>
@@ -1295,11 +1344,15 @@ function StepContextMenuContent({
   onToggle,
   onToggleArticulation,
   onSetSticking,
+  onCycleDots,
+  canDot,
 }: {
   hit: Hit | null;
   onToggle: () => void;
   onToggleArticulation: (art: Articulation) => void;
   onSetSticking: (s: "R" | "L" | null) => void;
+  onCycleDots: () => void;
+  canDot: boolean;
 }) {
   return (
     <div className="min-w-[200px] text-left">
@@ -1337,6 +1390,25 @@ function StepContextMenuContent({
           </button>
         ))}
       </div>
+      {canDot ? (
+        <>
+          <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+            Dots
+          </div>
+          <button
+            type="button"
+            onClick={onCycleDots}
+            className={cn(
+              "mb-3 block w-full rounded border px-2 py-1 text-[11px] font-bold transition",
+              (hit?.dots ?? 0) > 0
+                ? "border-amber-500 bg-amber-100 text-stone-900"
+                : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
+            )}
+          >
+            {hit?.dots === 1 ? "· (dotted)" : hit?.dots === 2 ? ":: (double)" : "— no dot"}
+          </button>
+        </>
+      ) : null}
       <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
         Sticking
       </div>

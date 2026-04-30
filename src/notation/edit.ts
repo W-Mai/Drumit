@@ -1,4 +1,5 @@
 import { defaultHeadFor } from "./instruments";
+import { maybeExpandDotted } from "./parser";
 import type {
   Articulation,
   Bar,
@@ -462,6 +463,68 @@ export function toggleArticulation(
     const i = hit.articulations.indexOf(articulation);
     if (i === -1) hit.articulations.push(articulation);
     else hit.articulations.splice(i, 1);
+  });
+}
+
+/**
+ * Cycle the dots on the slot's hit: 0 → 1 → 2 → 0. Dots can only be
+ * attached to an actual hit (not a rest); noop on empty slots and on
+ * lanes that are already split via the explicit `,` API (mixing user
+ * splits with dot expansion would require two-level groups).
+ */
+export function cycleDots(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  slotIndex: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex];
+    if (!beat) return;
+    const laneIdx = beat.lanes.findIndex((l) => l.instrument === instrument);
+    if (laneIdx < 0) return;
+    const lane = beat.lanes[laneIdx];
+
+    // Flatten to a plain slot list if the lane was previously dot-expanded.
+    const isDotExpanded =
+      !!lane.groups &&
+      lane.groups.length > 1 &&
+      lane.groups.every((g) => g.division === 1 && g.slots.length === 1);
+    const flat: Array<Hit | null> = isDotExpanded
+      ? lane.groups!.flatMap((g) => g.slots)
+      : lane.groups && lane.groups.length > 1
+        ? [] // explicit `,`-split lane: not supported in this release
+        : [...lane.slots];
+    if (flat.length === 0) return;
+    if (slotIndex < 0 || slotIndex >= flat.length) return;
+    const hit = flat[slotIndex];
+    if (!hit) return;
+
+    const next = ((hit.dots ?? 0) + 1) % 3;
+    const newHit: Hit = { ...hit };
+    if (next === 0) delete newHit.dots;
+    else newHit.dots = next;
+    flat[slotIndex] = newHit;
+
+    const expanded = maybeExpandDotted(flat);
+    if (expanded) {
+      beat.lanes[laneIdx] = {
+        ...lane,
+        division: 1,
+        tuplet: undefined,
+        slots: [flat[0] ?? null],
+        groups: expanded,
+      };
+    } else {
+      beat.lanes[laneIdx] = {
+        ...lane,
+        division: flat.length,
+        tuplet: undefined,
+        slots: flat,
+        groups: undefined,
+      };
+    }
   });
 }
 

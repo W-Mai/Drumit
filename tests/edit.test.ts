@@ -3,6 +3,7 @@ import { parseDrumtab } from "../src/notation/parser";
 import { serializeScore } from "../src/notation/serialize";
 import {
   clearBar,
+  cycleDots,
   deleteBar,
   deleteBars,
   deleteSection,
@@ -385,5 +386,38 @@ meter: 4/4
     // globalIndex past end falls through to append-to-last-section.
     const next = pasteBarsBefore(score, 99, clip);
     expect(next.sections[1].bars).toHaveLength(3);
+  });
+
+  describe("cycleDots", () => {
+    it("cycles 0 → 1 → 2 → 0 on a slot's hit and rebuilds groups", () => {
+      const { score } = parseDrumtab(
+        `title: T\nmeter: 4/4\n[A]\n| bd: oo / - / - / - |`,
+      );
+      let s = cycleDots(score, 0, 0, "kick", 0);
+      let lane = s.sections[0].bars[0].beats[0].lanes[0];
+      expect(lane.groups).toBeDefined();
+      expect(lane.groups![0].ratio).toBeCloseTo(0.75);
+      expect(lane.groups![0].slots[0]?.dots).toBe(1);
+
+      s = cycleDots(s, 0, 0, "kick", 0);
+      lane = s.sections[0].bars[0].beats[0].lanes[0];
+      expect(lane.groups![0].ratio).toBeCloseTo(0.875);
+      expect(lane.groups![0].slots[0]?.dots).toBe(2);
+
+      s = cycleDots(s, 0, 0, "kick", 0);
+      lane = s.sections[0].bars[0].beats[0].lanes[0];
+      expect(lane.groups).toBeUndefined();
+      expect(lane.slots[0]?.dots).toBeUndefined();
+    });
+
+    it("is a no-op on rests and out-of-range slots", () => {
+      const { score } = parseDrumtab(
+        `title: T\nmeter: 4/4\n[A]\n| bd: o- / - / - / - |`,
+      );
+      const s1 = cycleDots(score, 0, 0, "kick", 1); // slot is rest
+      expect(s1.sections[0].bars[0].beats[0].lanes[0].slots[1]).toBeNull();
+      const s2 = cycleDots(score, 0, 0, "kick", 99); // out of range
+      expect(s2).toEqual(score);
+    });
   });
 });

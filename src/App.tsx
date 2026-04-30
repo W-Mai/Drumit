@@ -14,6 +14,7 @@ import { validateScore } from "./notation/validate";
 import { exportScoreToMidi } from "./notation/midiExport";
 import {
   cycleBarEnding,
+  cycleDots,
   deleteBar,
   deleteBars,
   extractBars,
@@ -1381,6 +1382,11 @@ export default function App() {
                       st,
                       gi,
                     ),
+                  )
+                }
+                onCycleDots={(bi, inst, si) =>
+                  applyScoreUpdate((s) =>
+                    cycleDots(s, clampedSelectedBar, bi, inst, si),
                   )
                 }
                 onPrevBar={() =>
