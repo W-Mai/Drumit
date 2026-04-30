@@ -13,13 +13,17 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- **Perform view** — a fullscreen single-row rehearsal mode, opened
-  from the 🎭 Perform button in the Preview panel header. The chart
-  auto-windows to 3–5 bars around the current position (wider screens
-  show more), and the bottom chip strip lets you tap any bar to seek.
-  For repeated bars a `▾` popover lets you pick exactly which pass to
-  jump to. On mobile the view requests fullscreen and (when the
-  browser permits) locks landscape orientation.
+- **Perform view** — a fullscreen teleprompter-style rehearsal mode,
+  opened from the 🎭 Perform button in the Preview panel header. The
+  full expanded score lays out in one long horizontal row; during
+  playback the chart scrolls leftward beat-by-beat so the current
+  beat always lines up with an amber reticle at the left third of
+  the stage (the "read-ahead" position). Tap anywhere on the stage
+  to seek to that spot. A compressed mini-map at the top shows the
+  whole timeline at a glance with a viewport rectangle, plus chips
+  for every bar (section labels, `×pass/total` badges, `▾` pass
+  pickers for repeated bars). On mobile the view requests fullscreen
+  and (where the browser allows) locks landscape orientation.
 
 ## [2026.04.30.1]
 

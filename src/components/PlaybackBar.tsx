@@ -47,6 +47,7 @@ interface Props {
     barIndex: number;
     beatIndex: number;
     expandedBarIndex: number;
+    time: number;
   }) => void;
   onStop?: () => void;
   onEngineChange?: (kind: EngineKind) => void;

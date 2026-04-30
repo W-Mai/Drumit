@@ -208,6 +208,7 @@ export default function App() {
     barIndex: number;
     beatIndex: number;
     expandedBarIndex: number;
+    time: number;
   } | null>(null);
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [expandedPreview, setExpandedPreview] = useState(false);
@@ -1033,6 +1034,7 @@ export default function App() {
               barIndex: p.barIndex,
               beatIndex: p.beatIndex,
               expandedBarIndex: p.expandedBarIndex,
+              time: p.time,
             })
           }
           onStop={() => setPlayCursor(null)}
