@@ -271,14 +271,16 @@ function BarShell({
             width={30}
             height={14}
             rx={4}
-            className="fill-stone-900"
+            fill="#1c1917"
           />
           <text
             x={bar.x + bar.width - 15}
             y={barTop + 6}
             textAnchor="middle"
-            className="fill-amber-200 font-bold tabular-nums"
-            style={{ fontSize: 9 }}
+            fill="#fde68a"
+            fontSize={9}
+            fontWeight={700}
+            className="tabular-nums"
           >
             ×{repeatPass.pass}/{repeatPass.total}
           </text>

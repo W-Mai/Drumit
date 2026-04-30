@@ -267,18 +267,21 @@ function BarView({
       {isPlayhead && repeatPass && repeatPass.total > 1 ? (
         <g>
           <rect
-            x={x + width - 26}
+            x={x + width - 30}
             y={y + 2}
-            width={28}
+            width={30}
             height={14}
             rx={4}
-            className="fill-stone-900"
+            fill="#1c1917"
           />
           <text
-            x={x + width - 12}
-            y={12}
+            x={x + width - 15}
+            y={y + 12}
             textAnchor="middle"
-            className="fill-amber-200 text-[9px] font-bold tabular-nums"
+            fill="#fde68a"
+            fontSize={9}
+            fontWeight={700}
+            className="tabular-nums"
           >
             ×{repeatPass.pass}/{repeatPass.total}
           </text>
