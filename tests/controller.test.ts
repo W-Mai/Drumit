@@ -230,6 +230,84 @@ describe("PlaybackController — transport", () => {
     ctrl.stop();
   });
 
+  it("cursor expandedBarIndex walks the unrolled sequence of |: A B :| x2", () => {
+    // 60 bpm 4/4 → 4s per bar. Expanded order: A(0) B(1) A(2) B(3).
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o |\n| sn: o / o / o / o :|`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    expect(ctrl.cursorAt(0.0).expandedBarIndex).toBe(0);
+    expect(ctrl.cursorAt(4.0).expandedBarIndex).toBe(1);
+    expect(ctrl.cursorAt(8.0).expandedBarIndex).toBe(2);
+    expect(ctrl.cursorAt(12.0).expandedBarIndex).toBe(3);
+    // sourceBarIndex alternates between 0 and 1.
+    expect(ctrl.cursorAt(0.0).barIndex).toBe(0);
+    expect(ctrl.cursorAt(4.0).barIndex).toBe(1);
+    expect(ctrl.cursorAt(8.0).barIndex).toBe(0);
+    expect(ctrl.cursorAt(12.0).barIndex).toBe(1);
+  });
+
+  it("cursor expandedBarIndex tracks |: A :| x3 as three expanded bars", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    expect(ctrl.cursorAt(0).expandedBarIndex).toBe(0);
+    expect(ctrl.cursorAt(4).expandedBarIndex).toBe(1);
+    expect(ctrl.cursorAt(8).expandedBarIndex).toBe(2);
+    // sourceBarIndex stays 0 across all three repeats.
+    expect(ctrl.cursorAt(0).barIndex).toBe(0);
+    expect(ctrl.cursorAt(4).barIndex).toBe(0);
+    expect(ctrl.cursorAt(8).barIndex).toBe(0);
+  });
+
+  it("cursor honours 1st / 2nd endings in the expanded timeline", () => {
+    // Pass 1: bar0(open) + bar1(ending1). Pass 2: bar0 + bar2(ending2).
+    // Expanded order: [bar0, bar1, bar0, bar2] at t=[0,4,8,12].
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o |\n| sn: o / o / o / o | [1]\n| sn: o / - / - / - :| [2]`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    expect(ctrl.cursorAt(0).barIndex).toBe(0);
+    expect(ctrl.cursorAt(4).barIndex).toBe(1); // 1st ending
+    expect(ctrl.cursorAt(8).barIndex).toBe(0); // second pass
+    expect(ctrl.cursorAt(12).barIndex).toBe(2); // 2nd ending
+    expect(ctrl.cursorAt(12).expandedBarIndex).toBe(3);
+  });
+
+  it("cursor honours D.C. al Fine in the expanded timeline", () => {
+    // Bars: 0(bd) 1(sn@fine) 2(sn@dc-to-fine). After bar 2, jump to 0,
+    // then play 1 and stop at Fine. Expanded: [0,1,2,0,1].
+    const src = `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |\n@fine\n| sn: o / - / - / - |\n@dc al fine`;
+    const { score } = parseDrumtab(src);
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    expect(ctrl.cursorAt(0).barIndex).toBe(0);
+    expect(ctrl.cursorAt(4).barIndex).toBe(1);
+    expect(ctrl.cursorAt(8).barIndex).toBe(2);
+    // After the D.C. jump.
+    expect(ctrl.cursorAt(12).barIndex).toBe(0);
+    expect(ctrl.cursorAt(12).expandedBarIndex).toBe(3);
+    expect(ctrl.cursorAt(16).barIndex).toBe(1);
+    expect(ctrl.cursorAt(16).expandedBarIndex).toBe(4);
+  });
+
+  it("cursor beatIndex advances within a bar by wall-clock time", () => {
+    // 60 bpm 4/4 → beats at t = 0, 1, 2, 3 within the first bar.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    expect(ctrl.cursorAt(0.0).beatIndex).toBe(0);
+    expect(ctrl.cursorAt(1.0).beatIndex).toBe(1);
+    expect(ctrl.cursorAt(2.0).beatIndex).toBe(2);
+    expect(ctrl.cursorAt(3.0).beatIndex).toBe(3);
+  });
+
   it("pause records current time; resume continues from there", async () => {
     const { score } = parseDrumtab(
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,

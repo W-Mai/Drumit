@@ -197,6 +197,7 @@ export default function App() {
   const [playCursor, setPlayCursor] = useState<{
     barIndex: number;
     beatIndex: number;
+    expandedBarIndex: number;
   } | null>(null);
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [expandedPreview, setExpandedPreview] = useState(false);
@@ -220,13 +221,19 @@ export default function App() {
       lastScrolledBar.current = null;
       return;
     }
-    if (playCursor.barIndex === lastScrolledBar.current) return;
-    lastScrolledBar.current = playCursor.barIndex;
+    // Auto-scroll uses the *view's* bar index: compact view's DOM
+    // `data-bar-index` enumerates source bars, whereas expanded view's
+    // `data-bar-index` enumerates positions in the unrolled sequence.
+    const activeIndex = expandedPreview
+      ? playCursor.expandedBarIndex
+      : playCursor.barIndex;
+    if (activeIndex === lastScrolledBar.current) return;
+    lastScrolledBar.current = activeIndex;
     const el = chartContainer.querySelector<SVGGElement>(
-      `[data-bar-index="${playCursor.barIndex}"]`,
+      `[data-bar-index="${activeIndex}"]`,
     );
     el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-  }, [chartContainer, playCursor]);
+  }, [chartContainer, playCursor, expandedPreview]);
 
   // ---------------------------------------------------------------
   // Bar-level clipboard (Copy / Cut / Paste / Delete on selected bars)
@@ -477,6 +484,17 @@ export default function App() {
     () => (expandedPreview ? expandScore(score) : score),
     [score, expandedPreview],
   );
+
+  // playCursor carries both source and expanded indices. Renderers expect
+  // `{ barIndex, beatIndex }` — hand each view the flavour that matches
+  // its own DOM coordinate system (source bars in compact, unrolled
+  // bars in expand).
+  const viewPlayCursor = useMemo(() => {
+    if (!playCursor) return null;
+    return expandedPreview
+      ? { barIndex: playCursor.expandedBarIndex, beatIndex: playCursor.beatIndex }
+      : { barIndex: playCursor.barIndex, beatIndex: playCursor.beatIndex };
+  }, [playCursor, expandedPreview]);
 
   const layout = useMemo(
     () =>
@@ -974,7 +992,11 @@ export default function App() {
               : undefined
           }
           onCursor={(p) =>
-            setPlayCursor({ barIndex: p.barIndex, beatIndex: p.beatIndex })
+            setPlayCursor({
+              barIndex: p.barIndex,
+              beatIndex: p.beatIndex,
+              expandedBarIndex: p.expandedBarIndex,
+            })
           }
           onStop={() => setPlayCursor(null)}
           onEngineChange={setEngineKind}
@@ -1059,7 +1081,7 @@ export default function App() {
                 onSelectBar={
                   expandedPreview ? handleExpandedBarClick : handleBarClick
                 }
-                playCursor={expandedPreview ? null : playCursor}
+                playCursor={viewPlayCursor}
                 playheadEngine={engineKind}
               />
             ) : (
@@ -1075,7 +1097,7 @@ export default function App() {
                 onSelectBar={
                   expandedPreview ? handleExpandedBarClick : handleBarClick
                 }
-                playCursor={expandedPreview ? null : playCursor}
+                playCursor={viewPlayCursor}
                 playheadEngine={engineKind}
               />
             )}

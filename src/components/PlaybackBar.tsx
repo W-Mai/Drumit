@@ -22,7 +22,11 @@ interface Props {
    * live in the unrolled timeline that doesn't map 1:1 to source bars.
    */
   startTimeOverride?: number;
-  onCursor?: (pos: { barIndex: number; beatIndex: number }) => void;
+  onCursor?: (pos: {
+    barIndex: number;
+    beatIndex: number;
+    expandedBarIndex: number;
+  }) => void;
   onStop?: () => void;
   onEngineChange?: (kind: EngineKind) => void;
 }
