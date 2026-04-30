@@ -11,6 +11,26 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.29.11]
+
+### Added
+
+- **`SampleEngine`** — third playback engine alongside Synth and MIDI.
+  Plays real drum samples from `public/samples/*.ogg` via
+  `AudioBufferSourceNode`. Selectable from the Engine dropdown in the
+  PlaybackBar; shows `loading samples…` while fetching and
+  `no samples installed — silent` when the directory is empty.
+- `scripts/fetch-samples.ts` — scaffold for downloading a CC0 sample
+  set (URL list still TODO — we scouted a few sources but none had
+  stable public preview URLs without an API key). Drop your own `.ogg`
+  files into `public/samples/` in the meantime; missing files make
+  only the corresponding instrument silent, the rest keep playing.
+
+### Notes
+
+- Velocity layers deferred. MVP maps velocity to gain, like Synth.
+- The playable-HTML export still uses Synth (doesn't bundle samples).
+
 ## [2026.04.29.10]
 
 ### Added
@@ -349,7 +369,8 @@ back, and export simple rock/fusion charts.
   scheduler, controller, storage, undo/redo, MIDI export (200+ tests)
 - ESLint + Prettier; strict React 19 hook rules
 
-[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.10...HEAD
+[Unreleased]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.11...HEAD
+[2026.04.29.11]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.10...v2026.04.29.11
 [2026.04.29.10]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.9...v2026.04.29.10
 [2026.04.29.9]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.8...v2026.04.29.9
 [2026.04.29.8]: https://github.com/W-Mai/Drumit/compare/v2026.04.29.7...v2026.04.29.8
