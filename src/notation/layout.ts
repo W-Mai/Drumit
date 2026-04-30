@@ -181,23 +181,24 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     sectionHeaders.push({ label: section.label, y: y + 18 });
     y += SECTION_HEADER_HEIGHT;
 
-    let rowBars: LaidOutBar[] = [];
-    const flushRow = () => {
-      if (!rowBars.length) return;
+    // Slice this section's bars into rows ahead of time so we can
+    // compute one rowGroup assignment per row (making every bar in the
+    // row share the same row-to-Y mapping — lanes stay horizontally
+    // aligned even when individual bars use different row groups).
+    for (let rowStart = 0; rowStart < section.bars.length; rowStart += barsPerRow) {
+      const rowSourceBars = section.bars.slice(rowStart, rowStart + barsPerRow);
+      const rowAssignment = assignRows(rowSourceBars);
+      const rowBars: LaidOutBar[] = rowSourceBars.map((bar, colInRow) => {
+        const x = leftMargin + colInRow * (barWidth + BAR_GAP_X);
+        const laid = layoutBar(bar, barIndex, x, y, barWidth, beatsPerBar, rowAssignment);
+        barIndex += 1;
+        return laid;
+      });
       const rowMaxHeight = Math.max(...rowBars.map((b) => b.height));
       for (const b of rowBars) b.rowMaxHeight = rowMaxHeight;
       rows.push(rowBars);
-      rowBars = [];
       y += rowMaxHeight + ROW_GAP;
-    };
-    section.bars.forEach((bar, idx) => {
-      const col = idx % barsPerRow;
-      if (col === 0) flushRow();
-      const x = leftMargin + col * (barWidth + BAR_GAP_X);
-      rowBars.push(layoutBar(bar, barIndex, x, y, barWidth, beatsPerBar));
-      barIndex += 1;
-    });
-    flushRow();
+    }
   });
 
   return {
@@ -219,17 +220,13 @@ function layoutBar(
   y: number,
   width: number,
   beatsPerBar: number,
+  rowAssignment: Map<RowGroup, number>,
 ): LaidOutBar {
-  // Pre-pass: compute which row groups need a separate row because two
-  // different row groups produce hits at exactly the same instant. Groups
-  // that never collide collapse onto the same visual row (cymbals always get
-  // their own row to keep the cymbal/drum distinction clear).
-  const rowAssignment = assignRows(bar);
   const rowGroups = ROW_GROUP_ORDER.filter((g) => rowAssignment.has(g));
   if (rowGroups.length === 0) rowGroups.push("snare"); // safety for empty bar
 
   const uniqueRowIndices = Array.from(
-    new Set(rowGroups.map((g) => rowAssignment.get(g)!)),
+    new Set([...rowAssignment.values()]),
   ).sort((a, b) => a - b);
   const rowCount = uniqueRowIndices.length;
   const indexToVisualRow = new Map<number, number>();
@@ -620,35 +617,42 @@ function mergeTuplets(laneSegments: LaidOutLane[]): LaidOutTuplet[] {
  * (they never merge with drum rows) so the visual cymbal/drum distinction
  * from handwritten jianpu drum charts stays intact.
  */
-function assignRows(bar: Bar): Map<RowGroup, number> {
+function assignRows(bars: Bar | Bar[]): Map<RowGroup, number> {
+  const barList = Array.isArray(bars) ? bars : [bars];
   // 1. Gather per-group set of absolute tick positions.
+  // Bars contribute into separate tick spaces (offset by bar index × big
+  // number) so different bars never pretend to collide at the same tick.
   const TICK_DEN = 48; // lcm(16, 3) = 48 ticks per beat
+  const BAR_STRIDE = 1 << 20;
   const groupTicks: Partial<Record<RowGroup, Set<number>>> = {};
 
-  bar.beats.forEach((beat, beatIndex) => {
-    const beatStart = beatIndex * TICK_DEN;
-    beat.lanes.forEach((lane) => {
-      const group = rowGroupFor(lane.instrument);
-      const laneGroups = lane.groups ?? [
-        {
-          ratio: 1,
-          division: lane.division,
-          tuplet: lane.tuplet,
-          slots: lane.slots,
-        },
-      ];
-      let groupStartTick = beatStart;
-      laneGroups.forEach((g) => {
-        const groupTickWidth = Math.round(TICK_DEN * g.ratio);
-        g.slots.forEach((hit, slotIndex) => {
-          if (!hit) return;
-          const slotTick =
-            groupStartTick +
-            Math.round((slotIndex * groupTickWidth) / g.division);
-          if (!groupTicks[group]) groupTicks[group] = new Set();
-          groupTicks[group]!.add(slotTick);
+  barList.forEach((bar, barIndex) => {
+    const barOffset = barIndex * BAR_STRIDE;
+    bar.beats.forEach((beat, beatIndex) => {
+      const beatStart = barOffset + beatIndex * TICK_DEN;
+      beat.lanes.forEach((lane) => {
+        const group = rowGroupFor(lane.instrument);
+        const laneGroups = lane.groups ?? [
+          {
+            ratio: 1,
+            division: lane.division,
+            tuplet: lane.tuplet,
+            slots: lane.slots,
+          },
+        ];
+        let groupStartTick = beatStart;
+        laneGroups.forEach((g) => {
+          const groupTickWidth = Math.round(TICK_DEN * g.ratio);
+          g.slots.forEach((hit, slotIndex) => {
+            if (!hit) return;
+            const slotTick =
+              groupStartTick +
+              Math.round((slotIndex * groupTickWidth) / g.division);
+            if (!groupTicks[group]) groupTicks[group] = new Set();
+            groupTicks[group]!.add(slotTick);
+          });
+          groupStartTick += groupTickWidth;
         });
-        groupStartTick += groupTickWidth;
       });
     });
   });
