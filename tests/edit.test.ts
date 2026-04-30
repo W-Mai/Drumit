@@ -4,9 +4,12 @@ import { serializeScore } from "../src/notation/serialize";
 import {
   clearBar,
   deleteBar,
+  deleteBars,
   deleteSection,
+  extractBars,
   insertBarAfter,
   insertSectionAfterBar,
+  pasteBarsBefore,
   renameSection,
   setBarRepeatPrevious,
   setLaneDivision,
@@ -327,5 +330,60 @@ describe("section edits", () => {
     );
     const next = deleteSection(score, 0);
     expect(next.sections).toHaveLength(1);
+  });
+});
+
+describe("bar clipboard ops", () => {
+  const src = `title: T
+meter: 4/4
+[A]
+| bd: o / - / o / - |
+| sn: - / o / - / o |
+[B]
+| bd: o / o / o / o |
+| bd: - / o / - / o |`;
+
+  it("extractBars returns a deep copy of the range", () => {
+    const { score } = loadBar(src);
+    const bars = extractBars(score, 1, 2);
+    expect(bars).toHaveLength(2);
+    // Mutating the copy doesn't touch the source.
+    bars[0].repeatPrevious = true;
+    const bar1 = score.sections[0].bars[1];
+    expect(bar1.repeatPrevious).toBe(false);
+  });
+
+  it("extractBars works across section boundaries", () => {
+    const { score } = loadBar(src);
+    const bars = extractBars(score, 1, 3);
+    expect(bars).toHaveLength(3);
+  });
+
+  it("deleteBars removes an inclusive range", () => {
+    const { score } = loadBar(src);
+    const next = deleteBars(score, 0, 1);
+    // Section A used to have 2 bars, both removed.
+    expect(next.sections[0].bars).toHaveLength(0);
+    expect(next.sections[1].bars).toHaveLength(2);
+  });
+
+  it("pasteBarsBefore inserts deep-cloned bars ahead of the target", () => {
+    const { score } = loadBar(src);
+    const clip = extractBars(score, 2, 2); // one B-section bar
+    const next = pasteBarsBefore(score, 0, clip);
+    const flat = next.sections.flatMap((s) => s.bars);
+    expect(flat).toHaveLength(5);
+    // First bar is now a copy of what used to be bar 2.
+    expect(JSON.stringify(flat[0].beats)).toBe(
+      JSON.stringify(clip[0].beats),
+    );
+  });
+
+  it("pasteBarsBefore into an empty index appends at the end", () => {
+    const { score } = loadBar(src);
+    const clip = extractBars(score, 0, 0);
+    // globalIndex past end falls through to append-to-last-section.
+    const next = pasteBarsBefore(score, 99, clip);
+    expect(next.sections[1].bars).toHaveLength(3);
   });
 });

@@ -129,6 +129,115 @@ export function insertBarAfter(score: Score, globalIndex: number): Score {
   return next;
 }
 
+/**
+ * Return a deep copy of bars in a (possibly cross-section) global range.
+ * Order preserved. Bars whose structural flags lose meaning in isolation
+ * (section-relative navigation markers, first/second endings) are kept
+ * as-is — callers that round-trip through serialize will round-trip
+ * those too, and users pasting into a different context get to decide
+ * whether to keep or manually clear them.
+ */
+export function extractBars(score: Score, startIndex: number, endIndex: number): Bar[] {
+  const lo = Math.min(startIndex, endIndex);
+  const hi = Math.max(startIndex, endIndex);
+  const out: Bar[] = [];
+  let count = 0;
+  for (const section of score.sections) {
+    const localLo = Math.max(0, lo - count);
+    const localHi = Math.min(section.bars.length - 1, hi - count);
+    if (localLo <= localHi && localHi >= 0 && localLo < section.bars.length) {
+      for (let i = localLo; i <= localHi; i += 1) {
+        out.push(JSON.parse(JSON.stringify(section.bars[i])));
+      }
+    }
+    count += section.bars.length;
+    if (count > hi) break;
+  }
+  return out;
+}
+
+/**
+ * Delete a contiguous global range of bars. If an entire section ends
+ * up with zero bars, the section is kept (user may still want its
+ * label); call deleteSection separately to remove it.
+ */
+export function deleteBars(
+  score: Score,
+  startIndex: number,
+  endIndex: number,
+): Score {
+  const lo = Math.min(startIndex, endIndex);
+  const hi = Math.max(startIndex, endIndex);
+  const next = cloneScore(score);
+  let count = 0;
+  for (const section of next.sections) {
+    const size = section.bars.length;
+    const localLo = Math.max(0, lo - count);
+    const localHi = Math.min(size - 1, hi - count);
+    if (localLo <= localHi && localHi >= 0 && localLo < size) {
+      section.bars.splice(localLo, localHi - localLo + 1);
+    }
+    count += size;
+    if (count > hi) break;
+  }
+  return next;
+}
+
+/**
+ * Paste a list of bars immediately before `globalIndex`. The new bars
+ * slot into the same section as the target bar. Each pasted bar is
+ * deep-cloned so callers can reuse the source array freely.
+ */
+export function pasteBarsBefore(
+  score: Score,
+  globalIndex: number,
+  bars: Bar[],
+): Score {
+  if (bars.length === 0) return score;
+  const next = cloneScore(score);
+  const loc = locateBar(next, globalIndex);
+  if (!loc) {
+    // Empty score (or out-of-range): append into the last (or only) section.
+    const section =
+      next.sections[next.sections.length - 1] ??
+      (() => {
+        const s = { label: "", bars: [] };
+        next.sections.push(s);
+        return s;
+      })();
+    section.bars.push(...bars.map((b) => JSON.parse(JSON.stringify(b)) as Bar));
+    return next;
+  }
+  const section = next.sections[loc.sectionIndex];
+  section.bars.splice(
+    loc.barIndex,
+    0,
+    ...bars.map((b) => JSON.parse(JSON.stringify(b)) as Bar),
+  );
+  return next;
+}
+
+/**
+ * Paste bars at the end of the section that currently contains
+ * `globalIndex`. When the bar index is out of range, bars are appended
+ * to the final section.
+ */
+export function pasteBarsAtSectionEnd(
+  score: Score,
+  globalIndex: number,
+  bars: Bar[],
+): Score {
+  if (bars.length === 0) return score;
+  const next = cloneScore(score);
+  const loc = locateBar(next, globalIndex);
+  const section =
+    (loc && next.sections[loc.sectionIndex]) ??
+    next.sections[next.sections.length - 1];
+  if (!section) return next;
+  section.bars.push(...bars.map((b) => JSON.parse(JSON.stringify(b)) as Bar));
+  return next;
+}
+
 export function deleteBar(score: Score, globalIndex: number): Score {
   const next = cloneScore(score);
   const loc = locateBar(next, globalIndex);

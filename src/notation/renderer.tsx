@@ -45,7 +45,11 @@ interface Props {
   layout: LaidOutLayout;
   showLabels: boolean;
   selectedBarIndex?: number | null;
-  onSelectBar?: (index: number) => void;
+  /** Optional extension of the selection: when present, every bar whose
+   *  global index falls within [min(anchor,end), max(anchor,end)] is
+   *  treated as selected. */
+  selectionEnd?: number | null;
+  onSelectBar?: (index: number, shiftKey?: boolean) => void;
   /** Current playhead position — highlights the active bar (and beat within it). */
   playCursor?: { barIndex: number; beatIndex: number } | null;
 }
@@ -54,9 +58,18 @@ export function DrumChart({
   layout,
   showLabels,
   selectedBarIndex,
+  selectionEnd,
   onSelectBar,
   playCursor,
 }: Props) {
+  const selectionLo =
+    selectedBarIndex === null || selectedBarIndex === undefined
+      ? null
+      : Math.min(selectedBarIndex, selectionEnd ?? selectedBarIndex);
+  const selectionHi =
+    selectedBarIndex === null || selectedBarIndex === undefined
+      ? null
+      : Math.max(selectedBarIndex, selectionEnd ?? selectedBarIndex);
   return (
     <svg
       viewBox={`0 0 ${layout.width} ${layout.height}`}
@@ -140,10 +153,19 @@ export function DrumChart({
               bar={bar}
               showLabels={showLabels}
               isRowStart={indexInRow === 0}
-              selected={selectedBarIndex === globalIdx}
+              selected={
+                selectionLo !== null &&
+                selectionHi !== null &&
+                globalIdx >= selectionLo &&
+                globalIdx <= selectionHi
+              }
               isPlayhead={isPlayhead}
               playBeatIndex={isPlayhead ? playCursor?.beatIndex : undefined}
-              onSelect={onSelectBar ? () => onSelectBar(globalIdx) : undefined}
+              onSelect={
+                onSelectBar
+                  ? (shiftKey) => onSelectBar(globalIdx, shiftKey)
+                  : undefined
+              }
             />
           );
         }),
@@ -169,7 +191,7 @@ function BarView({
   selected?: boolean;
   isPlayhead?: boolean;
   playBeatIndex?: number;
-  onSelect?: () => void;
+  onSelect?: (shiftKey: boolean) => void;
 }) {
   const { x, y, width, height, rowGroups, rowY, beats } = bar;
   const firstRowY = rowY[rowGroups[0]] ?? y + 20;
@@ -179,7 +201,7 @@ function BarView({
 
   return (
     <g
-      onClick={onSelect}
+      onClick={onSelect ? (e) => onSelect(e.shiftKey) : undefined}
       style={onSelect ? { cursor: "pointer" } : undefined}
       data-bar-index={bar.index - 1}
     >

@@ -16,7 +16,7 @@ import type {
 import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
 import { Button, Chip, ChipGroup } from "./ui";
-import { useHotkeys } from "../lib/useHotkeys";
+import { useHotkeys, type Hotkey } from "../lib/useHotkeys";
 import {
   DIGIT_BY_INSTRUMENT,
   INSTRUMENT_BY_DIGIT,
@@ -475,107 +475,135 @@ export function PadEditor({
     );
   }
 
-  useHotkeys(
-    [
-      // Navigation
-      { key: "ArrowLeft", handler: () => moveCursor(-1, 0) },
-      { key: "ArrowRight", handler: () => moveCursor(1, 0) },
-      { key: "ArrowUp", handler: () => moveCursor(0, -1) },
-      { key: "ArrowDown", handler: () => moveCursor(0, 1) },
-      {
-        key: "Home",
-        handler: () =>
-          setCursor((c) => ({ ...c, beatIndex: 0, slotIndex: 0 })),
+  async function copyBarSourceToClipboard() {
+    try {
+      await navigator.clipboard?.writeText(serialized);
+    } catch {
+      // Clipboard may be blocked in insecure contexts; nothing we can do.
+    }
+  }
+
+  // Every Editor hotkey carries scope: "editor" so it only fires when
+  // focus is inside the Editor panel. Preview-scoped shortcuts (bar
+  // clipboard, selection) live in App.tsx with scope: "preview".
+  const editorHotkeys: Hotkey[] = [
+    // Navigation
+    { key: "ArrowLeft", handler: () => moveCursor(-1, 0) },
+    { key: "ArrowRight", handler: () => moveCursor(1, 0) },
+    { key: "ArrowUp", handler: () => moveCursor(0, -1) },
+    { key: "ArrowDown", handler: () => moveCursor(0, 1) },
+    {
+      key: "Home",
+      handler: () =>
+        setCursor((c) => ({ ...c, beatIndex: 0, slotIndex: 0 })),
+    },
+    {
+      key: "End",
+      handler: () => {
+        const beatIndex = beatsPerBar - 1;
+        const lane = bar.beats[beatIndex]?.lanes.find(
+          (l) => l.instrument === currentInstrument,
+        );
+        const plan = planLaneBeat(lane, beatIndex, barResolution);
+        setCursor((c) => ({
+          ...c,
+          beatIndex,
+          slotIndex: Math.max(0, plan.columns.length - 1),
+        }));
       },
-      {
-        key: "End",
-        handler: () => {
-          const beatIndex = beatsPerBar - 1;
-          const lane = bar.beats[beatIndex]?.lanes.find(
-            (l) => l.instrument === currentInstrument,
-          );
-          const plan = planLaneBeat(lane, beatIndex, barResolution);
-          setCursor((c) => ({
-            ...c,
-            beatIndex,
-            slotIndex: Math.max(0, plan.columns.length - 1),
-          }));
-        },
-      },
-      // Toggles
-      { key: "Tab", handler: () => setAutoAdvance((v) => !v) },
-      { key: "Delete", handler: () => clearCursorSlot() },
-      { key: "Backspace", handler: () => clearCursorSlot() },
-      // Instrument digits
-      ...Object.entries(INSTRUMENT_BY_DIGIT).map(([digit, instrument]) => ({
-        key: digit,
-        handler: () => toggleAtCursor(instrument),
-      })),
-      // Articulation modifiers — apply to each present instrument's hit at
-      // this slot if any. In practice the common case is the current lane.
-      {
-        key: ">",
-        shift: true,
-        handler: () => applyModifierAtCursor(currentInstrument, "accent"),
-      },
-      {
-        key: "g",
-        handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
-      },
-      {
-        key: "(",
-        shift: true,
-        handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
-      },
-      {
-        key: "f",
-        handler: () => applyModifierAtCursor(currentInstrument, "flam"),
-      },
-      {
-        key: "r",
-        handler: () => applyModifierAtCursor(currentInstrument, "roll"),
-      },
-      {
-        key: "~",
-        shift: true,
-        handler: () => applyModifierAtCursor(currentInstrument, "roll"),
-      },
-      {
-        key: "!",
-        shift: true,
-        handler: () => applyModifierAtCursor(currentInstrument, "choke"),
-      },
-      {
-        key: "R",
-        shift: true,
-        handler: () => setStickingAtCursor(currentInstrument, "R"),
-      },
-      {
-        key: "L",
-        shift: true,
-        handler: () => setStickingAtCursor(currentInstrument, "L"),
-      },
-      // Division: Alt/Option + digit sets the current beat's lane division.
-      // Alt is chosen over Shift because Shift+1 collides with `!` (choke).
-      ...([
+    },
+    // Copy the current bar's .drumtab source to the clipboard. Different
+    // semantics from the Preview panel's ⌘C (which copies whole bars as
+    // AST); here the user gets the raw text so they can paste into the
+    // Source-mode textarea or another app.
+    {
+      key: "c",
+      meta: true,
+      description: "Copy bar source",
+      handler: () => void copyBarSourceToClipboard(),
+    },
+    {
+      key: "c",
+      ctrl: true,
+      description: "Copy bar source",
+      handler: () => void copyBarSourceToClipboard(),
+    },
+    // Toggles
+    { key: "Tab", handler: () => setAutoAdvance((v) => !v) },
+    { key: "Delete", handler: () => clearCursorSlot() },
+    { key: "Backspace", handler: () => clearCursorSlot() },
+    // Instrument digits
+    ...Object.entries(INSTRUMENT_BY_DIGIT).map(([digit, instrument]) => ({
+      key: digit,
+      handler: () => toggleAtCursor(instrument),
+    })),
+    // Articulation modifiers — apply to each present instrument's hit at
+    // this slot if any. In practice the common case is the current lane.
+    {
+      key: ">",
+      shift: true,
+      handler: () => applyModifierAtCursor(currentInstrument, "accent"),
+    },
+    {
+      key: "g",
+      handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
+    },
+    {
+      key: "(",
+      shift: true,
+      handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
+    },
+    {
+      key: "f",
+      handler: () => applyModifierAtCursor(currentInstrument, "flam"),
+    },
+    {
+      key: "r",
+      handler: () => applyModifierAtCursor(currentInstrument, "roll"),
+    },
+    {
+      key: "~",
+      shift: true,
+      handler: () => applyModifierAtCursor(currentInstrument, "roll"),
+    },
+    {
+      key: "!",
+      shift: true,
+      handler: () => applyModifierAtCursor(currentInstrument, "choke"),
+    },
+    {
+      key: "R",
+      shift: true,
+      handler: () => setStickingAtCursor(currentInstrument, "R"),
+    },
+    {
+      key: "L",
+      shift: true,
+      handler: () => setStickingAtCursor(currentInstrument, "L"),
+    },
+    // Division: Alt/Option + digit sets the current beat's lane division.
+    // Alt is chosen over Shift because Shift+1 collides with `!` (choke).
+    ...(
+      [
         ["Digit1", 1], // 1/4 (whole beat)
         ["Digit2", 2], // 1/8
         ["Digit3", 3], // triplet
         ["Digit4", 4], // 1/16
         ["Digit6", 6], // sextuplet
         ["Digit8", 8], // 1/32
-      ] as Array<[string, number]>).map(([code, d]) => ({
-        code,
-        alt: true,
-        handler: () =>
-          onSetDivision(clampedCursor.beatIndex, currentInstrument, d),
-      })),
-    ],
-    currentInstrument !== undefined,
-  );
+      ] as Array<[string, number]>
+    ).map(([code, d]) => ({
+      code,
+      alt: true,
+      handler: () =>
+        onSetDivision(clampedCursor.beatIndex, currentInstrument, d),
+    })),
+  ].map((hk) => ({ ...hk, scope: "editor" }));
+
+  useHotkeys(editorHotkeys, currentInstrument !== undefined);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-drumit-scope="editor">
       <SectionStrip
         label={sectionLabel}
         isFirstBarOfSection={isFirstBarOfSection}

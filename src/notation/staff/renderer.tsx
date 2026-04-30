@@ -36,7 +36,8 @@ interface Props {
   score: Score;
   width?: number;
   selectedBarIndex?: number | null;
-  onSelectBar?: (index: number) => void;
+  selectionEnd?: number | null;
+  onSelectBar?: (index: number, shiftKey?: boolean) => void;
   playCursor?: { barIndex: number; beatIndex: number } | null;
 }
 
@@ -47,9 +48,18 @@ export function StaffView({
   score,
   width = 980,
   selectedBarIndex = null,
+  selectionEnd = null,
   onSelectBar,
   playCursor,
 }: Props) {
+  const selectionLo =
+    selectedBarIndex === null
+      ? null
+      : Math.min(selectedBarIndex, selectionEnd ?? selectedBarIndex);
+  const selectionHi =
+    selectedBarIndex === null
+      ? null
+      : Math.max(selectedBarIndex, selectionEnd ?? selectedBarIndex);
   const actualWidth = Math.max(400, width);
   const layout = layoutStaff(score, { width: actualWidth });
   const height = layout.height;
@@ -114,7 +124,8 @@ export function StaffView({
           )}
           <SystemBars
             system={system}
-            selectedBarIndex={selectedBarIndex}
+            selectionLo={selectionLo}
+            selectionHi={selectionHi}
             onSelectBar={onSelectBar}
             playCursor={playCursor}
           />
@@ -126,13 +137,15 @@ export function StaffView({
 
 function SystemBars({
   system,
-  selectedBarIndex,
+  selectionLo,
+  selectionHi,
   onSelectBar,
   playCursor,
 }: {
   system: StaffSystem;
-  selectedBarIndex: number | null;
-  onSelectBar?: (index: number) => void;
+  selectionLo: number | null;
+  selectionHi: number | null;
+  onSelectBar?: (index: number, shiftKey?: boolean) => void;
   playCursor?: { barIndex: number; beatIndex: number } | null;
 }) {
   const staffY = system.y;
@@ -143,12 +156,21 @@ function SystemBars({
           key={bar.index}
           bar={bar}
           staffY={staffY}
-          selected={selectedBarIndex === bar.index}
+          selected={
+            selectionLo !== null &&
+            selectionHi !== null &&
+            bar.index >= selectionLo &&
+            bar.index <= selectionHi
+          }
           isPlayhead={playCursor?.barIndex === bar.index}
           playBeatIndex={
             playCursor?.barIndex === bar.index ? playCursor.beatIndex : undefined
           }
-          onSelect={onSelectBar ? () => onSelectBar(bar.index) : undefined}
+          onSelect={
+            onSelectBar
+              ? (shiftKey) => onSelectBar(bar.index, shiftKey)
+              : undefined
+          }
         />
       ))}
     </>
@@ -168,14 +190,14 @@ function BarShell({
   selected?: boolean;
   isPlayhead?: boolean;
   playBeatIndex?: number;
-  onSelect?: () => void;
+  onSelect?: (shiftKey: boolean) => void;
 }) {
   const barTop = staffY - STAFF_SPACE * 0.5;
   const barHeight = STAFF_SPACE * 5;
   const beatWidth = bar.width / bar.beats;
   return (
     <g
-      onClick={onSelect}
+      onClick={onSelect ? (e) => onSelect(e.shiftKey) : undefined}
       style={onSelect ? { cursor: "pointer" } : undefined}
       data-bar-index={bar.index}
     >

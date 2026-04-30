@@ -12,6 +12,12 @@ export interface Hotkey {
   ctrl?: boolean;
   /** Description for discoverability. */
   description?: string;
+  /**
+   * Optional DOM scope: only fire when `e.target` lies inside an element
+   * with `data-drumit-scope="<scope>"`. Leave empty to match any target
+   * (the legacy document-wide behaviour).
+   */
+  scope?: string;
   handler: (e: KeyboardEvent) => void;
 }
 
@@ -19,6 +25,9 @@ export interface Hotkey {
  * Register a list of hotkeys on the document. Skips when the event target
  * is an editable element (input / textarea / contenteditable) so typing
  * doesn't trigger hotkeys.
+ *
+ * Hotkeys can opt into a scope via `scope: "preview" | "editor" | ...`;
+ * see `Hotkey.scope` for semantics.
  */
 export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
   useEffect(() => {
@@ -34,6 +43,7 @@ export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
         if (!!hk.shift !== e.shiftKey) continue;
         if (!!hk.alt !== e.altKey) continue;
         if (!!hk.ctrl !== e.ctrlKey) continue;
+        if (hk.scope && !isWithinScope(target, hk.scope)) continue;
         e.preventDefault();
         hk.handler(e);
         break;
@@ -42,6 +52,14 @@ export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [hotkeys, enabled]);
+}
+
+function isWithinScope(
+  target: HTMLElement | null,
+  scope: string,
+): boolean {
+  if (!target) return false;
+  return target.closest(`[data-drumit-scope="${scope}"]`) !== null;
 }
 
 function isEditable(el: HTMLElement): boolean {

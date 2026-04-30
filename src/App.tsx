@@ -9,7 +9,10 @@ import { exportScoreToMidi } from "./notation/midiExport";
 import {
   cycleBarEnding,
   deleteBar,
+  deleteBars,
+  extractBars,
   insertBarAfter,
+  pasteBarsBefore,
   setBarRepeatPrevious,
   clearBar,
   renameSection,
@@ -44,7 +47,7 @@ import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
 import { StaffView } from "./notation/staff/renderer";
 import { Badge, Button, Panel, PanelHeader } from "./components/ui";
-import type { Score } from "./notation/types";
+import type { Bar, Score } from "./notation/types";
 import { cn } from "./lib/utils";
 import { useHistory } from "./lib/useHistory";
 
@@ -119,6 +122,21 @@ export default function App() {
 
   const [mode, setMode] = useState<Mode>("visual");
   const [selectedBar, setSelectedBar] = useState<number | null>(0);
+  // When non-null, forms a contiguous selection with `selectedBar` as
+  // anchor and this as the other end — Shift+Arrow grows the range,
+  // any plain arrow / click collapses it back to a single bar.
+  const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
+  /** Normalised [lo, hi] inclusive range of the current selection. */
+  const selectionRange = useMemo<[number, number] | null>(() => {
+    if (selectedBar === null) return null;
+    const end = selectionEnd ?? selectedBar;
+    return [Math.min(selectedBar, end), Math.max(selectedBar, end)];
+  }, [selectedBar, selectionEnd]);
+
+  // In-memory clipboard used as a fallback when navigator.clipboard
+  // isn't available (insecure context / permission denied) or when the
+  // user copied from Drumit and the system clipboard was mangled.
+  const barClipboardRef = useRef<Bar[] | null>(null);
   const [showLabels, setShowLabels] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => loadInitialWorkspace().sidebarCollapsed,
@@ -184,38 +202,206 @@ export default function App() {
   const [chartContainer, setChartContainer] =
     useState<HTMLDivElement | null>(null);
 
+  // ---------------------------------------------------------------
+  // Bar-level clipboard (Copy / Cut / Paste / Delete on selected bars)
+  //
+  // Two storage paths:
+  //   1. navigator.clipboard.writeText with a `drumit/bars` JSON header
+  //      so copies round-trip across tabs and other apps see it as text.
+  //   2. An in-memory ref fallback, used whenever the async clipboard
+  //      API fails (insecure context, permission denied, old browser).
+  // ---------------------------------------------------------------
+
+  const CLIPBOARD_TAG = "drumit/bars:1";
+
+  function encodeBarsForClipboard(bars: Bar[]): string {
+    return `${CLIPBOARD_TAG}\n${JSON.stringify(bars)}`;
+  }
+
+  function decodeBarsFromClipboard(text: string): Bar[] | null {
+    if (!text.startsWith(`${CLIPBOARD_TAG}\n`)) return null;
+    try {
+      const json = text.slice(CLIPBOARD_TAG.length + 1);
+      const parsed = JSON.parse(json) as Bar[];
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function writeBarsToClipboard(bars: Bar[]): Promise<void> {
+    barClipboardRef.current = bars;
+    try {
+      await navigator.clipboard?.writeText(encodeBarsForClipboard(bars));
+    } catch {
+      // In-memory only; system clipboard is unavailable.
+    }
+  }
+
+  async function readBarsFromClipboard(): Promise<Bar[] | null> {
+    try {
+      const text = await navigator.clipboard?.readText();
+      if (text) {
+        const decoded = decodeBarsFromClipboard(text);
+        if (decoded) return decoded;
+      }
+    } catch {
+      // fall through
+    }
+    return barClipboardRef.current;
+  }
+
+  function handleCopyBars() {
+    if (!selectionRange) return;
+    const bars = extractBars(score, selectionRange[0], selectionRange[1]);
+    void writeBarsToClipboard(bars);
+  }
+
+  function handleCutBars() {
+    if (!selectionRange) return;
+    const bars = extractBars(score, selectionRange[0], selectionRange[1]);
+    void writeBarsToClipboard(bars);
+    const [lo, hi] = selectionRange;
+    applyScoreUpdate((s) => deleteBars(s, lo, hi));
+    // Cursor collapses to the bar right before the removed range
+    // (or 0 if we just removed the head).
+    setSelectionEnd(null);
+    setSelectedBar(Math.max(0, lo - 1));
+  }
+
+  function handleDeleteBars() {
+    if (!selectionRange) return;
+    const [lo, hi] = selectionRange;
+    applyScoreUpdate((s) => deleteBars(s, lo, hi));
+    setSelectionEnd(null);
+    setSelectedBar(Math.max(0, lo - 1));
+  }
+
+  function handleBarClick(index: number, shiftKey?: boolean) {
+    if (shiftKey && selectedBar !== null) {
+      setSelectionEnd(index);
+    } else {
+      setSelectionEnd(null);
+      setSelectedBar(index);
+    }
+    // Park focus inside the Preview scope so scoped hotkeys fire.
+    chartContainer?.focus();
+  }
+
+  async function handlePasteBars() {
+    const bars = await readBarsFromClipboard();
+    if (!bars || bars.length === 0) return;
+    if (selectedBar === null) return;
+    const target = selectionRange ? selectionRange[0] : selectedBar;
+    applyScoreUpdate((s) => pasteBarsBefore(s, target, bars));
+    // Move the selection to the pasted span so the user can immediately
+    // see / operate on what landed.
+    setSelectionEnd(null);
+    setSelectedBar(target);
+    // End of the pasted range for visual affordance.
+    if (bars.length > 1) setSelectionEnd(target + bars.length - 1);
+  }
+
   useHotkeys([
+    // Bar clipboard. Scoped to the Preview panel so the same shortcuts
+    // do something else (copy bar source, clear slot, ...) when the
+    // Editor panel has focus.
+    { key: "c", meta: true, scope: "preview", description: "Copy bar(s)", handler: handleCopyBars },
+    { key: "c", ctrl: true, scope: "preview", description: "Copy bar(s)", handler: handleCopyBars },
+    { key: "x", meta: true, scope: "preview", description: "Cut bar(s)", handler: handleCutBars },
+    { key: "x", ctrl: true, scope: "preview", description: "Cut bar(s)", handler: handleCutBars },
+    {
+      key: "v",
+      meta: true,
+      scope: "preview",
+      description: "Paste bars before selection",
+      handler: () => void handlePasteBars(),
+    },
+    {
+      key: "v",
+      ctrl: true,
+      scope: "preview",
+      description: "Paste bars before selection",
+      handler: () => void handlePasteBars(),
+    },
+    {
+      key: "Backspace",
+      scope: "preview",
+      description: "Delete selected bar(s)",
+      handler: handleDeleteBars,
+    },
+    {
+      key: "Delete",
+      scope: "preview",
+      description: "Delete selected bar(s)",
+      handler: handleDeleteBars,
+    },
+    // Shift+Arrow extends the selection.
+    {
+      key: "ArrowLeft",
+      meta: true,
+      shift: true,
+      description: "Extend selection left",
+      handler: () => {
+        if (selectedBar === null) return;
+        setSelectionEnd((e) => {
+          const cur = e ?? selectedBar;
+          return Math.max(0, cur - 1);
+        });
+      },
+    },
+    {
+      key: "ArrowRight",
+      meta: true,
+      shift: true,
+      description: "Extend selection right",
+      handler: () => {
+        if (selectedBar === null) return;
+        setSelectionEnd((e) => {
+          const cur = e ?? selectedBar;
+          return Math.min(totalBars - 1, cur + 1);
+        });
+      },
+    },
     {
       key: "ArrowLeft",
       meta: true,
       description: "Previous bar",
-      handler: () =>
-        setSelectedBar((i) => (i === null ? 0 : Math.max(0, i - 1))),
+      handler: () => {
+        setSelectionEnd(null);
+        setSelectedBar((i) => (i === null ? 0 : Math.max(0, i - 1)));
+      },
     },
     {
       key: "ArrowRight",
       meta: true,
       description: "Next bar",
-      handler: () =>
+      handler: () => {
+        setSelectionEnd(null);
         setSelectedBar((i) =>
           i === null ? 0 : Math.min(totalBars - 1, i + 1),
-        ),
+        );
+      },
     },
     {
       key: "ArrowLeft",
       ctrl: true,
       description: "Previous bar",
-      handler: () =>
-        setSelectedBar((i) => (i === null ? 0 : Math.max(0, i - 1))),
+      handler: () => {
+        setSelectionEnd(null);
+        setSelectedBar((i) => (i === null ? 0 : Math.max(0, i - 1)));
+      },
     },
     {
       key: "ArrowRight",
       ctrl: true,
       description: "Next bar",
-      handler: () =>
+      handler: () => {
+        setSelectionEnd(null);
         setSelectedBar((i) =>
           i === null ? 0 : Math.min(totalBars - 1, i + 1),
-        ),
+        );
+      },
     },
     // Undo / Redo. Cmd+Z / Ctrl+Z for undo; Shift variants for redo.
     {
@@ -771,7 +957,9 @@ export default function App() {
           </PanelHeader>
           <div
             ref={setChartContainer}
-            className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-2 sm:p-4"
+            data-drumit-scope="preview"
+            tabIndex={0}
+            className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-2 outline-none focus:ring-2 focus:ring-amber-300/60 focus:ring-inset sm:p-4"
           >
             {hasErrors ? (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
@@ -781,7 +969,8 @@ export default function App() {
               <StaffView
                 score={score}
                 selectedBarIndex={clampedSelectedBar}
-                onSelectBar={(idx) => setSelectedBar(idx)}
+                selectionEnd={selectionEnd}
+                onSelectBar={handleBarClick}
                 playCursor={playCursor}
               />
             ) : (
@@ -789,7 +978,8 @@ export default function App() {
                 layout={layout}
                 showLabels={showLabels}
                 selectedBarIndex={clampedSelectedBar}
-                onSelectBar={(idx) => setSelectedBar(idx)}
+                selectionEnd={selectionEnd}
+                onSelectBar={handleBarClick}
                 playCursor={playCursor}
               />
             )}
