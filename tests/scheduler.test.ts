@@ -154,6 +154,21 @@ describe("articulation expansion", () => {
     expect(ghost.velocity).toBeLessThan(plain.velocity);
     expect(accent.velocity).toBeGreaterThan(plain.velocity);
   });
+
+  it("schedules dotted eighth + 16th at 3:1 timing", () => {
+    // 60 bpm, 4/4 → 1s/beat. Beat 0: `o. -` = dotted 8th (0.75s) + 16th (0.25s).
+    // With no hit on the 16th rest, we only get bd at t=0, then next bar
+    // lanes; but we can check the timing via a two-hit test.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o. o / - / - / - |`,
+    );
+    const { events } = schedule(score);
+    const bd = events.filter((e) => e.hit.instrument === "kick");
+    expect(bd).toHaveLength(2);
+    expect(bd[0].time).toBeCloseTo(0, 3);
+    // Second hit starts after a dotted 8th (0.75s) at 60bpm 4/4.
+    expect(bd[1].time).toBeCloseTo(0.75, 3);
+  });
 });
 
 describe("GM drum map", () => {

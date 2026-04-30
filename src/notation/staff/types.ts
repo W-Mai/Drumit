@@ -46,6 +46,8 @@ export interface StaffNote {
   tuplet?: number;
   articulations: StaffArticulation[];
   sticking?: "R" | "L";
+  /** Number of augmentation dots (1 or 2). */
+  dots?: number;
 }
 
 export interface StaffRest {

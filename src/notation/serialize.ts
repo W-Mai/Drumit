@@ -121,6 +121,28 @@ function serializeBeatLane(
   if (!lane) return "-";
 
   if (lane.groups && lane.groups.length > 1) {
+    // Dot-expanded lanes (every sub-group has division=1 + single slot,
+    // and ratios are *not* equal) round-trip back to a flat slot list
+    // so `o. -` / `o.. -` survive. Equal-ratio single-slot groups come
+    // from the explicit `,` split API and stay grouped.
+    const allSingle = lane.groups.every(
+      (g) => g.division === 1 && g.slots.length === 1,
+    );
+    const equalRatios =
+      allSingle &&
+      lane.groups.every(
+        (g) =>
+          Math.abs(g.ratio - 1 / lane.groups!.length) < 1e-6,
+      );
+    if (allSingle && !equalRatios) {
+      const flat = lane.groups.flatMap((g) => g.slots);
+      return serializeGroup({
+        ratio: 1,
+        division: flat.length,
+        tuplet: undefined,
+        slots: flat,
+      });
+    }
     return lane.groups.map(serializeGroup).join(" , ");
   }
   return serializeGroup({
@@ -152,6 +174,7 @@ function slotToken(hit: Hit | null): string {
     else if (art === "ghost") base = `(${base})`;
     else if (art === "choke") base += "!";
   }
+  if (hit.dots && hit.dots > 0) base += ".".repeat(Math.min(2, hit.dots));
   if (hit.sticking) base += "/" + hit.sticking;
   return base;
 }

@@ -269,6 +269,7 @@ function collectVoice(
       const glyphs: StaffGlyph[] = [];
       const artSet = new Set<StaffArticulation>();
       let sticking: "R" | "L" | undefined;
+      let dots = 0;
       for (let i = 0; i < r.hits.length; i += 1) {
         const m = r.mappings[i];
         glyphs.push({ step: m.step, head: m.head });
@@ -284,11 +285,8 @@ function collectVoice(
           }
         }
         if (r.hits[i].sticking && !sticking) sticking = r.hits[i].sticking;
+        if (r.hits[i].dots && r.hits[i].dots! > dots) dots = r.hits[i].dots!;
       }
-      // Per-note duration: use the longest effective division across the
-      // chord's voices at this tick (so a 16th + 8th chord would record
-      // as "8"; in practice chords at the same tick come from the same
-      // group so they share a division).
       const noteDiv = r.hitDivisions.reduce((a, b) => Math.min(a, b), Infinity);
       notes.push({
         x: beatStartX + (r.tick / finest) * beatWidth,
@@ -297,6 +295,7 @@ function collectVoice(
         articulations: [...artSet],
         sticking,
         tuplet: r.tuplet,
+        ...(dots > 0 ? { dots } : {}),
       });
       noteBeatIndex.push(beatIndex);
       noteFinest.push(finest);

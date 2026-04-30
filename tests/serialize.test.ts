@@ -148,6 +148,22 @@ meter: 4/4
     expect(bd0?.slots[0]).toBeNull();
   });
 
+  it("round-trips dotted slots through o. / o..", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o. - / o.. - / o / o |`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    // Flat 2-slot packed form → "o.-" / "o..-" (no inner spaces,
+    // since division <= 4 and no tuplet).
+    expect(out).toMatch(/o\.-/);
+    expect(out).toMatch(/o\.\.-/);
+    const { score: s2, diagnostics } = parseDrumtab(out);
+    expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
+    const lane = s2.sections[0].bars[0].beats[0].lanes[0];
+    expect(lane.groups?.[0].slots[0]?.dots).toBe(1);
+    const lane2 = s2.sections[0].bars[0].beats[1].lanes[0];
+    expect(lane2.groups?.[0].slots[0]?.dots).toBe(2);
+  });
+
   it("serializer handles split with >2 groups", () => {
     // Build via edit API since there's no shorthand for 3+ groups
     const { score } = parseDrumtab(

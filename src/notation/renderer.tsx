@@ -686,6 +686,19 @@ function HitGlyph({ laid }: { laid: LaidOutHit }) {
 
       <HitHead hit={hit} x={x} y={y} size={size} />
 
+      {/* Augmentation dots to the right of the head. */}
+      {hit.dots && hit.dots > 0
+        ? Array.from({ length: Math.min(2, hit.dots) }).map((_, i) => (
+            <circle
+              key={`aug-${i}`}
+              cx={x + size + 3 + i * 4}
+              cy={y}
+              r={1.6}
+              className="fill-stone-900"
+            />
+          ))
+        : null}
+
       {/* Accent: wedge `>` above the head. */}
       {isAccent ? (
         <path

@@ -467,6 +467,17 @@ function NoteMarker({
             shape={g.head}
             open={open}
           />
+          {note.dots && i === 0
+            ? Array.from({ length: Math.min(2, note.dots) }).map((_, di) => (
+                <circle
+                  key={`aug-${di}`}
+                  cx={note.x + STAFF_SPACE * 0.9 + di * STAFF_SPACE * 0.4}
+                  cy={staffY + stepToY(g.step)}
+                  r={STAFF_SPACE * 0.18}
+                  className="fill-stone-900"
+                />
+              ))
+            : null}
         </g>
       ))}
       {!stemless ? (

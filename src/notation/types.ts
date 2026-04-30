@@ -36,6 +36,8 @@ export interface Hit {
   head: Head;
   articulations: Articulation[];
   sticking?: "R" | "L";
+  /** 1 = dotted, 2 = double-dotted. Absent / 0 means no augmentation dot. */
+  dots?: number;
 }
 
 export interface Slot {

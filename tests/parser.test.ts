@@ -390,4 +390,38 @@ describe("parseDrumtab", () => {
     );
     expect(score.sections[0].bars[0].beats).toHaveLength(2);
   });
+
+  it("parses a dotted eighth + 16th as a 3:1 group pair", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o. - / o. - / o. - / o. - |`,
+    );
+    const beat = score.sections[0].bars[0].beats[0];
+    const lane = beat.lanes[0];
+    expect(lane.groups).toBeDefined();
+    expect(lane.groups).toHaveLength(2);
+    expect(lane.groups![0].ratio).toBeCloseTo(3 / 4);
+    expect(lane.groups![1].ratio).toBeCloseTo(1 / 4);
+    expect(lane.groups![0].slots[0]?.dots).toBe(1);
+  });
+
+  it("parses double-dotted slots", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o.. - / - / - / - |`,
+    );
+    const beat = score.sections[0].bars[0].beats[0];
+    const lane = beat.lanes[0];
+    expect(lane.groups).toBeDefined();
+    expect(lane.groups![0].ratio).toBeCloseTo(7 / 8);
+    expect(lane.groups![1].ratio).toBeCloseTo(1 / 8);
+    expect(lane.groups![0].slots[0]?.dots).toBe(2);
+  });
+
+  it("keeps non-dotted beats flat (no groups)", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oo / - / - / - |`,
+    );
+    const beat = score.sections[0].bars[0].beats[0];
+    expect(beat.lanes[0].groups).toBeUndefined();
+    expect(beat.lanes[0].division).toBe(2);
+  });
 });

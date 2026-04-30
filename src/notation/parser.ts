@@ -10,6 +10,7 @@ import type {
   Hit,
   Instrument,
   LaneBeat,
+  LaneGroup,
   ParseResult,
   Score,
   Section,
@@ -305,6 +306,17 @@ function buildBeat(
       );
       const division = slots.length;
       const autoTuplet = detectTuplet(division, explicitTuplet);
+      const dottedGroups = maybeExpandDotted(slots);
+      if (dottedGroups) {
+        laneBeats.push({
+          instrument: lane.instrument,
+          division: dottedGroups[0].division,
+          tuplet: dottedGroups[0].tuplet,
+          slots: dottedGroups[0].slots,
+          groups: dottedGroups,
+        });
+        return;
+      }
       laneBeats.push({
         instrument: lane.instrument,
         division,
@@ -314,24 +326,31 @@ function buildBeat(
       return;
     }
 
-    // Multiple groups → emit a lane with groups[] (equal ratio per group).
-    const ratio = 1 / groupBodies.length;
+    // Multiple groups → emit a lane with groups[] (equal ratio per outer group).
+    const outerRatio = 1 / groupBodies.length;
     const groups = groupBodies
-      .map((body) => {
+      .flatMap((body) => {
         const { tuplet: explicitTuplet, body: inner } = extractTuplet(body);
         if (explicitTuplet) beatTuplets.add(explicitTuplet);
         const tokens = tokenizeBeat(inner);
-        if (tokens.length === 0) return null;
+        if (tokens.length === 0) return [];
         const slots = tokens.map((token) =>
           parseToken(token, lane.instrument, lineNumber, diagnostics),
         );
         const division = slots.length;
-        return {
-          ratio,
-          division,
-          tuplet: detectTuplet(division, explicitTuplet),
-          slots,
-        };
+        const expanded = maybeExpandDotted(slots);
+        if (expanded) {
+          // scale each sub-group's ratio by the outer ratio
+          return expanded.map((g) => ({ ...g, ratio: g.ratio * outerRatio }));
+        }
+        return [
+          {
+            ratio: outerRatio,
+            division,
+            tuplet: detectTuplet(division, explicitTuplet),
+            slots,
+          },
+        ];
       })
       .filter((g): g is NonNullable<typeof g> => g !== null);
 
@@ -392,22 +411,82 @@ function extractTuplet(raw: string): { tuplet?: number; body: string } {
   return { tuplet: n, body: match[2] };
 }
 
+/**
+ * Convert a flat slot list with dotted hits into one sub-group per
+ * slot. A dotted slot "borrows" time from the slot immediately after
+ * it: 1 dot = +1/2 of next slot's own time, 2 dots = +1/2 + 1/4 = 3/4.
+ * So `o. -` splits a beat 3:1; `o.. -` splits 7:1. Returns null when
+ * no dots exist so the caller keeps the flat shape.
+ */
+function maybeExpandDotted(
+  slots: Array<Hit | null>,
+): LaneGroup[] | null {
+  const dots = slots.map((s) => s?.dots ?? 0);
+  if (dots.every((d) => d === 0)) return null;
+  const N = slots.length;
+  // Start with each slot claiming an equal 1/N share of the beat.
+  const share = new Array<number>(N).fill(1 / N);
+  for (let i = 0; i < N; i += 1) {
+    const d = dots[i];
+    if (d === 0 || i + 1 >= N) continue;
+    // 1 dot → take half of next; 2 dots → take 3/4 of next.
+    const take = d === 1 ? share[i + 1] / 2 : (share[i + 1] * 3) / 4;
+    share[i] += take;
+    share[i + 1] -= take;
+  }
+  return slots.map((slot, idx) => ({
+    ratio: share[idx],
+    division: 1,
+    slots: [slot],
+  }));
+}
+
 function tokenizeBeat(raw: string): string[] {
   if (!raw) return [];
+  const attachDots = (tokens: string[]): string[] => {
+    // Move `.` / `..` that immediately follow a hit token onto that token
+    // (it's an augmentation dot, not a standalone slot).
+    const out: string[] = [];
+    for (const t of tokens) {
+      if ((t === "." || t === "..") && out.length > 0) {
+        const last = out[out.length - 1];
+        if (last !== "-" && !/\.$/.test(last)) {
+          out[out.length - 1] = last + t;
+          continue;
+        }
+      }
+      out.push(t);
+    }
+    return out;
+  };
+
   // Whitespace-separated form is the simplest: one token per chunk.
   if (/\s/.test(raw.trim())) {
-    return raw.trim().split(/\s+/);
+    return attachDots(raw.trim().split(/\s+/));
   }
-  // Packed form: each token is `[modifiers] head [suffix]` where
+  // Packed form: each token is `[modifiers] head [dots] [suffix]` where
   //   modifiers ∈ { >, ~, f } (may stack)
   //   head ∈ { o, x } or a parenthesized ghost `(...)`
+  //   dots ∈ { ., .. }
   //   suffix ∈ { ! (choke), /R, /L (sticking) }
   const tokens: string[] = [];
   let i = 0;
   while (i < raw.length) {
     const c = raw[i];
-    if (c === "-" || c === ".") {
+    if (c === "-") {
       tokens.push(c);
+      i += 1;
+      continue;
+    }
+    if (c === ".") {
+      // Attach to previous hit token when possible; otherwise treat as
+      // a rest (legacy).
+      const last = tokens[tokens.length - 1];
+      if (last && last !== "-" && !/\.$/.test(last)) {
+        tokens[tokens.length - 1] = last + ".";
+      } else {
+        tokens.push(".");
+      }
       i += 1;
       continue;
     }
@@ -424,6 +503,12 @@ function tokenizeBeat(raw: string): string[] {
       j = close + 1;
     } else if (j < raw.length) {
       j += 1;
+    }
+    // Augmentation dots (up to 2).
+    let dotCount = 0;
+    while (j < raw.length && raw[j] === "." && dotCount < 2) {
+      j += 1;
+      dotCount += 1;
     }
     // Suffix: choke `!`
     if (raw[j] === "!") j += 1;
@@ -450,6 +535,12 @@ function parseToken(
   if (stickingMatch) {
     sticking = stickingMatch[1].toUpperCase() as "R" | "L";
     value = value.slice(0, -2);
+  }
+
+  let dots = 0;
+  while (value.endsWith(".") && dots < 2) {
+    dots += 1;
+    value = value.slice(0, -1);
   }
 
   while (/^[>~f]/i.test(value)) {
@@ -482,6 +573,7 @@ function parseToken(
       head: defaultHeadFor(instrument),
       articulations,
       sticking: value.toUpperCase() as "R" | "L",
+      ...(dots > 0 ? { dots } : {}),
     };
   }
 
@@ -490,6 +582,7 @@ function parseToken(
     head: defaultHeadFor(instrument),
     articulations,
     sticking,
+    ...(dots > 0 ? { dots } : {}),
   };
 }
 
