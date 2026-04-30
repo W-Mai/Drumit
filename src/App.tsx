@@ -3,6 +3,7 @@ import { defaultSample, samples } from "./notation/samples";
 import { parseDrumtab } from "./notation/parser";
 import { serializeScore } from "./notation/serialize";
 import { layoutScore } from "./notation/layout";
+import { expandScore } from "./notation/expand";
 import { DrumChart } from "./notation/renderer";
 import { validateScore } from "./notation/validate";
 import { exportScoreToMidi } from "./notation/midiExport";
@@ -197,6 +198,7 @@ export default function App() {
     beatIndex: number;
   } | null>(null);
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
+  const [expandedPreview, setExpandedPreview] = useState(false);
 
   const [chartContainer, setChartContainer] =
     useState<HTMLDivElement | null>(null);
@@ -445,14 +447,19 @@ export default function App() {
     },
   ]);
 
+  const displayScore = useMemo(
+    () => (expandedPreview ? expandScore(score) : score),
+    [score, expandedPreview],
+  );
+
   const layout = useMemo(
     () =>
-      layoutScore(score, {
+      layoutScore(displayScore, {
         showLabels,
         expanded: false,
         width: 980,
       }),
-    [score, showLabels],
+    [displayScore, showLabels],
   );
 
   const selectedBarData = useMemo(() => {
@@ -952,6 +959,20 @@ export default function App() {
             }
           >
             <Button
+              variant={expandedPreview ? "primary" : "secondary"}
+              onClick={() => setExpandedPreview((v) => !v)}
+              title={
+                expandedPreview
+                  ? "Show compact view (repeat marks, endings, D.C./D.S.)"
+                  : "Show expanded linear view (repeats unrolled)"
+              }
+            >
+              <span className="sm:hidden">{expandedPreview ? "⇉" : "⇆"}</span>
+              <span className="hidden sm:inline">
+                {expandedPreview ? "Compact" : "Expand"}
+              </span>
+            </Button>
+            <Button
               variant={showLabels ? "primary" : "secondary"}
               onClick={() => setShowLabels((v) => !v)}
               title={showLabels ? "隐藏乐器名" : "显示乐器名"}
@@ -981,21 +1002,21 @@ export default function App() {
               </div>
             ) : viewMode === "staff" ? (
               <StaffView
-                score={score}
-                selectedBarIndex={clampedSelectedBar}
-                selectionEnd={selectionEnd}
-                onSelectBar={handleBarClick}
-                playCursor={playCursor}
+                score={displayScore}
+                selectedBarIndex={expandedPreview ? null : clampedSelectedBar}
+                selectionEnd={expandedPreview ? null : selectionEnd}
+                onSelectBar={expandedPreview ? undefined : handleBarClick}
+                playCursor={expandedPreview ? null : playCursor}
                 playheadEngine={engineKind}
               />
             ) : (
               <DrumChart
                 layout={layout}
                 showLabels={showLabels}
-                selectedBarIndex={clampedSelectedBar}
-                selectionEnd={selectionEnd}
-                onSelectBar={handleBarClick}
-                playCursor={playCursor}
+                selectedBarIndex={expandedPreview ? null : clampedSelectedBar}
+                selectionEnd={expandedPreview ? null : selectionEnd}
+                onSelectBar={expandedPreview ? undefined : handleBarClick}
+                playCursor={expandedPreview ? null : playCursor}
                 playheadEngine={engineKind}
               />
             )}
