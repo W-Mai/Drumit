@@ -11,6 +11,8 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.04.30.2]
+
 ### Added
 
 - **Perform view** — a fullscreen teleprompter-style rehearsal mode,
@@ -22,8 +24,17 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
   to seek to that spot. A compressed mini-map at the top shows the
   whole timeline at a glance with a viewport rectangle, plus chips
   for every bar (section labels, `×pass/total` badges, `▾` pass
-  pickers for repeated bars). On mobile the view requests fullscreen
-  and (where the browser allows) locks landscape orientation.
+  pickers for repeated bars). The chart auto-scales to fill the stage
+  while keeping at least 4 bars visible at once. On touch devices in
+  portrait the whole panel CSS-rotates 90° so users with auto-rotate
+  disabled still land in landscape; on Android Chrome it also
+  requests the native orientation lock.
+
+### Fixed
+
+- Seeking from a stopped transport (e.g. tapping a Perform-view
+  chip before hitting play) now pushes the cursor to the picked
+  position immediately instead of waiting for the next play().
 
 ## [2026.04.30.1]
 
