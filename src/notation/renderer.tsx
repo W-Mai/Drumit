@@ -28,6 +28,24 @@ function navigationLabel(nav: import("./types").NavigationMarker): string {
   }
 }
 
+const PLAYHEAD_PALETTE: Record<
+  "synth" | "sample" | "midi",
+  { bar: string; beat: string }
+> = {
+  synth: {
+    bar: "fill-emerald-100/70 stroke-emerald-500",
+    beat: "fill-emerald-300/40",
+  },
+  sample: {
+    bar: "fill-sky-100/70 stroke-sky-500",
+    beat: "fill-sky-300/40",
+  },
+  midi: {
+    bar: "fill-rose-100/70 stroke-rose-500",
+    beat: "fill-rose-300/40",
+  },
+};
+
 function rowGroupLabel(g: RowGroup): string {
   switch (g) {
     case "cymbals":
@@ -45,13 +63,10 @@ interface Props {
   layout: LaidOutLayout;
   showLabels: boolean;
   selectedBarIndex?: number | null;
-  /** Optional extension of the selection: when present, every bar whose
-   *  global index falls within [min(anchor,end), max(anchor,end)] is
-   *  treated as selected. */
   selectionEnd?: number | null;
   onSelectBar?: (index: number, shiftKey?: boolean) => void;
-  /** Current playhead position — highlights the active bar (and beat within it). */
   playCursor?: { barIndex: number; beatIndex: number } | null;
+  playheadEngine?: "synth" | "sample" | "midi";
 }
 
 export function DrumChart({
@@ -61,6 +76,7 @@ export function DrumChart({
   selectionEnd,
   onSelectBar,
   playCursor,
+  playheadEngine = "synth",
 }: Props) {
   const selectionLo =
     selectedBarIndex === null || selectedBarIndex === undefined
@@ -161,6 +177,7 @@ export function DrumChart({
               }
               isPlayhead={isPlayhead}
               playBeatIndex={isPlayhead ? playCursor?.beatIndex : undefined}
+              playheadEngine={playheadEngine}
               onSelect={
                 onSelectBar
                   ? (shiftKey) => onSelectBar(globalIdx, shiftKey)
@@ -181,16 +198,16 @@ function BarView({
   selected,
   isPlayhead,
   playBeatIndex,
+  playheadEngine = "synth",
   onSelect,
 }: {
   bar: LaidOutBar;
   showLabels: boolean;
-  /** True for the leftmost bar of a chart row — only this bar prints the
-   *  instrument-group labels on the left margin. */
   isRowStart?: boolean;
   selected?: boolean;
   isPlayhead?: boolean;
   playBeatIndex?: number;
+  playheadEngine?: "synth" | "sample" | "midi";
   onSelect?: (shiftKey: boolean) => void;
 }) {
   const { x, y, width, height, rowGroups, rowY, beats } = bar;
@@ -198,6 +215,7 @@ function BarView({
   const lastRowY = rowY[rowGroups[rowGroups.length - 1]] ?? firstRowY;
   const barlineTop = firstRowY - 12;
   const barlineBottom = lastRowY + 24;
+  const playhead = PLAYHEAD_PALETTE[playheadEngine];
 
   return (
     <g
@@ -205,7 +223,6 @@ function BarView({
       style={onSelect ? { cursor: "pointer" } : undefined}
       data-bar-index={bar.index - 1}
     >
-      {/* Click target + selection highlight */}
       <rect
         x={x - 8}
         y={y + 2}
@@ -214,7 +231,7 @@ function BarView({
         rx={8}
         className={
           isPlayhead
-            ? "fill-emerald-100/70 stroke-emerald-500"
+            ? `${playhead.bar}`
             : selected
               ? "fill-amber-200/60 stroke-amber-500"
               : "fill-transparent stroke-transparent hover:fill-stone-200/40"
@@ -223,14 +240,13 @@ function BarView({
         data-bar-highlight="true"
       />
 
-      {/* Current-beat vertical playhead line (only when this bar is the playhead). */}
       {isPlayhead && typeof playBeatIndex === "number" && beats[playBeatIndex] ? (
         <rect
           x={beats[playBeatIndex].x - 1}
           y={barlineTop}
           width={beats[playBeatIndex].width + 2}
           height={barlineBottom - barlineTop}
-          className="fill-emerald-300/40"
+          className={playhead.beat}
         />
       ) : null}
 

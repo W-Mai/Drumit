@@ -11,16 +11,23 @@ import { SampleEngine } from "../playback/sampleEngine";
 import { useHotkeys } from "../lib/useHotkeys";
 import { Badge, Button, Field, Select, TextInput } from "./ui";
 
-type EngineKind = "synth" | "sample" | "midi";
+export type EngineKind = "synth" | "sample" | "midi";
 
 interface Props {
   score: Score;
   startBar?: number;
   onCursor?: (pos: { barIndex: number; beatIndex: number }) => void;
   onStop?: () => void;
+  onEngineChange?: (kind: EngineKind) => void;
 }
 
-export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
+export function PlaybackBar({
+  score,
+  startBar,
+  onCursor,
+  onStop,
+  onEngineChange,
+}: Props) {
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [tempoOverride, setTempoOverride] = useState<number>(0);
   const [metronome, setMetronome] = useState(false);
@@ -97,10 +104,11 @@ export function PlaybackBar({ score, startBar, onCursor, onStop }: Props) {
       next = new SynthEngine();
     }
     controller.setEngine(next);
+    onEngineChange?.(engineKind);
     return () => {
       cancelled = true;
     };
-  }, [engineKind, controller]);
+  }, [engineKind, controller, onEngineChange]);
 
   // Apply MIDI port selection whenever it changes (on the current engine).
   useEffect(() => {

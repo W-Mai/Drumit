@@ -65,8 +65,17 @@ const TRANSIENT_FILL_CLASSES = [
   "fill-amber-200/60",
   "fill-emerald-100/70",
   "fill-emerald-300/40",
+  "fill-sky-100/70",
+  "fill-sky-300/40",
+  "fill-rose-100/70",
+  "fill-rose-300/40",
 ];
-const TRANSIENT_STROKE_CLASSES = ["stroke-amber-500", "stroke-emerald-500"];
+const TRANSIENT_STROKE_CLASSES = [
+  "stroke-amber-500",
+  "stroke-emerald-500",
+  "stroke-sky-500",
+  "stroke-rose-500",
+];
 const TRANSIENT_FILL_RE = new RegExp(
   "\\b(?:" +
     TRANSIENT_FILL_CLASSES.map((c) =>

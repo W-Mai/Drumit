@@ -29,7 +29,7 @@ import {
   toggleSlot,
 } from "./notation/edit";
 import { PadEditor } from "./components/PadEditor";
-import { PlaybackBar } from "./components/PlaybackBar";
+import { PlaybackBar, type EngineKind } from "./components/PlaybackBar";
 import { useHotkeys } from "./lib/useHotkeys";
 import {
   clearWorkspace,
@@ -196,11 +196,24 @@ export default function App() {
     barIndex: number;
     beatIndex: number;
   } | null>(null);
+  const [engineKind, setEngineKind] = useState<EngineKind>("synth");
 
-  // Ref-as-state so Export actions can reach the currently rendered
-  // SVG without re-rendering through `react-dom/server`.
   const [chartContainer, setChartContainer] =
     useState<HTMLDivElement | null>(null);
+
+  const lastScrolledBar = useRef<number | null>(null);
+  useEffect(() => {
+    if (!chartContainer || !playCursor) {
+      lastScrolledBar.current = null;
+      return;
+    }
+    if (playCursor.barIndex === lastScrolledBar.current) return;
+    lastScrolledBar.current = playCursor.barIndex;
+    const el = chartContainer.querySelector<SVGGElement>(
+      `[data-bar-index="${playCursor.barIndex}"]`,
+    );
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [chartContainer, playCursor]);
 
   // ---------------------------------------------------------------
   // Bar-level clipboard (Copy / Cut / Paste / Delete on selected bars)
@@ -926,6 +939,7 @@ export default function App() {
             setPlayCursor({ barIndex: p.barIndex, beatIndex: p.beatIndex })
           }
           onStop={() => setPlayCursor(null)}
+          onEngineChange={setEngineKind}
         />
 
         <Panel className="flex min-h-0 flex-[55_55_0%] flex-col">
@@ -972,6 +986,7 @@ export default function App() {
                 selectionEnd={selectionEnd}
                 onSelectBar={handleBarClick}
                 playCursor={playCursor}
+                playheadEngine={engineKind}
               />
             ) : (
               <DrumChart
@@ -981,6 +996,7 @@ export default function App() {
                 selectionEnd={selectionEnd}
                 onSelectBar={handleBarClick}
                 playCursor={playCursor}
+                playheadEngine={engineKind}
               />
             )}
           </div>

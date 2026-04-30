@@ -32,6 +32,8 @@ import type {
   StaffVoice,
 } from "./types";
 
+type PlayheadEngine = "synth" | "sample" | "midi";
+
 interface Props {
   score: Score;
   width?: number;
@@ -39,7 +41,24 @@ interface Props {
   selectionEnd?: number | null;
   onSelectBar?: (index: number, shiftKey?: boolean) => void;
   playCursor?: { barIndex: number; beatIndex: number } | null;
+  playheadEngine?: PlayheadEngine;
 }
+
+const PLAYHEAD_PALETTE: Record<PlayheadEngine, { bar: string; beat: string }> =
+  {
+    synth: {
+      bar: "fill-emerald-100/70 stroke-emerald-500",
+      beat: "fill-emerald-300/40",
+    },
+    sample: {
+      bar: "fill-sky-100/70 stroke-sky-500",
+      beat: "fill-sky-300/40",
+    },
+    midi: {
+      bar: "fill-rose-100/70 stroke-rose-500",
+      beat: "fill-rose-300/40",
+    },
+  };
 
 const SYSTEM_PAD_X = 20;
 const LEDGER_WIDTH = STAFF_SPACE * 0.8;
@@ -51,6 +70,7 @@ export function StaffView({
   selectionEnd = null,
   onSelectBar,
   playCursor,
+  playheadEngine = "synth",
 }: Props) {
   const selectionLo =
     selectedBarIndex === null
@@ -128,6 +148,7 @@ export function StaffView({
             selectionHi={selectionHi}
             onSelectBar={onSelectBar}
             playCursor={playCursor}
+            playheadEngine={playheadEngine}
           />
         </g>
       ))}
@@ -141,12 +162,14 @@ function SystemBars({
   selectionHi,
   onSelectBar,
   playCursor,
+  playheadEngine,
 }: {
   system: StaffSystem;
   selectionLo: number | null;
   selectionHi: number | null;
   onSelectBar?: (index: number, shiftKey?: boolean) => void;
   playCursor?: { barIndex: number; beatIndex: number } | null;
+  playheadEngine: PlayheadEngine;
 }) {
   const staffY = system.y;
   return (
@@ -166,6 +189,7 @@ function SystemBars({
           playBeatIndex={
             playCursor?.barIndex === bar.index ? playCursor.beatIndex : undefined
           }
+          playheadEngine={playheadEngine}
           onSelect={
             onSelectBar
               ? (shiftKey) => onSelectBar(bar.index, shiftKey)
@@ -183,6 +207,7 @@ function BarShell({
   selected,
   isPlayhead,
   playBeatIndex,
+  playheadEngine,
   onSelect,
 }: {
   bar: StaffBar;
@@ -190,11 +215,13 @@ function BarShell({
   selected?: boolean;
   isPlayhead?: boolean;
   playBeatIndex?: number;
+  playheadEngine: PlayheadEngine;
   onSelect?: (shiftKey: boolean) => void;
 }) {
   const barTop = staffY - STAFF_SPACE * 0.5;
   const barHeight = STAFF_SPACE * 5;
   const beatWidth = bar.width / bar.beats;
+  const playhead = PLAYHEAD_PALETTE[playheadEngine];
   return (
     <g
       onClick={onSelect ? (e) => onSelect(e.shiftKey) : undefined}
@@ -210,7 +237,7 @@ function BarShell({
         data-bar-highlight="true"
         className={
           isPlayhead
-            ? "fill-emerald-100/70 stroke-emerald-500"
+            ? playhead.bar
             : selected
               ? "fill-amber-200/60 stroke-amber-500"
               : "fill-transparent stroke-transparent hover:fill-stone-200/40"
@@ -223,7 +250,7 @@ function BarShell({
           y={barTop}
           width={beatWidth}
           height={barHeight}
-          className="fill-emerald-300/40"
+          className={playhead.beat}
         />
       ) : null}
       {Array.from({ length: bar.beats }, (_, i) => (
