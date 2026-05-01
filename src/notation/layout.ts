@@ -721,27 +721,28 @@ function beamDepthForGroup(group: {
   tuplet?: number;
   ratio: number;
 }): number {
-  // Effective subdivision across a full beat: a half-beat group with
-  // division=1 behaves like an 8th note (effective = 2).
-  const durationScale = group.ratio > 0 ? 1 / group.ratio : 1;
-  const effective = group.division * durationScale;
+  // Each slot in this group lasts `slotDur` beats. We pick the beam
+  // depth from the slot's own duration family so dotted values pick
+  // up the same beaming as their base (0.75 beat = dotted 8th = 1 beam).
+  const slotDur = (group.ratio || 1) / Math.max(1, group.division);
 
   if (group.tuplet) {
-    // A triplet lives under one beam when it spans a quarter-note (effective
-    // subdivision ~3), adds another beam when compressed to a half-beat
-    // (effective ~6 → 16th triplet), and so on.
     const base =
       group.tuplet === 6 || group.tuplet === 5 || group.tuplet === 7 ? 2 : 1;
-    // Each doubling of effective subdivision over the "normal" range adds a
-    // beam. Normal span for a 3-tuplet is effective≈3, for 6-tuplet ≈6.
-    const normal = group.tuplet === 6 ? 6 : 3;
-    if (effective >= normal * 4) return base + 2;
-    if (effective >= normal * 2) return base + 1;
+    // Triplet / tuplet families: quarter-triplet = 1 beam, 8th-triplet
+    // = 1 beam, 16th-triplet = 2 beams, …
+    if (slotDur <= 1 / 12) return base + 1;
+    if (slotDur <= 1 / 24) return base + 2;
     return base;
   }
 
-  if (effective >= 8) return 3; // 32nds
-  if (effective >= 4) return 2; // 16ths
-  if (effective >= 2) return 1; // 8ths
-  return 0; // quarter or longer: no beam
+  // Map slot duration to beam count by its base power-of-two family,
+  // letting dotted values land with their base (dotted 8th → 8th → 1 beam).
+  // Each band is [base, base × 1.5]: 8th [0.5, 0.75], 16th [0.25, 0.375], …
+  const eps = 1e-6;
+  if (slotDur >= 1 - eps) return 0;
+  if (slotDur >= 0.5 - eps) return 1; // 8th family (incl. dotted 8th)
+  if (slotDur >= 0.25 - eps) return 2; // 16th family
+  if (slotDur >= 0.125 - eps) return 3; // 32nd family
+  return 4; // 64th or shorter
 }
