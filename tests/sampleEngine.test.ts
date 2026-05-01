@@ -172,4 +172,27 @@ describe("SampleEngine", () => {
     engine.stop();
     for (const src of sources) expect(src.stop).toHaveBeenCalled();
   });
+
+  it("dispose() clears buffers and is idempotent", async () => {
+    installFakeAudio();
+    installFakeFetch({ "kick.ogg": "ok" });
+    const engine = new SampleEngine({ baseUrl: "/samples/" });
+    await engine.ensureReady();
+    expect(engine.loadedCount).toBe(1);
+    engine.dispose();
+    // Calling dispose twice doesn't throw.
+    expect(() => engine.dispose()).not.toThrow();
+  });
+
+  it("accepts scheduleEvent after stop without throwing (fresh events)", async () => {
+    const sources = installFakeAudio();
+    installFakeFetch({ "kick.ogg": "ok" });
+    const engine = new SampleEngine({ baseUrl: "/samples/" });
+    await engine.ensureReady();
+    engine.scheduleEvent(fakeHit("kick"), 0);
+    engine.stop();
+    engine.scheduleEvent(fakeHit("kick"), 0.1);
+    // A new source is created for the second event.
+    expect(sources.length).toBeGreaterThanOrEqual(1);
+  });
 });

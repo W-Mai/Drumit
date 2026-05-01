@@ -169,4 +169,34 @@ describe("workspace", () => {
     expect(loadWorkspace()).toBeNull();
     expect(localStorage.getItem("drumit:score")).toBeNull();
   });
+
+  it("saveStoredSource seeds a workspace when none exists", () => {
+    saveStoredSource("first source");
+    const ws = loadWorkspace();
+    expect(ws).toBeDefined();
+    expect(ws!.documents).toHaveLength(1);
+    expect(ws!.documents[0].source).toBe("first source");
+  });
+
+  it("saveStoredSource updates the active document's source in an existing workspace", () => {
+    saveWorkspace({
+      version: 2,
+      documents: [
+        { id: "a", name: "A", source: "old-a", savedAt: 1 },
+        { id: "b", name: "B", source: "old-b", savedAt: 2 },
+      ],
+      activeId: "b",
+    });
+    saveStoredSource("new-b");
+    const ws = loadWorkspace();
+    // Only the active doc (b) is updated; a stays intact.
+    expect(ws!.documents.find((d) => d.id === "a")!.source).toBe("old-a");
+    expect(ws!.documents.find((d) => d.id === "b")!.source).toBe("new-b");
+  });
+
+  it("clearStoredSource clears the workspace alias", () => {
+    saveStoredSource("x");
+    clearStoredSource();
+    expect(loadStoredSource()).toBeNull();
+  });
 });

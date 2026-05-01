@@ -19,6 +19,7 @@ import {
   setLaneDivision,
   setGroupDivision,
   splitBeatIntoGroups,
+  toggleArticulation,
   toggleBarRepeatEnd,
   toggleBarRepeatStart,
   toggleSlot,
@@ -486,6 +487,45 @@ describe("clearLaneBeat", () => {
     );
     expect(clearLaneBeat(score, 99, 0, "kick")).toEqual(score);
     expect(clearLaneBeat(score, 0, 99, "kick")).toEqual(score);
+  });
+});
+
+describe("edit ops on dot-expanded lanes", () => {
+  it("toggleSlot on dot-expanded lane addresses slots flatly across groups", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o.- / - / - / - |`;
+    const { score } = parseDrumtab(src);
+    // dot-expanded: groups are [ratio 0.75 + 1 slot, ratio 0.25 + 1 slot].
+    // toggleSlot with flat slotIndex=1 should toggle the 2nd group's slot.
+    const next = toggleSlot(score, 0, 0, "kick", 1);
+    const lane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.groups![1].slots[0]).not.toBeNull();
+  });
+
+  it("toggleArticulation on a dot-expanded slot finds the right hit", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o.o / - / - / - |`;
+    const { score } = parseDrumtab(src);
+    // slot 1 is the 16th hit; accent it.
+    const next = toggleArticulation(score, 0, 0, "kick", 1, "accent");
+    const lane = next.sections[0].bars[0].beats[0].lanes[0];
+    expect(lane.groups![1].slots[0]?.articulations).toContain("accent");
+  });
+});
+
+describe("findOrCreateLane path", () => {
+  it("toggleSlot on an instrument not yet in the beat creates a new lane", () => {
+    // Start with only kick in the bar.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    // Add a snare hit at beat 0 slot 0.
+    const next = toggleSlot(score, 0, 0, "snare", 0);
+    const snareLane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "snare",
+    );
+    expect(snareLane).toBeDefined();
+    expect(snareLane!.slots[0]).not.toBeNull();
   });
 });
 

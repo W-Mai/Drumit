@@ -3,4 +3,5 @@
 .kiro/
 node_modules/
 dist/
+coverage/
 *.tsbuildinfo

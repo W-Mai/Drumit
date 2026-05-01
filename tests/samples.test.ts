@@ -5,11 +5,24 @@ import { parseDrumtab } from "../src/notation/parser";
 import { serializeScore } from "../src/notation/serialize";
 import { layoutScore } from "../src/notation/layout";
 import { DrumChart } from "../src/notation/renderer";
-import { samples } from "../src/notation/samples";
+import { samples, defaultSample, sampleById } from "../src/notation/samples";
 
 describe("all drumtab samples", () => {
   it("bundles at least a handful of samples", () => {
     expect(samples.length).toBeGreaterThan(3);
+  });
+
+  it("defaultSample returns the first sample", () => {
+    expect(defaultSample()).toBe(samples[0]);
+  });
+
+  it("sampleById finds a sample by id", () => {
+    const target = samples[1];
+    expect(sampleById(target.id)).toBe(target);
+  });
+
+  it("sampleById returns undefined for missing id", () => {
+    expect(sampleById("__nonexistent__")).toBeUndefined();
   });
 
   for (const sample of samples) {
