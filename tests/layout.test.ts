@@ -201,22 +201,6 @@ describe("beam merging across groups", () => {
     }
   });
 
-  it("`%` repeat bar on a row of its own still gets a valid rowY and bar height", () => {
-    // 5 `%` bars wrap onto row 2 as a single-bar row. The empty bar
-    // still needs a rowY so the renderer can place the slash glyph —
-    // regression guard: was NaN when the row had no hits at all.
-    const layout = layoutScoreOf(
-      `title: T\nmeter: 4/4\n[A]\n| bd: o / - / o / - |\n| % |\n| % |\n| % |\n| % |`,
-    );
-    const bar5 = layout.rows[1][0];
-    expect(bar5.repeatPrevious).toBe(true);
-    expect(bar5.rowGroups.length).toBeGreaterThan(0);
-    const firstGroup = bar5.rowGroups[0];
-    const y = bar5.rowY[firstGroup];
-    expect(Number.isFinite(y)).toBe(true);
-    expect(bar5.height).toBeGreaterThan(0);
-  });
-
   it("hh 16ths + bd/sn 8ths: cymbals keeps its own depth=1 base under the depth=2 short beam", () => {
     // Pop-rock bar pattern: hh=xxxx (16ths) with bd=o- / sn=-o on
     // top. The cymbals row must show BOTH its depth=1 basis and
@@ -442,6 +426,33 @@ describe("repeat-previous layout", () => {
     const bars = layout.rows[0];
     expect(bars[1].repeatPrevious).toBe(true);
     expect(bars[1].repeatCount).toBe(1);
+  });
+
+  // Generic regression: when an *entire row* has no hits (all bars are
+  // `%`, all-rest, or empty), every bar in that row must still have a
+  // finite rowY and non-zero height so the renderer's slash / `∅`
+  // glyphs land somewhere.
+  it("all-%, all-rest, empty bars all produce finite rowY + height", () => {
+    const sources = [
+      // 5 `%` bars → 5th wraps to row 2 as a `%`-only row.
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / - / o / - |\n| % |\n| % |\n| % |\n| % |`,
+      // Row 2 is 4 all-rest bars.
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / - / o / - |\n| bd: - / - / - / - |\n| bd: - / - / - / - |\n| bd: - / - / - / - |\n| bd: - / - / - / - |`,
+      // Row 2 is empty bars (no lanes).
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / - / o / - |\n| |\n| |\n| |\n| |`,
+    ];
+    for (const src of sources) {
+      const layout = layoutScoreOf(src);
+      for (const row of layout.rows) {
+        for (const bar of row) {
+          expect(bar.height).toBeGreaterThan(0);
+          expect(bar.rowGroups.length).toBeGreaterThan(0);
+          for (const g of bar.rowGroups) {
+            expect(Number.isFinite(bar.rowY[g])).toBe(true);
+          }
+        }
+      }
+    }
   });
 });
 
