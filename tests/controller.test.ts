@@ -329,4 +329,69 @@ describe("PlaybackController — transport", () => {
     expect(scheduled.length).toBeLessThanOrEqual(firstRun);
     ctrl.stop();
   });
+
+  it("togglePlay cycles idle → playing → paused → playing", async () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    expect(ctrl.getState()).toBe("idle");
+    await ctrl.togglePlay();
+    expect(ctrl.getState()).toBe("playing");
+    ctrl.togglePlay();
+    expect(ctrl.getState()).toBe("paused");
+    await ctrl.togglePlay();
+    expect(ctrl.getState()).toBe("playing");
+    ctrl.stop();
+  });
+
+  it("setTempo overrides the bpm and rescales cursor times", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    // Bar 2 starts at t=4 at 60 bpm.
+    expect(ctrl.cursorAt(4).barIndex).toBe(1);
+    ctrl.setTempo(120); // twice as fast → bar 2 starts at t=2.
+    expect(ctrl.cursorAt(2).barIndex).toBe(1);
+  });
+
+  it("setScore replaces the active score (cursor reflects new bars)", () => {
+    const { score: s1 } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { score: s2 } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score: s1 });
+    // Initially only bar 0 at t=3 (still in bar 0 at 60 bpm 4/4 for first 4s).
+    expect(ctrl.cursorAt(3).barIndex).toBe(0);
+    ctrl.setScore(s2);
+    // Now t=5 lands in bar 1 (bar 0 is [0,4), bar 1 is [4,8)).
+    expect(ctrl.cursorAt(5).barIndex).toBe(1);
+    expect(ctrl.cursorAt(9).barIndex).toBe(2);
+  });
+
+  it("onEnd listener can be registered and unregistered", () => {
+    // Full end-of-playback requires real timers; just check that the
+    // listener registration API returns an unregister function and
+    // doesn't throw.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    let called = 0;
+    const off = ctrl.onEnd(() => {
+      called += 1;
+    });
+    expect(typeof off).toBe("function");
+    off();
+    // Stop after off() — listener must not fire.
+    ctrl.stop();
+    expect(called).toBe(0);
+  });
 });

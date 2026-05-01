@@ -616,6 +616,29 @@ describe("tuplet placement", () => {
     expect(sn.tickXs).toHaveLength(6);
     expect(sn.tuplet).toBe(6);
   });
+
+  it("quintuplet beam depth uses base+1 once effective subdivision doubles", () => {
+    // 5-tuplet across a beat is unusual but should not crash.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (5)xxxxx / x / x / x |`,
+    );
+    const sn = bar.beats[0].lanes.find((l) => l.instrument === "snare")!;
+    expect(sn.tickXs).toHaveLength(5);
+    expect(sn.tuplet).toBe(5);
+    expect(sn.beamDepth).toBeGreaterThan(0);
+  });
+
+  it("mixed tuplet + non-tuplet lanes render independently", () => {
+    // One lane triplet, another straight 8ths — the straight lane
+    // shouldn't pick up the tuplet number label.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: (3)xxx / x / x / x  hh: oo / x / x / x |`,
+    );
+    const hh = bar.beats[0].lanes.find(
+      (l) => l.instrument === "hihatClosed",
+    )!;
+    expect(hh.tuplet).toBeFalsy();
+  });
 });
 
 describe("tuplet label merging", () => {

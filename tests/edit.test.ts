@@ -3,6 +3,8 @@ import { parseDrumtab } from "../src/notation/parser";
 import { serializeScore } from "../src/notation/serialize";
 import {
   clearBar,
+  clearLaneBeat,
+  cycleBarEnding,
   cycleDots,
   deleteBar,
   deleteBars,
@@ -10,12 +12,15 @@ import {
   extractBars,
   insertBarAfter,
   insertSectionAfterBar,
+  pasteBarsAtSectionEnd,
   pasteBarsBefore,
   renameSection,
   setBarRepeatPrevious,
   setLaneDivision,
   setGroupDivision,
   splitBeatIntoGroups,
+  toggleBarRepeatEnd,
+  toggleBarRepeatStart,
   toggleSlot,
 } from "../src/notation/edit";
 
@@ -419,5 +424,98 @@ meter: 4/4
       const s2 = cycleDots(score, 0, 0, "kick", 99); // out of range
       expect(s2).toEqual(score);
     });
+  });
+});
+
+describe("repeat / ending edit ops", () => {
+  const baseSrc = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n| bd: o / o / o / o |`;
+
+  it("toggleBarRepeatStart flips on and off", () => {
+    const { score } = parseDrumtab(baseSrc);
+    const on = toggleBarRepeatStart(score, 1);
+    expect(on.sections[0].bars[1].repeatStart).toBe(true);
+    const off = toggleBarRepeatStart(on, 1);
+    expect(off.sections[0].bars[1].repeatStart).toBeFalsy();
+  });
+
+  it("toggleBarRepeatEnd defaults times=2 and toggles off", () => {
+    const { score } = parseDrumtab(baseSrc);
+    const on = toggleBarRepeatEnd(score, 1);
+    expect(on.sections[0].bars[1].repeatEnd).toEqual({ times: 2 });
+    const off = toggleBarRepeatEnd(on, 1);
+    expect(off.sections[0].bars[1].repeatEnd).toBeUndefined();
+  });
+
+  it("toggleBarRepeatEnd with custom times", () => {
+    const { score } = parseDrumtab(baseSrc);
+    const on = toggleBarRepeatEnd(score, 1, 4);
+    expect(on.sections[0].bars[1].repeatEnd).toEqual({ times: 4 });
+  });
+
+  it("cycleBarEnding cycles undefined → '1' → '2' → undefined", () => {
+    const { score } = parseDrumtab(baseSrc);
+    let s = cycleBarEnding(score, 1);
+    expect(s.sections[0].bars[1].ending).toBe("1");
+    s = cycleBarEnding(s, 1);
+    expect(s.sections[0].bars[1].ending).toBe("2");
+    s = cycleBarEnding(s, 1);
+    expect(s.sections[0].bars[1].ending).toBeUndefined();
+  });
+});
+
+describe("clearLaneBeat", () => {
+  it("removes the target instrument lane from the given beat only", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o  sn: o / o / o / o |`;
+    const { score } = parseDrumtab(src);
+    const next = clearLaneBeat(score, 0, 1, "kick"); // clear kick in beat 1
+    const beat1 = next.sections[0].bars[0].beats[1];
+    expect(beat1.lanes.find((l) => l.instrument === "kick")).toBeUndefined();
+    // snare in same beat still there
+    expect(beat1.lanes.find((l) => l.instrument === "snare")).toBeDefined();
+    // kick in other beats untouched
+    expect(
+      next.sections[0].bars[0].beats[0].lanes.find(
+        (l) => l.instrument === "kick",
+      ),
+    ).toBeDefined();
+  });
+
+  it("is a no-op on missing bar / beat", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    expect(clearLaneBeat(score, 99, 0, "kick")).toEqual(score);
+    expect(clearLaneBeat(score, 0, 99, "kick")).toEqual(score);
+  });
+});
+
+describe("pasteBarsAtSectionEnd", () => {
+  it("appends to the target bar's section", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n[B]\n| sn: o / o / o / o |`,
+    );
+    const clip = extractBars(score, 0, 0); // one bar from A
+    // Point the globalIndex at a bar in section B; clip should get
+    // appended to section B, not A.
+    const next = pasteBarsAtSectionEnd(score, 1, clip);
+    expect(next.sections[1].bars).toHaveLength(2);
+    expect(next.sections[0].bars).toHaveLength(1);
+  });
+
+  it("falls back to the last section when the index is out of range", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n[B]\n| sn: o / o / o / o |`,
+    );
+    const clip = extractBars(score, 0, 0);
+    const next = pasteBarsAtSectionEnd(score, 99, clip);
+    expect(next.sections[1].bars).toHaveLength(2);
+  });
+
+  it("is a no-op for empty clipboard", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const next = pasteBarsAtSectionEnd(score, 0, []);
+    expect(next).toEqual(score);
   });
 });

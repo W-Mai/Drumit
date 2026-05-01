@@ -313,6 +313,23 @@ describe("StaffView (S6: beams within a beat)", () => {
     expect(flagCount).toBe(0);
   });
 
+  it("draws an augmentation dot next to a dotted note head", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o. o / - / - / - |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    const { score: baseScore } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o o / - / - / - |`,
+    );
+    const baseSvg = renderToStaticMarkup(
+      createElement(StaffView, { score: baseScore }),
+    );
+    // Dot renders as an extra <circle> compared to the non-dotted bar.
+    const dotCount = (svg.match(/<circle/g) ?? []).length;
+    const baseCount = (baseSvg.match(/<circle/g) ?? []).length;
+    expect(dotCount).toBeGreaterThan(baseCount);
+  });
+
   it("draws twice as many beam lines for 16ths as 8ths", () => {
     const eighths = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| hh: oo / oo / oo / oo |`,

@@ -181,4 +181,60 @@ meter: 4/4
     );
     expect(bd?.groups).toHaveLength(3);
   });
+
+  it("round-trips tempo + title metadata", () => {
+    const src = `title: My Tune\ntempo: 137\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    expect(out).toContain("tempo: 137");
+    expect(out).toContain("title: My Tune");
+    const { score: s2 } = parseDrumtab(out);
+    expect(s2.tempo?.bpm).toBe(137);
+    expect(s2.title).toBe("My Tune");
+  });
+
+  it("round-trips navigation markers (@fine, @dc)", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n@fine\n| bd: o / o / o / o |\n@dc al fine`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    expect(out).toContain("@fine");
+    expect(out.toLowerCase()).toContain("dc al fine");
+    const { score: s2, diagnostics } = parseDrumtab(out);
+    expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
+    const flat = s2.sections.flatMap((s) => s.bars);
+    expect(flat.some((b) => b.navigation?.kind === "fine")).toBe(true);
+    expect(flat.some((b) => b.navigation?.kind === "dc")).toBe(true);
+  });
+
+  it("round-trips 1st/2nd endings", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o |\n| sn: o / o / o / o | [1]\n| sn: o / - / - / - :| [2]`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    expect(out).toContain("[1]");
+    expect(out).toContain("[2]");
+    const { score: s2 } = parseDrumtab(out);
+    const bars = s2.sections[0].bars;
+    expect(bars.some((b) => b.ending === "1")).toBe(true);
+    expect(bars.some((b) => b.ending === "2")).toBe(true);
+  });
+
+  it("round-trips repeat count on ending bar (x3)", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`;
+    const { score } = parseDrumtab(src);
+    const out = serializeScore(score);
+    expect(out).toContain(":|");
+    expect(out).toMatch(/x\s?3/);
+    const { score: s2 } = parseDrumtab(out);
+    const endBar = s2.sections[0].bars.find((b) => b.repeatEnd);
+    expect(endBar?.repeatEnd?.times).toBe(3);
+  });
+
+  it("serializes a bar with only rests back to a parseable form", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: - / - / - / - |`,
+    );
+    const out = serializeScore(score);
+    const { diagnostics } = parseDrumtab(out);
+    expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
+  });
 });
