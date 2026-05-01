@@ -167,13 +167,17 @@ function serializeGroup(group: import("./types").LaneGroup): string {
 function slotToken(hit: Hit | null): string {
   if (!hit) return "-";
   let base = headToken(hit);
-  for (const art of hit.articulations) {
-    if (art === "accent") base = ">" + base;
-    else if (art === "roll") base = "~" + base;
-    else if (art === "flam") base = "f" + base;
-    else if (art === "ghost") base = `(${base})`;
-    else if (art === "choke") base += "!";
-  }
+  // Canonical articulation order — ghost first (wraps the base in
+  // parens), then outer prefixes (flam/roll/accent), then suffixes.
+  // Applying in a fixed order keeps the output independent of how
+  // the articulations[] array is ordered upstream, so serialize +
+  // re-parse is idempotent.
+  const has = (a: string) => hit.articulations.includes(a as never);
+  if (has("ghost")) base = `(${base})`;
+  if (has("flam")) base = "f" + base;
+  if (has("roll")) base = "~" + base;
+  if (has("accent")) base = ">" + base;
+  if (has("choke")) base += "!";
   if (hit.dots && hit.dots > 0) base += ".".repeat(Math.min(2, hit.dots));
   if (hit.sticking) base += "/" + hit.sticking;
   return base;
