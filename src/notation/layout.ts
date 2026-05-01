@@ -468,15 +468,18 @@ function mergeBeams(
   }
 
   // Step 2b: Collapse beams with identical x-range across rows.
-  // Self-primary copies (the base bar under richer rows' short beams)
-  // are held out — collapsing them would leave the short beams with
-  // no under-line on their own row.
+  // Skipped for:
+  //  - self-primary copies (base bar under a richer row's short beams)
+  //  - depth ≥ 2 beams (16th / 32nd short beams belong to their own
+  //    row's note heads and can't be relocated)
   const kept: RowBeam[] = [];
   const dropped = new Set<number>();
+  const isPinnedToRow = (b: RowBeam) =>
+    selfPrimarySet.has(b) || b.depth >= 2;
   for (let i = 0; i < folded.length; i += 1) {
     if (dropped.has(i)) continue;
     const bi = folded[i];
-    if (selfPrimarySet.has(bi)) {
+    if (isPinnedToRow(bi)) {
       kept.push(bi);
       continue;
     }
@@ -484,7 +487,7 @@ function mergeBeams(
     for (let j = i + 1; j < folded.length; j += 1) {
       if (dropped.has(j)) continue;
       const bj = folded[j];
-      if (selfPrimarySet.has(bj)) continue;
+      if (isPinnedToRow(bj)) continue;
       if (bi.rowGroup === bj.rowGroup) continue;
       if (bi.depth !== bj.depth) continue;
       if (Math.abs(bi.x1 - bj.x1) > EPS) continue;
