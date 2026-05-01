@@ -582,6 +582,7 @@ export function Rest({
 }
 
 const STEM_LENGTH = STAFF_SPACE * 3.5;
+const STEM_THICKNESS = Math.max(1, STAFF_SPACE * 0.12); // SMuFL default 0.12 × space
 const NOTEHEAD_HALF_WIDTH = STAFF_SPACE * 0.58;
 
 /**
@@ -617,7 +618,7 @@ export function NoteheadStem({
         y1={baseY}
         y2={y}
         className="stroke-stone-900"
-        strokeWidth={1.4}
+        strokeWidth={STEM_THICKNESS}
         strokeLinecap="round"
       />
     );
@@ -632,7 +633,7 @@ export function NoteheadStem({
       y1={baseY}
       y2={y}
       className="stroke-stone-900"
-      strokeWidth={1.4}
+      strokeWidth={STEM_THICKNESS}
       strokeLinecap="round"
     />
   );

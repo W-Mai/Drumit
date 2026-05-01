@@ -659,7 +659,7 @@ function HitGlyph({ laid }: { laid: LaidOutHit }) {
           <path
             d={`M ${x - size * 2.4} ${y + size * 0.4} L ${x - size * 0.8} ${y - size * 1.6}`}
             className="fill-none stroke-stone-700"
-            strokeWidth={1.1}
+            strokeWidth={strokeForSize(size) * 0.75}
             strokeLinecap="round"
           />
         </>
@@ -672,13 +672,13 @@ function HitGlyph({ laid }: { laid: LaidOutHit }) {
           <path
             d={`M ${x - size * 1.8} ${y - size * 1.2} q ${-size * 0.6} ${size * 1.2} 0 ${size * 2.4}`}
             className="fill-none stroke-stone-600"
-            strokeWidth={1.2}
+            strokeWidth={strokeForSize(size) * 0.8}
             strokeLinecap="round"
           />
           <path
             d={`M ${x + size * 1.8} ${y - size * 1.2} q ${size * 0.6} ${size * 1.2} 0 ${size * 2.4}`}
             className="fill-none stroke-stone-600"
-            strokeWidth={1.2}
+            strokeWidth={strokeForSize(size) * 0.8}
             strokeLinecap="round"
           />
         </>
@@ -768,6 +768,15 @@ function HitGlyph({ laid }: { laid: LaidOutHit }) {
   );
 }
 
+/**
+ * Single source of truth for head stroke width — derived from the
+ * glyph's own `size` so small / large heads stay visually balanced.
+ * Clamped to [1.2, 1.9] so it never goes hairline or heavy.
+ */
+function strokeForSize(size: number): number {
+  return Math.max(1.2, Math.min(1.9, size * 0.32));
+}
+
 function HitHead({
   hit,
   x,
@@ -779,20 +788,22 @@ function HitHead({
   y: number;
   size: number;
 }) {
+  const sw = strokeForSize(size);
+
   if (hit.head === "x") {
     return (
       <path
         d={`M ${x - size} ${y - size} L ${x + size} ${y + size} M ${x + size} ${y - size} L ${x - size} ${y + size}`}
         className="fill-none stroke-stone-900"
-        strokeWidth={1.8}
+        strokeWidth={sw}
         strokeLinecap="round"
       />
     );
   }
   if (hit.head === "partial") {
-    // ∂ glyph sized roughly 2.2× the base `size` so the shape matches a ×
-    // head of the same size in optical weight.
-    const fontSize = Math.max(9, size * 2.6);
+    // Hand-drawn jianpu convention uses a ∂ glyph. Size it a touch under
+    // the other heads' optical weight so it doesn't dominate a row.
+    const fontSize = Math.max(9, size * 2.4);
     return (
       <text
         x={x}
@@ -816,12 +827,11 @@ function HitHead({
         cy={y}
         r={size}
         className="fill-stone-50 stroke-stone-900"
-        strokeWidth={1.6}
+        strokeWidth={sw}
       />
     );
   }
   if (hit.head === "slash") {
-    const sw = Math.max(1.2, Math.min(2, size * 0.35));
     return (
       <line
         x1={x + size}
@@ -839,7 +849,6 @@ function HitHead({
     //   |
     //   ×
     const stemH = size * 1.8;
-    const sw = Math.max(1, Math.min(1.8, size * 0.28));
     return (
       <g>
         <line

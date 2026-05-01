@@ -566,8 +566,9 @@ function NoteMarker({
 }
 
 const STEM_LENGTH_SCREEN = STAFF_SPACE * 3.5;
-const BEAM_THICKNESS = STAFF_SPACE * 0.55;
-const BEAM_GAP = STAFF_SPACE * 0.35;
+// SMuFL engraving-default proportions for beams.
+const BEAM_THICKNESS = STAFF_SPACE * 0.5;
+const BEAM_GAP = STAFF_SPACE * 0.3;
 
 function BeamLine({
   beam,
