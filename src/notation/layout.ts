@@ -414,19 +414,24 @@ function mergeBeams(
     }
   }
 
-  // Step 2a: Fold every depth=1 ("primary") beam across rows into a
-  // single shared beam covering the union of their x-ranges. Jianpu
-  // convention: a beat's primary beam is a single bar spanning every
-  // beamed voice. Only primary beams collapse — higher-depth (16th /
-  // 32nd) beams stay on their own lane.
+  const rowMaxDepth = new Map<RowGroup, number>();
+  for (const lane of laneSegments) {
+    if (lane.beamDepth <= 0) continue;
+    const prev = rowMaxDepth.get(lane.rowGroup) ?? 0;
+    if (lane.beamDepth > prev) rowMaxDepth.set(lane.rowGroup, lane.beamDepth);
+  }
+
+  // Step 2a: Build the beat-level primary bar. Fold every row's
+  // depth=1 into a single merged beam on the bottom row. In addition,
+  // each richer-stack row (has its own 16th / 32nd) keeps its own
+  // depth=1 on its home lane — that copy is the base under the
+  // short beams. The bottom row's self-primary is absorbed into the
+  // folded beam (no duplicate on the same row).
+  const EPS = 1.5;
   const primaryTupletGroups = new Map<number, RowBeam[]>();
   const nonPrimary: RowBeam[] = [];
   for (const b of perRowBeams) {
-    if (b.depth !== 1) {
-      nonPrimary.push(b);
-      continue;
-    }
-    if (b.tuplet === -1) {
+    if (b.depth !== 1 || b.tuplet === -1) {
       nonPrimary.push(b);
       continue;
     }
@@ -435,9 +440,8 @@ function mergeBeams(
     primaryTupletGroups.set(b.tuplet, list);
   }
   const folded: RowBeam[] = [...nonPrimary];
+  const selfPrimarySet = new Set<RowBeam>();
   for (const [tuplet, beams] of primaryTupletGroups) {
-    // Merge the union of x-ranges with a generous tolerance so
-    // adjacent-but-not-touching spans still collapse.
     const spans = beams
       .map((b) => ({ x1: b.x1, x2: b.x2 }))
       .sort((a, b) => a.x1 - b.x1);
@@ -455,21 +459,32 @@ function mergeBeams(
         tuplet,
       });
     }
+    for (const b of beams) {
+      if ((rowMaxDepth.get(b.rowGroup) ?? 0) <= 1) continue;
+      if (b.rowGroup === bottom.rowGroup) continue;
+      selfPrimarySet.add(b);
+      folded.push(b);
+    }
   }
 
-  // Step 2b: Collapse higher-depth beams that happen to land on
-  // identical x-ranges across rows — same rhythm on two voices reads
-  // as one under-line; drawing both is redundant.
-  const EPS = 1.5;
+  // Step 2b: Collapse beams with identical x-range across rows.
+  // Self-primary copies (the base bar under richer rows' short beams)
+  // are held out — collapsing them would leave the short beams with
+  // no under-line on their own row.
   const kept: RowBeam[] = [];
   const dropped = new Set<number>();
   for (let i = 0; i < folded.length; i += 1) {
     if (dropped.has(i)) continue;
     const bi = folded[i];
+    if (selfPrimarySet.has(bi)) {
+      kept.push(bi);
+      continue;
+    }
     const matches: number[] = [i];
     for (let j = i + 1; j < folded.length; j += 1) {
       if (dropped.has(j)) continue;
       const bj = folded[j];
+      if (selfPrimarySet.has(bj)) continue;
       if (bi.rowGroup === bj.rowGroup) continue;
       if (bi.depth !== bj.depth) continue;
       if (Math.abs(bi.x1 - bj.x1) > EPS) continue;

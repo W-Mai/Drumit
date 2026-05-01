@@ -184,6 +184,26 @@ describe("beam merging across groups", () => {
     });
   });
 
+  it("hh 16ths + bd/sn 8ths: cymbals keeps its own depth=1 base under the depth=2 short beam", () => {
+    // Pop-rock bar pattern: hh=xxxx (16ths) with bd=o- / sn=-o on
+    // top. The cymbals row must show BOTH its depth=1 basis and
+    // depth=2 short beam (the two stacked under-lines that read as
+    // "16th note"), while the kick still gets the beat-level
+    // primary folded onto it.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx  bd: o - / o - / o - / o -  sn: - o / - o / - o / - o |`,
+    );
+    const b0 = bar.beats[0];
+    const cymDepths = new Set(
+      b0.beams.filter((b) => b.rowGroup === "cymbals").map((b) => b.depth),
+    );
+    expect(cymDepths).toEqual(new Set([1, 2]));
+    const kickPrimary = b0.beams.find(
+      (b) => b.rowGroup === "kick" && b.depth === 1,
+    );
+    expect(kickPrimary).toBeDefined();
+  });
+
   it("whole-beat 4 × 16ths has 2 merged beams spanning the beat", () => {
     const bar = layoutBarOf(
       `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / x / x / x |`,
