@@ -191,8 +191,8 @@ describe("beam merging across groups", () => {
     const b0 = bar.beats[0];
     const cymBeams = b0.beams.filter((b) => b.rowGroup === "cymbals");
     expect(cymBeams).toHaveLength(2);
-    expect(cymBeams[0].depth).toBe(1);
-    expect(cymBeams[1].depth).toBe(2);
+    const depths = new Set(cymBeams.map((b) => b.depth));
+    expect(depths).toEqual(new Set([1, 2]));
   });
 
   it("cymbal and drum rows with SAME rhythm share one collapsed beam on bottom row", () => {

@@ -277,8 +277,11 @@ function layoutBar(
           beamDepth > 0
             ? [
                 {
-                  x1: groupX + 3,
-                  x2: groupX + groupWidth - 3,
+                  // Small 1px inset keeps a visible gap at beat
+                  // boundaries without swallowing narrow (16th / 32nd)
+                  // groups the way the old 3px inset did.
+                  x1: groupX + 1,
+                  x2: groupX + groupWidth - 1,
                 },
               ]
             : [];
@@ -411,30 +414,67 @@ function mergeBeams(
     }
   }
 
-  // Step 2: collapse beams that are visually identical across rows —
-  // same depth and (approximately) the same x-range. Keep only the
-  // instance on the bottom-most row. This is what users call "same
-  // rhythm" at a glance: the under-line shapes are indistinguishable so
-  // drawing them on multiple lanes is redundant.
+  // Step 2a: Fold every depth=1 ("primary") beam across rows into a
+  // single shared beam covering the union of their x-ranges. Jianpu
+  // convention: a beat's primary beam is a single bar spanning every
+  // beamed voice. Only primary beams collapse — higher-depth (16th /
+  // 32nd) beams stay on their own lane.
+  const primaryTupletGroups = new Map<number, RowBeam[]>();
+  const nonPrimary: RowBeam[] = [];
+  for (const b of perRowBeams) {
+    if (b.depth !== 1) {
+      nonPrimary.push(b);
+      continue;
+    }
+    if (b.tuplet === -1) {
+      nonPrimary.push(b);
+      continue;
+    }
+    const list = primaryTupletGroups.get(b.tuplet) ?? [];
+    list.push(b);
+    primaryTupletGroups.set(b.tuplet, list);
+  }
+  const folded: RowBeam[] = [...nonPrimary];
+  for (const [tuplet, beams] of primaryTupletGroups) {
+    // Merge the union of x-ranges with a generous tolerance so
+    // adjacent-but-not-touching spans still collapse.
+    const spans = beams
+      .map((b) => ({ x1: b.x1, x2: b.x2 }))
+      .sort((a, b) => a.x1 - b.x1);
+    const merged = mergeSpans(spans, 10);
+    const bottom = beams.reduce((acc, b) =>
+      (rowY[b.rowGroup] ?? 0) > (rowY[acc.rowGroup] ?? 0) ? b : acc,
+    );
+    for (const span of merged) {
+      folded.push({
+        rowGroup: bottom.rowGroup,
+        rowAnchorY: bottom.rowAnchorY,
+        depth: 1,
+        x1: span.x1,
+        x2: span.x2,
+        tuplet,
+      });
+    }
+  }
+
+  // Step 2b: Collapse higher-depth beams that happen to land on
+  // identical x-ranges across rows — same rhythm on two voices reads
+  // as one under-line; drawing both is redundant.
   const EPS = 1.5;
   const kept: RowBeam[] = [];
   const dropped = new Set<number>();
-  for (let i = 0; i < perRowBeams.length; i += 1) {
+  for (let i = 0; i < folded.length; i += 1) {
     if (dropped.has(i)) continue;
-    const bi = perRowBeams[i];
-    // Find all matching beams on other rows.
+    const bi = folded[i];
     const matches: number[] = [i];
-    for (let j = i + 1; j < perRowBeams.length; j += 1) {
+    for (let j = i + 1; j < folded.length; j += 1) {
       if (dropped.has(j)) continue;
-      const bj = perRowBeams[j];
+      const bj = folded[j];
       if (bi.rowGroup === bj.rowGroup) continue;
       if (bi.depth !== bj.depth) continue;
       if (Math.abs(bi.x1 - bj.x1) > EPS) continue;
       if (Math.abs(bi.x2 - bj.x2) > EPS) continue;
-      // Different tuplet values mean different rhythmic meaning — don't
-      // collapse a 3-tuplet beam with a non-tuplet or 6-tuplet beam.
       if (bi.tuplet !== bj.tuplet) continue;
-      // Mixed-tuplet rows (-1) never merge.
       if (bi.tuplet === -1 || bj.tuplet === -1) continue;
       matches.push(j);
     }
@@ -442,9 +482,8 @@ function mergeBeams(
       kept.push(bi);
       continue;
     }
-    // Pick bottom-most row.
     const anchor = matches
-      .map((idx) => perRowBeams[idx])
+      .map((idx) => folded[idx])
       .reduce((bottom, b) =>
         (rowY[b.rowGroup] ?? 0) > (rowY[bottom.rowGroup] ?? 0) ? b : bottom,
       );

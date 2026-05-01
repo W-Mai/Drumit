@@ -401,6 +401,15 @@ export function toggleSlot(
     if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
     const lane = findOrCreateLane(beat, instrument);
 
+    // Dot-expanded lanes address slots by their flat index across
+    // one-slot-per-group structure.
+    if (isDotExpanded(lane) && (groupIndex === 0 || groupIndex === undefined)) {
+      const g = lane.groups![slotIndex];
+      if (!g) return;
+      g.slots[0] = g.slots[0] ? null : createHit(instrument);
+      return;
+    }
+
     // Writing into a slot beyond the current division must grow division
     // so the renderer can place the new hit. Pad intermediate slots with
     // null to keep the array dense.
@@ -457,8 +466,8 @@ export function toggleArticulation(
       (l) => l.instrument === instrument,
     );
     if (!lane) return;
-    const slots = laneGroupSlots(lane, groupIndex);
-    const hit = slots?.[slotIndex];
+    const resolved = resolveSlot(lane, slotIndex, groupIndex);
+    const hit = resolved?.slots[resolved.idx];
     if (!hit) return;
     const i = hit.articulations.indexOf(articulation);
     if (i === -1) hit.articulations.push(articulation);
@@ -590,8 +599,8 @@ export function setSticking(
       (l) => l.instrument === instrument,
     );
     if (!lane) return;
-    const slots = laneGroupSlots(lane, groupIndex);
-    const hit = slots?.[slotIndex];
+    const resolved = resolveSlot(lane, slotIndex, groupIndex);
+    const hit = resolved?.slots[resolved.idx];
     if (!hit) return;
     hit.sticking = sticking ?? undefined;
   });
@@ -606,6 +615,34 @@ function laneGroupSlots(
   }
   if (!lane.groups && groupIndex === 0) return lane.slots;
   return null;
+}
+
+/**
+ * Walk a flat slot index across a dot-expanded lane's one-slot-per-group
+ * structure; returns the underlying {slots, idx} so callers can mutate
+ * the single-slot sub-group without knowing about dot expansion.
+ */
+function isDotExpanded(lane: LaneBeat): boolean {
+  return (
+    !!lane.groups &&
+    lane.groups.length > 1 &&
+    lane.groups.every((g) => g.division === 1 && g.slots.length === 1)
+  );
+}
+
+function resolveSlot(
+  lane: LaneBeat,
+  slotIndex: number,
+  groupIndex: number | undefined,
+): { slots: Array<Hit | null>; idx: number } | null {
+  if (isDotExpanded(lane) && (groupIndex === undefined || groupIndex === 0)) {
+    const g = lane.groups![slotIndex];
+    if (!g) return null;
+    return { slots: g.slots, idx: 0 };
+  }
+  const slots = laneGroupSlots(lane, groupIndex ?? 0);
+  if (!slots) return null;
+  return { slots, idx: slotIndex };
 }
 
 export function emptyBeat(): Beat {

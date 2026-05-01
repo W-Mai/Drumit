@@ -182,6 +182,28 @@ function planLaneBeat(
   barResolution: Resolution,
 ): LaneBeatPlan {
   if (lane?.groups && lane.groups.length > 1) {
+    // Dot-expanded lanes — every sub-group is a single slot with a
+    // ratio driven by the hit's dots. Treat them as a flat beat-slot
+    // list so the cell UI (right-click Dots toggle, hotkeys) keeps
+    // working uniformly.
+    const allSingle = lane.groups.every(
+      (g) => g.division === 1 && g.slots.length === 1,
+    );
+    if (allSingle) {
+      const columns: CellPlan[] = lane.groups.map((g, idx) => ({
+        kind: "beat-slot",
+        slotIndex: idx,
+        slotsPerBeat: lane.groups!.length,
+        custom: true,
+        widthUnits: g.ratio,
+      }));
+      return {
+        beatIndex,
+        usesBarResolution: false,
+        split: false,
+        columns,
+      };
+    }
     const columns: CellPlan[] = [];
     lane.groups.forEach((g, groupIndex) => {
       const widthUnits = g.ratio / Math.max(1, g.division);
@@ -1333,6 +1355,7 @@ function StepCell({
             onCycleDots(plan.beatIndex, instrument, column.slotIndex);
           }}
           canDot={!!hit && column.kind === "beat-slot"}
+          currentDots={hit?.dots ?? 0}
         />
       </FloatingMenu>
     </>
@@ -1346,6 +1369,7 @@ function StepContextMenuContent({
   onSetSticking,
   onCycleDots,
   canDot,
+  currentDots,
 }: {
   hit: Hit | null;
   onToggle: () => void;
@@ -1353,6 +1377,7 @@ function StepContextMenuContent({
   onSetSticking: (s: "R" | "L" | null) => void;
   onCycleDots: () => void;
   canDot: boolean;
+  currentDots: number;
 }) {
   return (
     <div className="min-w-[200px] text-left">
@@ -1400,12 +1425,16 @@ function StepContextMenuContent({
             onClick={onCycleDots}
             className={cn(
               "mb-3 block w-full rounded border px-2 py-1 text-[11px] font-bold transition",
-              (hit?.dots ?? 0) > 0
+              currentDots > 0
                 ? "border-amber-500 bg-amber-100 text-stone-900"
                 : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
             )}
           >
-            {hit?.dots === 1 ? "· (dotted)" : hit?.dots === 2 ? ":: (double)" : "— no dot"}
+            {currentDots === 1
+              ? "· (dotted) — click for double"
+              : currentDots === 2
+                ? ":: (double-dotted) — click to clear"
+                : "— no dot — click to add"}
           </button>
         </>
       ) : null}
@@ -1793,6 +1822,16 @@ function resolveHit(
     const g = lane.groups[column.groupIndex];
     if (!g) return null;
     return g.slots[column.slotIndex] ?? null;
+  }
+
+  // beat-slot on a dot-expanded lane: each group owns one slot.
+  if (
+    lane.groups &&
+    lane.groups.length > 1 &&
+    lane.groups.every((g) => g.division === 1 && g.slots.length === 1)
+  ) {
+    const g = lane.groups[column.slotIndex];
+    return g?.slots[0] ?? null;
   }
 
   // beat-slot: map display slots → lane.slots
