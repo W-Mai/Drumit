@@ -11,6 +11,52 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.02.2]
+
+### Added
+
+- **Framed exports** — SVG / PNG / PDF / static HTML exports now
+  wrap the chart in a bleed margin and a footer strip with the
+  title, artist (if any), a QR code pointing at the Drumit landing
+  page, the URL in text, and the app version. Playable HTML and
+  raw `.drumtab` / MIDI exports stay unframed. New dependency:
+  `qrcode`.
+
+### Changed
+
+- **Tighter Preview layout** — row / bar / header / section spacing
+  tokens all shrunk ~15-20% for a more professional density. Bar
+  heights drop from ~122 → ~102 px on a typical pop-rock grid.
+- **Unified note-head strokes** — every head in the Drumit view
+  (`x` / `o` / `∂` / slash / stickX / flam slash / ghost brackets)
+  now derives its stroke width from the same `strokeForSize(size)`
+  helper, clamped to [1.2, 1.9], so proportions stay balanced across
+  `instrumentSizeScale`.
+- **SMuFL-leaning staff proportions** — stem thickness 1.4 → 1.2
+  (0.12 × staff space), beam thickness 0.55 → 0.5, beam gap 0.35 →
+  0.3. Closer to traditional engraving defaults.
+- **PadEditor cells by voice family** — hit cells in the editor are
+  coloured by row group (cymbals yellow-700, toms orange-800, snare
+  rose-700, kick stone-900) so the grid carries voice info at a
+  glance. Accent stays amber, ghost stays dim.
+- **Button focus ring** — keyboard tabbing through buttons now lands
+  a visible amber-500 ring.
+
+### Fixed
+
+- **`×pass/total` badge no longer leaks into exports** — the
+  playhead overlay tag is stripped alongside the existing
+  interaction hit-boxes when `stripInteraction` is on.
+
+### Internal
+
+- New `src/notation/palette.ts` — `rowGroupAccent` / `instrumentAccent`
+  tokens so other UI can pick up the new voice colours without
+  re-hardcoding Tailwind classes.
+- Added `scripts/dump-sizes.ts` for manual before/after diffing of
+  layout dimensions.
+- Test suite grew to 653 (up from 641); coverage ~94.35% → 94.50%.
+
 ## [2026.05.02.1]
 
 ### Fixed
