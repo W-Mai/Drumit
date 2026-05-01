@@ -201,6 +201,67 @@ describe("beam merging across groups", () => {
     }
   });
 
+  it("regression: `cr/hh/bd/sn/ft` dotted+split multi-lane bar", () => {
+    // User-reported bar (spec: dotted 8ths on hh, 16th splits on bd
+    // and sn, ft 16th). Lock the exact beam structure the accepted
+    // baseline produces.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| cr: -- / - / - / -  hh: oo / o , o- / o- , o / oo  bd: o- / - , -o / -o , o / - , --  sn: - / x- / -- / x-  ft: - / - , -- / - / - |`,
+    );
+    const shapes = bar.beats.map((bt) => ({
+      rows: [...new Set(bt.beams.map((b) => b.rowGroup))].sort(),
+      depths: bt.beams.map((b) => b.depth).sort(),
+    }));
+    expect(shapes).toEqual([
+      { rows: ["kick"], depths: [1] },
+      { rows: ["kick"], depths: [1, 2] },
+      { rows: ["kick"], depths: [1, 2] },
+      { rows: ["snare"], depths: [1] },
+    ]);
+  });
+
+  it("regression: hh 16ths + multi-voice bar collapses primary to kick", () => {
+    // User-reported: hi-hat plays 16ths across all 4 beats; kick/sn/
+    // aux cymbals add colour. cymbals share the same 16th stack with
+    // one cross-row folded primary per beat.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oooo / oooo / oooo / oooo  bd: oooo / o- / o- / o-  sn: -- / -x / -x / -x  hho: ---- / - / - / -  ride: - / o--- / - / -  cr: - / -o-- / - / -  cr2: - / --o- / - / -  t1: - / ---o / - / - |`,
+    );
+    expect(bar.beats).toHaveLength(4);
+    for (const bt of bar.beats) {
+      const depths = new Set(bt.beams.map((b) => b.depth));
+      expect(depths).toEqual(new Set([1, 2]));
+    }
+  });
+
+  it("regression: kick `o-` + snare `-x` — primary covers whole beat on kick row", () => {
+    // When kick plays the first 8th and snare answers on the 2nd 8th,
+    // the two rows' primaries fold into a single continuous kick-row
+    // beam covering the beat.
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: oooo / oooo / oooo / oooo  bd: o- / o- / o- / o-  sn: -x / -x / -x / -x |`,
+    );
+    for (const bt of bar.beats) {
+      const kickD1 = bt.beams.find(
+        (b) => b.rowGroup === "kick" && b.depth === 1,
+      );
+      expect(kickD1).toBeDefined();
+      expect(kickD1!.x2 - kickD1!.x1).toBeGreaterThan(bt.width * 0.85);
+    }
+  });
+
+  it("regression: dotted 8th + 16th (o.o) draws primary across beat + secondary at 1/4", () => {
+    const bar = layoutBarOf(
+      `title: T\nmeter: 4/4\n[A]\n| hh: o.o / oo / oo / oo |`,
+    );
+    const b0 = bar.beats[0];
+    const d1 = b0.beams.find((b) => b.depth === 1)!;
+    const d2 = b0.beams.find((b) => b.depth === 2)!;
+    expect(d1.x2 - d1.x1).toBeGreaterThan(b0.width * 0.85);
+    expect(d2.x2 - d2.x1).toBeLessThan(b0.width * 0.35);
+    expect(d2.x2).toBeCloseTo(d1.x2, 0);
+  });
+
   it("hh 16ths + bd/sn 8ths: cymbals keeps its own depth=1 base under the depth=2 short beam", () => {
     // Pop-rock bar pattern: hh=xxxx (16ths) with bd=o- / sn=-o on
     // top. The cymbals row must show BOTH its depth=1 basis and
