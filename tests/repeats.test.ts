@@ -149,6 +149,29 @@ meter: 4/4
     expect(order.map((x) => x.barIndex)).toEqual([0, 1, 2, 0, 1]);
   });
 
+  it("@segno + D.S. al Fine: plays once, jumps to segno, stops at Fine", () => {
+    // @tag applies to the most recent bar, not the next one.
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n@segno\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n@fine\n| bd: o / o / o / o |\n@ds al fine`;
+    const { score } = parse(src);
+    const flat = score.sections.flatMap((s) => s.bars);
+    const order = expandPlayOrder(flat);
+    // Bars: 0(@segno), 1, 2(@fine), 3(@ds al fine).
+    // Pass 1: 0 1 2 3 → D.S. to segno (bar 0) → 0 1 2 → stop at Fine (bar 2).
+    expect(order.map((x) => x.barIndex)).toEqual([0, 1, 2, 3, 0, 1, 2]);
+  });
+
+  it("does not infinitely loop when repeats are malformed", () => {
+    // Repeat end with no matching repeat start — should just play once.
+    const b = bars(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o :|`,
+    );
+    const order = expandPlayOrder(b);
+    // Defensive: the implementation has a SAFETY_LIMIT. We just
+    // require this to terminate and produce a sensible length.
+    expect(order.length).toBeGreaterThan(0);
+    expect(order.length).toBeLessThan(1000);
+  });
+
   it("schedule() total duration respects repeats", () => {
     const { score } = parse(
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,

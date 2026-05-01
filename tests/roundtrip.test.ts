@@ -62,7 +62,7 @@ function randomBar(r: () => number): string {
 }
 
 describe("round-trip fuzz", () => {
-  const cases = Array.from({ length: 50 }, (_, i) => i);
+  const cases = Array.from({ length: 100 }, (_, i) => i);
   for (const seed of cases) {
     it(`seed=${seed} parses, serializes, re-parses without error`, () => {
       const r = rng(seed + 1);

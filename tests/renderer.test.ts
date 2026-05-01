@@ -178,4 +178,71 @@ describe("DrumChart", () => {
     );
     expect(svg).toContain("∅");
   });
+
+  it("draws ∕ for a `%` repeat-previous bar", () => {
+    const svg = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |`,
+    );
+    expect(svg).toContain("∕");
+  });
+
+  it("renders augmentation dots as extra circles beside the note head", () => {
+    const base = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o o / - / - / - |`,
+    );
+    const dotted = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o. o / - / - / - |`,
+    );
+    const baseCount = (base.match(/<circle/g) ?? []).length;
+    const dottedCount = (dotted.match(/<circle/g) ?? []).length;
+    expect(dottedCount).toBeGreaterThan(baseCount);
+  });
+
+  it("renders ×pass/total badge on the active repeated bar", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+    );
+    const layout = layoutScore(score, {
+      showLabels: false,
+      expanded: false,
+      width: 900,
+    });
+    const svg = renderToStaticMarkup(
+      createElement(DrumChart, {
+        layout,
+        showLabels: false,
+        playCursor: { barIndex: 0, beatIndex: 0 },
+        repeatPass: { pass: 2, total: 3 },
+      }),
+    );
+    expect(svg).toContain("×2/3");
+  });
+
+  it("does not render ×pass/total when bar plays only once", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const layout = layoutScore(score, {
+      showLabels: false,
+      expanded: false,
+      width: 900,
+    });
+    const svg = renderToStaticMarkup(
+      createElement(DrumChart, {
+        layout,
+        showLabels: false,
+        playCursor: { barIndex: 0, beatIndex: 0 },
+        repeatPass: { pass: 1, total: 1 },
+      }),
+    );
+    expect(svg).not.toContain("×1/1");
+  });
+
+  it("emits data-bar-index attributes on every bar group", () => {
+    const svg = renderSvg(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,
+    );
+    expect(svg).toMatch(/data-bar-index="0"/);
+    expect(svg).toMatch(/data-bar-index="1"/);
+  });
 });

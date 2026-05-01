@@ -91,6 +91,25 @@ describe("scheduler", () => {
     expect(met[4].velocity).toBeGreaterThan(met[5].velocity);
   });
 
+  it("metronome respects 3/4 meter (3 beats per bar)", () => {
+    const src = `title: T\ntempo: 60\nmeter: 3/4\n[A]\n| bd: o / - / - |\n| bd: o / - / - |`;
+    const { score } = parseDrumtab(src);
+    const { totalDuration } = schedule(score);
+    const met = metronomeEvents(score, totalDuration);
+    expect(met).toHaveLength(6); // 2 bars × 3 beats
+    // Downbeats at t=0 and t=3.
+    expect(met[0].time).toBeCloseTo(0, 3);
+    expect(met[3].time).toBeCloseTo(3, 3);
+  });
+
+  it("tempoOverride in schedule doubles / halves the total duration", () => {
+    const src = `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`;
+    const { score } = parseDrumtab(src);
+    const normal = schedule(score);
+    const fast = schedule(score, { tempoOverride: 120 });
+    expect(fast.totalDuration).toBeCloseTo(normal.totalDuration / 2, 3);
+  });
+
   it("hit velocity reflects accent / ghost modifiers", () => {
     const { events } = scheduled(
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| sn: o / >o / (o) / o |`,
