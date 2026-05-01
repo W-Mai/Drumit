@@ -1,7 +1,7 @@
 {
   "name": "drumit",
   "private": true,
-  "version": "2026.05.01.2",
+  "version": "2026.05.02.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -11,6 +11,35 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.02.1]
+
+### Fixed
+
+- Serializer output for hits carrying multiple articulations (e.g.
+  flam + ghost) is now deterministic — articulations are applied in a
+  canonical order (ghost → flam → roll → accent) regardless of the
+  source `articulations[]` array order. Caught by round-trip fuzz:
+  previously a flam+ghost hit could bounce between `f(o)` and `(fo)`
+  between serialize passes, and the second form was parsed as ghost
+  without the flam (silent data loss).
+- End-slot dot (a dotted hit with nothing after it to borrow from)
+  now retains its `dots=1` on the hit but no longer expands the lane
+  into an equal-ratio group structure — keeps source stable across
+  parse → serialize round-trips.
+- `%` rows with no preceding content no longer render with NaN
+  coordinates (5+ consecutive repeat bars wrapping to a second row
+  would silently drop the slash glyph).
+
+### Internal
+
+- Test suite: 341 → 641 tests, statement coverage 85.7% → 94.4%,
+  lines 88.4% → 97.0%. 8 new test files covering validate, utils,
+  hotkey map, midi helpers, build info, PDF / PNG exporters,
+  round-trip fuzz pipeline (100 seeds), and multi-layer user-flow
+  paths (parse → edit → serialize → render → export, etc.).
+  `scripts/dump-beams.ts` added as a manual beam-layout diff tool;
+  `@vitest/coverage-v8` added as a dev dependency.
+
 ## [2026.05.01.2]
 
 ### Added
