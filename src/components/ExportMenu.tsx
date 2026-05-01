@@ -8,11 +8,15 @@ import {
   printSvgAsPdf,
   triggerDownload,
   filenameStem,
+  frameSvgForExport,
 } from "../notation/exporters";
 import { exportScoreToMidi } from "../notation/midiExport";
 import { serializeScore } from "../notation/serialize";
+import { buildInfo } from "../lib/buildInfo";
 import { HoverClickPopover } from "./HoverClickPopover";
 import { cn } from "../lib/utils";
+
+const EXPORT_QR_URL = "https://w-mai.github.io/Drumit/";
 
 interface Props {
   score: Score;
@@ -58,6 +62,17 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     });
   }
 
+  /** Wrap a stripped SVG with bleed + footer + QR for static exports. */
+  async function getFramedSvg(): Promise<string> {
+    const svg = getSvg();
+    return frameSvgForExport(svg, {
+      title: score.title || "Drumit chart",
+      subtitle: score.artist,
+      qrUrl: EXPORT_QR_URL,
+      version: buildInfo.version,
+    });
+  }
+
   async function run(action: () => Promise<void> | void) {
     setStatus("pending");
     try {
@@ -78,8 +93,8 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     {
       label: "SVG",
       hint: "Vector, crisp at any zoom",
-      onClick: () => {
-        const svg = getSvg();
+      onClick: async () => {
+        const svg = await getFramedSvg();
         triggerDownload(
           new Blob([svg], { type: "image/svg+xml;charset=utf-8" }),
           filenameFor("svg"),
@@ -90,7 +105,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
       label: "PNG",
       hint: "Bitmap, prints cleanly",
       onClick: async () => {
-        const svg = getSvg();
+        const svg = await getFramedSvg();
         const blob = await svgStringToPng(svg, { background: "#fafaf9" });
         triggerDownload(blob, filenameFor("png"));
       },
@@ -98,16 +113,16 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     {
       label: "PDF",
       hint: "Opens a print dialog (save as PDF)",
-      onClick: () => {
-        const svg = getSvg();
+      onClick: async () => {
+        const svg = await getFramedSvg();
         printSvgAsPdf(svg, score);
       },
     },
     {
       label: "HTML (static)",
       hint: "Single file, no interactivity",
-      onClick: () => {
-        const svg = getSvg();
+      onClick: async () => {
+        const svg = await getFramedSvg();
         const html = wrapSvgInStaticHtml(svg, score);
         triggerDownload(
           new Blob([html], { type: "text/html;charset=utf-8" }),

@@ -116,10 +116,15 @@ function neutralizeTransientClasses(svg: string): string {
  * would leave `</rect>` behind and break XML nesting.
  */
 function stripInteractionLayers(svg: string): string {
-  return svg.replace(
-    /<rect\b[^>]*\bdata-(?:beat-rect|bar-highlight)=[^>]*(?:\/>|><\/rect>)/g,
-    "",
-  );
+  // Remove hit-test / highlight rects that don't belong in a static
+  // export, and transient overlay groups like the playhead's
+  // ×pass/total badge (tagged data-transient-badge).
+  return svg
+    .replace(
+      /<rect\b[^>]*\bdata-(?:beat-rect|bar-highlight)=[^>]*(?:\/>|><\/rect>)/g,
+      "",
+    )
+    .replace(/<g\b[^>]*\bdata-transient-badge=[^>]*>[\s\S]*?<\/g>/g, "");
 }
 
 export interface PostProcessOptions {

@@ -153,6 +153,22 @@ describe("wrapSvgInDynamicHtml", () => {
   });
 });
 
+describe("postProcessSvg strips transient playback badges", () => {
+  it("removes ×pass/total pass badge from exports", () => {
+    const raw = `<svg viewBox="0 0 100 100"><g data-transient-badge="pass"><rect x="0" y="0" width="30" height="14" fill="#1c1917"/><text>×2/3</text></g><rect x="10" y="10" width="5" height="5"/></svg>`;
+    const out = postProcessSvg(raw);
+    expect(out).not.toContain("data-transient-badge");
+    expect(out).not.toContain("×2/3");
+    expect(out).toContain('x="10"');
+  });
+
+  it("keeps the badge when stripInteraction is false (playable HTML)", () => {
+    const raw = `<svg viewBox="0 0 100 100"><g data-transient-badge="pass"><text>×2/3</text></g></svg>`;
+    const out = postProcessSvg(raw, undefined, { stripInteraction: false });
+    expect(out).toContain("×2/3");
+  });
+});
+
 describe("wrapSvgInStaticHtml fallbacks", () => {
   it("uses the options.title when score has none", () => {
     const bareScore = {

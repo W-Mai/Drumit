@@ -15,3 +15,5 @@ export type { RenderHtmlOptions } from "./html";
 export { printSvgAsPdf } from "./pdf";
 
 export { triggerDownload, filenameStem } from "./download";
+export { frameSvgForExport } from "./frame";
+export type { FrameOptions } from "./frame";

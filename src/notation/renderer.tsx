@@ -267,7 +267,7 @@ function BarView({
           band (same horizontal strip as the bar.index label on the
           left) so it doesn't overlap the note rows that start below. */}
       {isPlayhead && repeatPass && repeatPass.total > 1 ? (
-        <g>
+        <g data-transient-badge="pass">
           <rect
             x={x + width - 30}
             y={y}

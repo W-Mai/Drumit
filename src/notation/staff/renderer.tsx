@@ -264,7 +264,7 @@ function BarShell({
         />
       ) : null}
       {isPlayhead && repeatPass && repeatPass.total > 1 ? (
-        <g>
+        <g data-transient-badge="pass">
           <rect
             x={bar.x + bar.width - 30}
             y={staffY - STAFF_SPACE * 2.2}
