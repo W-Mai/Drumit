@@ -223,12 +223,17 @@ function layoutBar(
   rowAssignment: Map<RowGroup, number>,
 ): LaidOutBar {
   const rowGroups = ROW_GROUP_ORDER.filter((g) => rowAssignment.has(g));
-  if (rowGroups.length === 0) rowGroups.push("snare"); // safety for empty bar
+  if (rowGroups.length === 0) {
+    // Empty bar (e.g. bar of `%` in an otherwise empty row): anchor
+    // a snare row so rowY / barHeight stay defined.
+    rowGroups.push("snare");
+    if (!rowAssignment.has("snare")) rowAssignment.set("snare", 0);
+  }
 
   const uniqueRowIndices = Array.from(
     new Set([...rowAssignment.values()]),
   ).sort((a, b) => a - b);
-  const rowCount = uniqueRowIndices.length;
+  const rowCount = Math.max(1, uniqueRowIndices.length);
   const indexToVisualRow = new Map<number, number>();
   uniqueRowIndices.forEach((idx, visualRow) =>
     indexToVisualRow.set(idx, visualRow),
