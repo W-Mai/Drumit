@@ -21,6 +21,7 @@ import {
   DIGIT_BY_INSTRUMENT,
   INSTRUMENT_BY_DIGIT,
 } from "../notation/hotkeyMap";
+import { rowGroupFor } from "../notation/layout";
 import { useHotkeyContext } from "./hotkeyContext";
 
 /* ------------------------------------------------------------------ */
@@ -1306,7 +1307,7 @@ function StepCell({
             "border-l border-dashed border-amber-400",
           hit
             ? hitBgClass(hit)
-            : "bg-white text-stone-200 hover:bg-stone-100",
+            : "bg-white text-stone-200 hover:bg-amber-50/60 hover:text-stone-400",
           cursorState === "lane" && !hit && "bg-sky-50",
           cursorState === "beat" && !hit && "bg-sky-50/60",
           cursorState === "cell" &&
@@ -1882,11 +1883,27 @@ function divisionForGroup(plan: LaneBeatPlan, groupIndex: number): number {
 /* Hit visuals                                                         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Per-row-group background so each voice family has a recognisable
+ * colour in the editor. Accent keeps the existing amber emphasis;
+ * ghost stays dim. Matches the rest of the app's stone + amber palette.
+ */
 function hitBgClass(hit: Hit): string {
   if (hit.articulations.includes("accent"))
-    return "bg-amber-500 text-white shadow-sm";
-  if (hit.articulations.includes("ghost")) return "bg-stone-400 text-white";
-  return "bg-stone-900 text-amber-100";
+    return "bg-amber-500 text-white shadow-sm ring-1 ring-amber-600/30";
+  if (hit.articulations.includes("ghost"))
+    return "bg-stone-400 text-white shadow-sm";
+  const group = rowGroupFor(hit.instrument);
+  switch (group) {
+    case "cymbals":
+      return "bg-yellow-700 text-amber-50 shadow-sm";
+    case "toms":
+      return "bg-orange-800 text-orange-50 shadow-sm";
+    case "snare":
+      return "bg-rose-700 text-rose-50 shadow-sm";
+    case "kick":
+      return "bg-stone-900 text-amber-100 shadow-sm";
+  }
 }
 
 function renderHitBadge(hit: Hit): React.ReactNode {
