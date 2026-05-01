@@ -267,16 +267,16 @@ describe("beam merging across groups", () => {
       })),
     );
     expect(snapshot).toEqual([
-      [{ rowGroup: "kick", depth: 1, x1: 29, x2: 79.4, y: 128 }],
+      [{ rowGroup: "kick", depth: 1, x1: 29, x2: 79.4, y: 112 }],
       [
-        { rowGroup: "kick", depth: 2, x1: 107.6, x2: 131.8, y: 131 },
-        { rowGroup: "kick", depth: 1, x1: 81.4, x2: 131.8, y: 128 },
+        { rowGroup: "kick", depth: 2, x1: 107.6, x2: 131.8, y: 115 },
+        { rowGroup: "kick", depth: 1, x1: 81.4, x2: 131.8, y: 112 },
       ],
       [
-        { rowGroup: "kick", depth: 2, x1: 133.8, x2: 158, y: 131 },
-        { rowGroup: "kick", depth: 1, x1: 133.8, x2: 184.2, y: 128 },
+        { rowGroup: "kick", depth: 2, x1: 133.8, x2: 158, y: 115 },
+        { rowGroup: "kick", depth: 1, x1: 133.8, x2: 184.2, y: 112 },
       ],
-      [{ rowGroup: "snare", depth: 1, x1: 186.2, x2: 236.6, y: 128 }],
+      [{ rowGroup: "snare", depth: 1, x1: 186.2, x2: 236.6, y: 112 }],
     ]);
   });
 
@@ -325,12 +325,12 @@ describe("beam merging across groups", () => {
     );
     expect(snap).toEqual([
       [
-        { rowGroup: "cymbals", depth: 2, x1: 65.2, x2: 75.3, y: 103 },
-        { rowGroup: "cymbals", depth: 1, x1: 29, x2: 75.3, y: 100 },
+        { rowGroup: "cymbals", depth: 2, x1: 65.2, x2: 75.3, y: 91 },
+        { rowGroup: "cymbals", depth: 1, x1: 29, x2: 75.3, y: 88 },
       ],
-      [{ rowGroup: "cymbals", depth: 1, x1: 77.3, x2: 123.5, y: 100 }],
-      [{ rowGroup: "cymbals", depth: 1, x1: 125.5, x2: 171.8, y: 100 }],
-      [{ rowGroup: "cymbals", depth: 1, x1: 173.8, x2: 220, y: 100 }],
+      [{ rowGroup: "cymbals", depth: 1, x1: 77.3, x2: 123.5, y: 88 }],
+      [{ rowGroup: "cymbals", depth: 1, x1: 125.5, x2: 171.8, y: 88 }],
+      [{ rowGroup: "cymbals", depth: 1, x1: 173.8, x2: 220, y: 88 }],
     ]);
   });
 

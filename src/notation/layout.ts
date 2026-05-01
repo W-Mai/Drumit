@@ -110,13 +110,19 @@ export interface LayoutOptions {
   width: number;
 }
 
-export const BAR_CONTENT_TOP = 20;
-export const ROW_HEIGHT = 28; // vertical space per voicing row (note head + beam band)
-export const ROW_GAP = 16;
-export const SECTION_GAP_BEFORE = 20;
-export const SECTION_HEADER_HEIGHT = 24;
-/** The top band reserved for title / tempo / meter. */
-export const HEADER_BAND_HEIGHT = 44;
+// Visual rhythm tokens. Keep these in one place; the renderer reads
+// them to size note heads + badges so any value change stays
+// consistent across the chart.
+export const BAR_CONTENT_TOP = 16;
+export const ROW_HEIGHT = 24; // vertical space per voicing row
+export const ROW_GAP = 14;
+export const SECTION_GAP_BEFORE = 18;
+export const SECTION_HEADER_HEIGHT = 22;
+// Space reserved at the top of the score for the title, tempo, and
+// meter signature tokens.
+export const HEADER_BAND_HEIGHT = 38;
+// Extra room below the last row for beam lines + articulations.
+export const BAR_CONTENT_BOTTOM = 14;
 
 const MIN_BEAT_WIDTH = 44;
 const BAR_GAP_X = 0;
@@ -243,7 +249,7 @@ function layoutBar(
     const visualRow = indexToVisualRow.get(rowAssignment.get(group)!)!;
     rowY[group] = y + BAR_CONTENT_TOP + visualRow * ROW_HEIGHT;
   });
-  const barHeight = BAR_CONTENT_TOP + rowCount * ROW_HEIGHT + 18; // +18 for bottom beam space
+  const barHeight = BAR_CONTENT_TOP + rowCount * ROW_HEIGHT + BAR_CONTENT_BOTTOM;
 
   const innerLeft = x + 12;
   const innerRight = x + width - 12;
