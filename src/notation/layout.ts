@@ -467,47 +467,47 @@ function mergeBeams(
     }
   }
 
-  // Step 2b: Collapse beams with identical x-range across rows.
-  // Skipped for:
-  //  - self-primary copies (base bar under a richer row's short beams)
-  //  - depth ≥ 2 beams (16th / 32nd short beams belong to their own
-  //    row's note heads and can't be relocated)
-  const kept: RowBeam[] = [];
-  const dropped = new Set<number>();
-  const isPinnedToRow = (b: RowBeam) =>
-    selfPrimarySet.has(b) || b.depth >= 2;
-  for (let i = 0; i < folded.length; i += 1) {
-    if (dropped.has(i)) continue;
-    const bi = folded[i];
-    if (isPinnedToRow(bi)) {
-      kept.push(bi);
-      continue;
-    }
-    const matches: number[] = [i];
-    for (let j = i + 1; j < folded.length; j += 1) {
-      if (dropped.has(j)) continue;
-      const bj = folded[j];
-      if (isPinnedToRow(bj)) continue;
-      if (bi.rowGroup === bj.rowGroup) continue;
-      if (bi.depth !== bj.depth) continue;
-      if (Math.abs(bi.x1 - bj.x1) > EPS) continue;
-      if (Math.abs(bi.x2 - bj.x2) > EPS) continue;
-      if (bi.tuplet !== bj.tuplet) continue;
-      if (bi.tuplet === -1 || bj.tuplet === -1) continue;
-      matches.push(j);
-    }
-    if (matches.length === 1) {
-      kept.push(bi);
-      continue;
-    }
-    const anchor = matches
-      .map((idx) => folded[idx])
-      .reduce((bottom, b) =>
-        (rowY[b.rowGroup] ?? 0) > (rowY[bottom.rowGroup] ?? 0) ? b : bottom,
-      );
-    kept.push(anchor);
-    matches.forEach((idx) => dropped.add(idx));
+  // Step 2b: Collapse rows whose entire beam stack is identical. If
+  // two rows play the same rhythm (all depths at the same x), the
+  // under-lines on the upper row are redundant — drop them and keep
+  // the bottom row's stack only.
+  const byRowGroup = new Map<RowGroup, RowBeam[]>();
+  for (const b of folded) {
+    const list = byRowGroup.get(b.rowGroup) ?? [];
+    list.push(b);
+    byRowGroup.set(b.rowGroup, list);
   }
+  const stackKeyFor = (list: RowBeam[]) =>
+    list
+      .slice()
+      .sort(
+        (a, b) => a.depth - b.depth || a.x1 - b.x1 || a.x2 - b.x2,
+      )
+      .map(
+        (b) =>
+          `${b.depth}:${b.x1.toFixed(1)}:${b.x2.toFixed(1)}:${b.tuplet}`,
+      )
+      .join("|");
+  const stackByRow = new Map<RowGroup, string>();
+  for (const [rg, list] of byRowGroup) stackByRow.set(rg, stackKeyFor(list));
+  const rowsByStack = new Map<string, RowGroup[]>();
+  for (const [rg, key] of stackByRow) {
+    const list = rowsByStack.get(key) ?? [];
+    list.push(rg);
+    rowsByStack.set(key, list);
+  }
+  const dropRowGroups = new Set<RowGroup>();
+  for (const rgs of rowsByStack.values()) {
+    if (rgs.length < 2) continue;
+    const bottom = rgs.reduce((acc, r) =>
+      (rowY[r] ?? 0) > (rowY[acc] ?? 0) ? r : acc,
+    );
+    for (const r of rgs) if (r !== bottom) dropRowGroups.add(r);
+  }
+  const kept: RowBeam[] = folded.filter(
+    (b) => !dropRowGroups.has(b.rowGroup),
+  );
+  void EPS;
 
   return kept.map((b) => ({
     rowGroup: b.rowGroup,

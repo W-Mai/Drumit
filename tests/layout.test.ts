@@ -184,22 +184,19 @@ describe("beam merging across groups", () => {
     });
   });
 
-  it("two rows of 16ths each keep their own depth=1 AND depth=2", () => {
+  it("two rows with identical 16th stacks collapse onto the bottom row", () => {
     // `bd` 16ths + `rb` 16ths (rideBell is on the cymbals row): both
-    // rows have short depth=2 beams and need their own depth=1 base.
-    // The depth=2 short beams must not collapse across rows — each
-    // belongs directly under its own note heads.
+    // rows have identical stacks (d=1 + d=2 at matching x). The
+    // upper row's under-lines are redundant and collapse onto kick.
     const bar = layoutBarOf(
       `title: T\nmeter: 4/4\n[A]\n| bd: o--- / -o-- / --o- / ---o  hho: - / -- / - / -  rb: -xx- / -x-x / x--- / xxxx |`,
     );
     for (const bt of bar.beats) {
-      const cymDepths = new Set(
-        bt.beams.filter((b) => b.rowGroup === "cymbals").map((b) => b.depth),
-      );
+      const rows = new Set(bt.beams.map((b) => b.rowGroup));
+      expect(rows).toEqual(new Set(["kick"]));
       const kickDepths = new Set(
         bt.beams.filter((b) => b.rowGroup === "kick").map((b) => b.depth),
       );
-      expect(cymDepths).toEqual(new Set([1, 2]));
       expect(kickDepths).toEqual(new Set([1, 2]));
     }
   });
