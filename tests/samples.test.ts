@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { parseDrumtab } from "../src/notation/parser";
+import { serializeScore } from "../src/notation/serialize";
 import { layoutScore } from "../src/notation/layout";
 import { DrumChart } from "../src/notation/renderer";
 import { samples } from "../src/notation/samples";
@@ -37,6 +38,18 @@ describe("all drumtab samples", () => {
       );
       expect(svg.startsWith("<svg")).toBe(true);
       expect(svg.length).toBeGreaterThan(500);
+    });
+
+    it(`${sample.id} serializes idempotently`, () => {
+      const { score } = parseDrumtab(sample.source);
+      const out1 = serializeScore(score);
+      const { score: s2, diagnostics } = parseDrumtab(out1);
+      expect(
+        diagnostics.filter((d) => d.level === "error"),
+        `${sample.id} re-parse should have no errors`,
+      ).toHaveLength(0);
+      const out2 = serializeScore(s2);
+      expect(out2).toBe(out1);
     });
   }
 });

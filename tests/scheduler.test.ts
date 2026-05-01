@@ -166,8 +166,41 @@ describe("articulation expansion", () => {
     const bd = events.filter((e) => e.hit.instrument === "kick");
     expect(bd).toHaveLength(2);
     expect(bd[0].time).toBeCloseTo(0, 3);
-    // Second hit starts after a dotted 8th (0.75s) at 60bpm 4/4.
     expect(bd[1].time).toBeCloseTo(0.75, 3);
+  });
+
+  it("schedules double-dotted 8th + 32nd at 7:1 timing", () => {
+    // `o.. o` → dotted²8 (7/8 beat = 0.875s) + 32nd (0.125s).
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o.. o / - / - / - |`,
+    );
+    const { events } = schedule(score);
+    const bd = events.filter((e) => e.hit.instrument === "kick");
+    expect(bd).toHaveLength(2);
+    expect(bd[1].time).toBeCloseTo(0.875, 3);
+  });
+
+  it("end-slot dot has no effect on timing (nothing to borrow from)", () => {
+    // `o-o.` last slot dotted but no next slot — dots get ignored
+    // and the beat stays equally divided into thirds.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o-o. / - / - / - |`,
+    );
+    const { events } = schedule(score);
+    const bd = events.filter((e) => e.hit.instrument === "kick");
+    expect(bd).toHaveLength(2);
+    // Three equal thirds → hits at 0 and 2/3 beat = 0.667s.
+    expect(bd[0].time).toBeCloseTo(0, 3);
+    expect(bd[1].time).toBeCloseTo(2 / 3, 3);
+  });
+
+  it("total duration is unchanged when the beat contains dots", () => {
+    // A bar with dotted notes still sums to the same wall-clock time.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o.o / o.o / o.o / o.o |`,
+    );
+    const { totalDuration } = schedule(score);
+    expect(totalDuration).toBeCloseTo(4, 3); // 4 beats × 1s
   });
 });
 

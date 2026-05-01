@@ -424,4 +424,66 @@ describe("parseDrumtab", () => {
     expect(beat.lanes[0].groups).toBeUndefined();
     expect(beat.lanes[0].division).toBe(2);
   });
+
+  it("end-slot dot is preserved on the hit but doesn't expand the lane", () => {
+    // `o-o.` — last slot dotted with nothing after to borrow from.
+    // Expected: flat 3-slot lane, hit at index 2 keeps dots=1, no groups.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o-o. / - / - / - |`,
+    );
+    const lane = score.sections[0].bars[0].beats[0].lanes[0];
+    expect(lane.groups).toBeUndefined();
+    expect(lane.slots).toHaveLength(3);
+    expect(lane.slots[2]?.dots).toBe(1);
+  });
+
+  it("multiple meters are parsed per-bar from inline `meter:`", () => {
+    // A mid-score meter change keeps its own beats count.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\nmeter: 3/4\n| bd: o / o / o |`,
+    );
+    const bars = score.sections[0].bars;
+    expect(bars).toHaveLength(2);
+    expect(bars[0].beats).toHaveLength(4);
+    expect(bars[1].beats).toHaveLength(3);
+  });
+
+  it("empty section (no bars) is retained as a marker", () => {
+    // Some charts declare a section header without bars yet (TBD).
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[Intro]\n[A]\n| bd: o / o / o / o |`,
+    );
+    // The empty Intro section is folded into whichever bars come next
+    // or kept as an empty section depending on implementation — the
+    // contract is that parse doesn't throw and bars are reachable.
+    const totalBars = score.sections.reduce((n, s) => n + s.bars.length, 0);
+    expect(totalBars).toBe(1);
+  });
+
+  it("trailing newline + blank lines don't produce phantom bars", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n\n\n`,
+    );
+    expect(score.sections[0].bars).toHaveLength(1);
+  });
+
+  it("leading whitespace on bar lines is ignored", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n   | bd: o / o / o / o |\n\t| bd: - / - / - / - |`,
+    );
+    expect(score.sections[0].bars).toHaveLength(2);
+  });
+
+  it("bar with only whitespace between pipes is a valid empty bar", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n|   |`,
+    );
+    expect(score.sections[0].bars).toHaveLength(2);
+    // Second bar has no hits.
+    const bar2 = score.sections[0].bars[1];
+    const hits = bar2.beats.flatMap((b) =>
+      b.lanes.flatMap((l) => l.slots.filter((s) => s !== null)),
+    );
+    expect(hits).toHaveLength(0);
+  });
 });

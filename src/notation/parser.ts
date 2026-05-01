@@ -424,15 +424,22 @@ export function maybeExpandDotted(
   const dots = slots.map((s) => s?.dots ?? 0);
   if (dots.every((d) => d === 0)) return null;
   const N = slots.length;
-  // Start with each slot claiming an equal 1/N share of the beat.
   const share = new Array<number>(N).fill(1 / N);
+  let anyBorrow = false;
   for (let i = 0; i < N; i += 1) {
     const d = dots[i];
     if (d === 0 || i + 1 >= N) continue;
-    // 1 dot → take half of next; 2 dots → take 3/4 of next.
     const take = d === 1 ? share[i + 1] / 2 : (share[i + 1] * 3) / 4;
     share[i] += take;
     share[i + 1] -= take;
+    anyBorrow = true;
+  }
+  if (!anyBorrow) {
+    // All dots are on slots with nothing after them to borrow from —
+    // they can't change the timing. Keep them on the hit so the
+    // rendering still shows the augmentation dot, but don't expand
+    // the lane into a one-slot-per-group structure.
+    return null;
   }
   return slots.map((slot, idx) => ({
     ratio: share[idx],

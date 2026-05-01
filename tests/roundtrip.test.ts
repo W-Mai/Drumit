@@ -23,17 +23,36 @@ function randomBar(r: () => number): string {
     ["sn", ["o", "(o)", ">o", "o/R", "o/L"]],
     ["cr", ["o"]],
     ["ft", ["o"]],
+    ["ride", ["o"]],
+    ["t1", ["o"]],
   ] as const;
-  const divisions = [1, 2, 3, 4, 6];
+  const divisions = [1, 2, 3, 4, 6, 8];
+  const pickLanes = 1 + Math.floor(r() * 4); // 1..4 lanes
   const beats = Array.from({ length: 4 }, () => {
     const d = rand(divisions);
-    // Pick 2 lanes
-    return lanes
-      .slice(0, 3)
+    // Fisher-Yates with our rng to deterministically pick N lanes.
+    const shuffled = lanes.slice();
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(r() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const chosen = shuffled.slice(0, pickLanes);
+    return chosen
       .map(([alias, heads]) => {
         const tokens: string[] = [];
         for (let i = 0; i < d; i += 1) {
-          tokens.push(r() < 0.35 ? "-" : rand(heads));
+          if (r() < 0.3) tokens.push("-");
+          else {
+            const base = rand(heads);
+            // 15% chance of a dot on this hit (if it's a head, not a rest).
+            const dots = r() < 0.15 ? "." : r() < 0.03 ? ".." : "";
+            tokens.push(base + dots);
+          }
+        }
+        // 25% chance: split this beat into two `,` groups.
+        if (r() < 0.25 && tokens.length >= 2) {
+          const mid = Math.floor(tokens.length / 2);
+          return `${alias}: ${tokens.slice(0, mid).join(" ")} , ${tokens.slice(mid).join(" ")}`;
         }
         return `${alias}: ${tokens.join(" ")}`;
       })
@@ -43,11 +62,13 @@ function randomBar(r: () => number): string {
 }
 
 describe("round-trip fuzz", () => {
-  const cases = Array.from({ length: 20 }, (_, i) => i);
+  const cases = Array.from({ length: 50 }, (_, i) => i);
   for (const seed of cases) {
     it(`seed=${seed} parses, serializes, re-parses without error`, () => {
       const r = rng(seed + 1);
-      const src = `title: Fuzz\nmeter: 4/4\n[A]\n${randomBar(r)}\n${randomBar(r)}\n${randomBar(r)}\n${randomBar(r)}\n`;
+      const barCount = 2 + Math.floor(r() * 5); // 2..6 bars
+      const bars = Array.from({ length: barCount }, () => randomBar(r));
+      const src = `title: Fuzz\nmeter: 4/4\n[A]\n${bars.join("\n")}\n`;
       const p1 = parseDrumtab(src);
       expect(p1.diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
       const out1 = serializeScore(p1.score);

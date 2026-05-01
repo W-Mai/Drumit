@@ -119,4 +119,33 @@ describe("exportScoreToMidi", () => {
     expect(fast[27]).toBe(0xd0);
     expect(fast[28]).toBe(0x90);
   });
+
+  it("exports dotted 8th + 16th with 3:1 delta-time ratio", () => {
+    // `o. o` → dotted 8th (3/4 beat = 3*PPQ/4) then 16th (PPQ/4).
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o. o / - / - / - |`,
+    );
+    const bytes = exportScoreToMidi(score);
+    // Smoke check: it produced something and didn't throw.
+    expect(bytes.length).toBeGreaterThan(50);
+    // 3/4 of PPQ (default 480) = 360 → vlq encodes as 0x82 0x68.
+    // Rather than match exact byte offsets, confirm the expected
+    // delta appears somewhere in the track.
+    const target = vlq(Math.round((3 * PPQ) / 4));
+    let found = false;
+    for (let i = 0; i <= bytes.length - target.length; i += 1) {
+      let ok = true;
+      for (let j = 0; j < target.length; j += 1) {
+        if (bytes[i + j] !== target[j]) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        found = true;
+        break;
+      }
+    }
+    expect(found).toBe(true);
+  });
 });

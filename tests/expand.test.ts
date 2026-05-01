@@ -222,4 +222,36 @@ describe("sliceExpandedForPerform", () => {
     expect(result.offset).toBe(0);
     expect(barsFrom(result.score)).toHaveLength(2);
   });
+
+  it("expands `%` repeat-previous into a concrete copy of the preceding bar", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| % |\n| % |`,
+    );
+    const expanded = expandScore(score);
+    const bars = expanded.sections[0].bars;
+    expect(bars).toHaveLength(3);
+    // All three bars should have identical hit content.
+    for (let i = 1; i < 3; i += 1) {
+      expect(JSON.stringify(bars[i].beats)).toBe(
+        JSON.stringify(bars[0].beats),
+      );
+      expect(bars[i].repeatPrevious).toBe(false);
+    }
+  });
+
+  it("D.C. al Fine in a bar with dotted notes preserves dot through expansion", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o.o / o / o / o |\n| bd: o / o / o / o |\n@fine\n| bd: o / o / o / o |\n@dc al fine`,
+    );
+    const expanded = expandScore(score);
+    const bars = expanded.sections[0].bars;
+    // Pass 1: bar 0, 1, 2. After D.C. al Fine: bar 0, 1 (stop at Fine).
+    expect(bars).toHaveLength(5);
+    // Bar 0's first-beat first-hit should still carry dots on both
+    // the original and the D.C.-repeated copy.
+    const firstHit = bars[0].beats[0].lanes[0].slots[0];
+    const dcHit = bars[3].beats[0].lanes[0].slots[0];
+    expect(firstHit?.dots).toBe(1);
+    expect(dcHit?.dots).toBe(1);
+  });
 });
