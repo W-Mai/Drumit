@@ -13,6 +13,7 @@ import type {
   LaneBeat,
   RepeatHint,
 } from "../notation/types";
+import { AnimatePresence, motion } from "motion/react";
 import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
 import { Button, Chip, ChipGroup } from "./ui";
@@ -1314,7 +1315,25 @@ function StepCell({
             "outline outline-2 outline-sky-500 outline-offset-[-2px] z-10",
         )}
       >
-        {hit ? renderHitBadge(hit) : null}
+        <AnimatePresence mode="popLayout">
+          {hit ? (
+            <motion.span
+              key="hit"
+              className="pointer-events-none flex flex-col items-center justify-center"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 520,
+                damping: 30,
+                mass: 0.6,
+              }}
+            >
+              {renderHitBadge(hit)}
+            </motion.span>
+          ) : null}
+        </AnimatePresence>
       </button>
 
       <FloatingMenu
@@ -1917,14 +1936,14 @@ function renderHitBadge(hit: Hit): React.ReactNode {
   if (hit.articulations.includes("flam")) subs.push("f");
   if (hit.sticking) subs.push(hit.sticking);
   return (
-    <span className="pointer-events-none flex flex-col items-center justify-center">
+    <>
       <span className="font-bold leading-none">{icon}</span>
       {subs.length ? (
         <span className="text-[8px] font-bold opacity-80">
           {subs.join("")}
         </span>
       ) : null}
-    </span>
+    </>
   );
 }
 

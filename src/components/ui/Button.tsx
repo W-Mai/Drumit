@@ -16,6 +16,8 @@ export interface ButtonProps
   variant?: ButtonVariant;
   size?: ButtonSize;
   pill?: boolean;
+  /** Scales down on press. Use for transport / primary actions. */
+  pressable?: boolean;
 }
 
 const variantClass: Record<ButtonVariant, string> = {
@@ -44,6 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "secondary",
       size = "sm",
       pill = true,
+      pressable = false,
       className,
       type = "button",
       ...rest
@@ -59,6 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           "disabled:cursor-not-allowed disabled:opacity-40",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1",
           pill ? "rounded-full" : "rounded-md",
+          pressable && "motion-press",
           variantClass[variant],
           sizeClass[size],
           className,

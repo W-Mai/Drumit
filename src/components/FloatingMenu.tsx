@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "motion/react";
 import { useMediaQuery } from "../lib/useMediaQuery";
 
 interface Props {
@@ -116,47 +117,58 @@ export function FloatingMenu({
     };
   }, [open, anchor, onClose, placement, gap]);
 
-  if (!open) return null;
-
-  if (asSheet) {
-    return createPortal(
-      <div
-        className="fixed inset-0 z-50 flex items-end bg-stone-900/50"
-        onClick={onClose}
-        role="presentation"
-      >
-        <div
+  return createPortal(
+    <AnimatePresence>
+      {open && asSheet ? (
+        <motion.div
+          key="sheet"
+          className="fixed inset-0 z-50 flex items-end bg-stone-900/50"
+          onClick={onClose}
+          role="presentation"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
+        >
+          <motion.div
+            ref={menuRef}
+            onClick={(e) => e.stopPropagation()}
+            className={
+              "w-full max-h-[70dvh] overflow-auto rounded-t-2xl border-t border-stone-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl " +
+              (className ?? "")
+            }
+            role="dialog"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+          >
+            {children}
+          </motion.div>
+        </motion.div>
+      ) : open ? (
+        <motion.div
+          key="float"
           ref={menuRef}
-          onClick={(e) => e.stopPropagation()}
           className={
-            "w-full max-h-[70dvh] overflow-auto rounded-t-2xl border-t border-stone-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl " +
+            "fixed z-50 origin-top rounded-xl border border-stone-200 bg-white p-2 shadow-2xl " +
             (className ?? "")
           }
+          style={{
+            left: coords?.left ?? -9999,
+            top: coords?.top ?? -9999,
+            visibility: coords ? "visible" : "hidden",
+          }}
           role="dialog"
+          initial={{ opacity: 0, scale: 0.96, y: -4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: -4 }}
+          transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
         >
           {children}
-        </div>
-      </div>,
-      document.body,
-    );
-  }
-
-  return createPortal(
-    <div
-      ref={menuRef}
-      className={
-        "fixed z-50 rounded-xl border border-stone-200 bg-white p-2 shadow-2xl " +
-        (className ?? "")
-      }
-      style={{
-        left: coords?.left ?? -9999,
-        top: coords?.top ?? -9999,
-        visibility: coords ? "visible" : "hidden",
-      }}
-      role="dialog"
-    >
-      {children}
-    </div>,
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
     document.body,
   );
 }

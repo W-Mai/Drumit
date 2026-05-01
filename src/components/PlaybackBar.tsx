@@ -268,6 +268,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
         <Button
           onClick={playing ? handlePause : handlePlay}
           variant={playing ? "accent" : "success"}
+          pressable
         >
           {playing
             ? "❚❚ Pause"
@@ -281,6 +282,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
           onClick={handleStop}
           disabled={playState === "idle"}
           variant="primary"
+          pressable
         >
           ■ Stop
         </Button>

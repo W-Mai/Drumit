@@ -196,7 +196,7 @@ export function PerformView({
         <button
           type="button"
           onClick={onExit}
-          className="grid h-10 w-10 place-items-center rounded-full bg-stone-800 text-lg font-bold hover:bg-stone-700"
+          className="motion-press grid h-10 w-10 place-items-center rounded-full bg-stone-800 text-lg font-bold hover:bg-stone-700"
           aria-label="Exit perform view"
           title="Exit (Esc)"
         >
@@ -208,7 +208,7 @@ export function PerformView({
         <button
           type="button"
           onClick={onTogglePlay}
-          className="grid h-10 min-w-10 place-items-center rounded-full bg-amber-400 px-4 font-bold text-stone-950 hover:bg-amber-300"
+          className="motion-press grid h-10 min-w-10 place-items-center rounded-full bg-amber-400 px-4 font-bold text-stone-950 hover:bg-amber-300"
           aria-label={isPlaying ? "Pause" : "Play"}
           title={isPlaying ? "Pause (Space)" : "Play (Space)"}
         >

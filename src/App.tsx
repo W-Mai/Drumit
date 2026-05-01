@@ -59,7 +59,7 @@ import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
 import { StaffView } from "./notation/staff/renderer";
-import { Badge, Button, Panel, PanelHeader } from "./components/ui";
+import { Badge, Button, Panel, PanelHeader, ViewFader } from "./components/ui";
 import type { Bar, Score } from "./notation/types";
 import { cn } from "./lib/utils";
 import { useHistory } from "./lib/useHistory";
@@ -1118,39 +1118,45 @@ export default function App() {
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
                 Fix parse errors to update the preview.
               </div>
-            ) : viewMode === "staff" ? (
-              <StaffView
-                score={displayScore}
-                selectedBarIndex={
-                  expandedPreview ? expandedSelectedBar : clampedSelectedBar
-                }
-                selectionEnd={
-                  expandedPreview ? expandedSelectionEnd : selectionEnd
-                }
-                onSelectBar={
-                  expandedPreview ? handleExpandedBarClick : handleBarClick
-                }
-                playCursor={viewPlayCursor}
-                playheadEngine={engineKind}
-                repeatPass={viewRepeatPass}
-              />
             ) : (
-              <DrumChart
-                layout={layout}
-                showLabels={showLabels}
-                selectedBarIndex={
-                  expandedPreview ? expandedSelectedBar : clampedSelectedBar
-                }
-                selectionEnd={
-                  expandedPreview ? expandedSelectionEnd : selectionEnd
-                }
-                onSelectBar={
-                  expandedPreview ? handleExpandedBarClick : handleBarClick
-                }
-                playCursor={viewPlayCursor}
-                playheadEngine={engineKind}
-                repeatPass={viewRepeatPass}
-              />
+              <ViewFader
+                activeKey={`${viewMode}-${expandedPreview ? "exp" : "cmp"}`}
+              >
+                {viewMode === "staff" ? (
+                  <StaffView
+                    score={displayScore}
+                    selectedBarIndex={
+                      expandedPreview ? expandedSelectedBar : clampedSelectedBar
+                    }
+                    selectionEnd={
+                      expandedPreview ? expandedSelectionEnd : selectionEnd
+                    }
+                    onSelectBar={
+                      expandedPreview ? handleExpandedBarClick : handleBarClick
+                    }
+                    playCursor={viewPlayCursor}
+                    playheadEngine={engineKind}
+                    repeatPass={viewRepeatPass}
+                  />
+                ) : (
+                  <DrumChart
+                    layout={layout}
+                    showLabels={showLabels}
+                    selectedBarIndex={
+                      expandedPreview ? expandedSelectedBar : clampedSelectedBar
+                    }
+                    selectionEnd={
+                      expandedPreview ? expandedSelectionEnd : selectionEnd
+                    }
+                    onSelectBar={
+                      expandedPreview ? handleExpandedBarClick : handleBarClick
+                    }
+                    playCursor={viewPlayCursor}
+                    playheadEngine={engineKind}
+                    repeatPass={viewRepeatPass}
+                  />
+                )}
+              </ViewFader>
             )}
           </div>
         </Panel>
