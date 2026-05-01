@@ -11,6 +11,52 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.01.2]
+
+### Added
+
+- **Dotted notes** — `o.` (dotted) / `o..` (double-dotted) in
+  `.drumtab` sources. Works in the editor too: `.` hotkey or the
+  Dots entry in a cell's right-click menu cycles 0 → 1 → 2 → 0 on
+  the selected slot. Playback / staff / Drumit all reflect the
+  right timing and augmentation dot glyph.
+- **Dotted extension punches out other lanes' beams** in its range.
+  When one lane is dotted, the other lane's 16th rest in the same
+  territory no longer paints a competing under-line — the dot
+  visually owns its extended span.
+
+### Changed / Fixed
+
+- **Lane alignment across a row of bars** — the row-group → visual-row
+  mapping is now computed per row (not per bar), so neighbouring bars
+  using different row groups no longer shift each other's lanes up
+  and down.
+- **Tighter Preview layout** — `BAR_GAP_X` → 0 so adjacent bars share
+  barlines, `ROW_GAP` / `SECTION_GAP_BEFORE` / `SECTION_HEADER_HEIGHT`
+  shrunk. Playhead highlight no longer flares over neighbouring
+  barlines.
+- **Stable playhead bar box** — the highlight now uses the row's
+  maximum height (`rowMaxHeight`) instead of each bar's own, so the
+  box no longer resizes as playback moves between bars with
+  different row-group sets.
+- **Richer rows keep their own primary bar** — a 16th / 32nd row now
+  shows both its depth-1 base and depth-2 short beam, so hi-hat
+  16ths display the full two-line stack even when another voice is
+  folded onto the bottom row.
+- **Identical-stack rows collapse to the bottom row** — when two
+  voices share the exact same beam stack (e.g. kick 16ths + ride
+  16ths), the upper row's under-lines fold away, leaving one clean
+  stack on the lowest voice.
+- **`%` repeat bar on a row of its own** — rows containing only
+  repeat-previous / all-rest / empty bars now produce valid rowY
+  and non-zero height, so the `∕` slash actually renders instead of
+  silently disappearing at NaN coordinates.
+- **Dotted values pick up their base beam count** — a dotted 8th
+  (`o.`) now gets one beam instead of zero (the effective-subdivision
+  heuristic used to leave it under the threshold).
+- **Beam depth badge (×pass/total) fits into the bar gutter** —
+  stops overlapping the first note row.
+
 ## [2026.05.01.1]
 
 🎉 劳动节快乐！May Day release — go rehearse something noisy.
