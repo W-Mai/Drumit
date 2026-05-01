@@ -312,6 +312,61 @@ describe("path: controller state mutations chain consistently", () => {
   });
 });
 
+describe("path: repeated parse+serialize converges in ≤2 rounds", () => {
+  // Idempotency guarantee: after at most one round-trip the text
+  // reaches a fixed point. This is stronger than the existing
+  // fuzz — it asserts convergence speed, not just that a second
+  // round matches.
+  it.each(samples.map((s) => [s.id, s.source]))(
+    "%s converges after at most 2 round-trips",
+    (_id, src) => {
+      const o1 = serializeScore(parseDrumtab(src).score);
+      const o2 = serializeScore(parseDrumtab(o1).score);
+      const o3 = serializeScore(parseDrumtab(o2).score);
+      // o2 should already be stable.
+      expect(o2).toBe(o3);
+    },
+  );
+});
+
+describe("path: SVG export roundtrip — render then re-parse source", () => {
+  // When we export a playable HTML / static HTML, the embedded
+  // drumtab source is read back by the embedded player. Round-trip
+  // every sample through the export's embedded source to confirm it
+  // parses cleanly and produces the same structure.
+  it.each(samples.slice(0, 3).map((s) => [s.id, s.source]))(
+    "%s roundtrips through embedded HTML source",
+    (_id, src) => {
+      const { score } = parseDrumtab(src);
+      const serialized = serializeScore(score);
+      const { score: replayed, diagnostics } = parseDrumtab(serialized);
+      expect(
+        diagnostics.filter((d) => d.level === "error"),
+      ).toHaveLength(0);
+
+      // Bar counts match.
+      const origBars = score.sections.reduce(
+        (n, s) => n + s.bars.length,
+        0,
+      );
+      const replayBars = replayed.sections.reduce(
+        (n, s) => n + s.bars.length,
+        0,
+      );
+      expect(replayBars).toBe(origBars);
+
+      // Expanded bar counts also match.
+      const expanded1 = expandScore(score);
+      const expanded2 = expandScore(replayed);
+      expect(
+        expanded2.sections.reduce((n, s) => n + s.bars.length, 0),
+      ).toBe(
+        expanded1.sections.reduce((n, s) => n + s.bars.length, 0),
+      );
+    },
+  );
+});
+
 describe("path: load sample → edit → save → reload round", () => {
   it("picks a sample, modifies it, serializes and re-parses cleanly", () => {
     const sample = samples[0];

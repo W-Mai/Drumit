@@ -153,6 +153,48 @@ describe("wrapSvgInDynamicHtml", () => {
   });
 });
 
+describe("wrapSvgInStaticHtml fallbacks", () => {
+  it("uses the options.title when score has none", () => {
+    const bareScore = {
+      version: 1 as const,
+      title: "",
+      meter: { beats: 4, beatUnit: 4 },
+      sections: [{ label: "A", bars: [] }],
+    };
+    const html = wrapSvgInStaticHtml("<svg/>", bareScore, {
+      title: "Override Title",
+    });
+    expect(html).toContain("<title>Override Title</title>");
+  });
+
+  it("uses the empty title when both options and score title are empty strings", () => {
+    // Empty string is not nullish, so it propagates as-is.
+    const bareScore = {
+      version: 1 as const,
+      title: "",
+      meter: { beats: 4, beatUnit: 4 },
+      sections: [{ label: "A", bars: [] }],
+    };
+    const html = wrapSvgInStaticHtml("<svg/>", bareScore);
+    // <title></title> is still a valid <title> element.
+    expect(html).toMatch(/<title>\s*<\/title>/);
+  });
+});
+
+describe("wrapSvgInDynamicHtml source default", () => {
+  it("empty source produces an empty source script block", () => {
+    const bareScore = {
+      version: 1 as const,
+      title: "Empty",
+      meter: { beats: 4, beatUnit: 4 },
+      sections: [{ label: "A", bars: [] }],
+    };
+    const html = wrapSvgInDynamicHtml("<svg/>", bareScore);
+    // The script element for drumtab-source exists even without content.
+    expect(html).toContain('id="drumtab-source"');
+  });
+});
+
 describe("renderScoreToSvgFromDom", () => {
   it("delegates to postProcessSvg using the element's outerHTML", () => {
     // Build a minimal SVGSVGElement via jsdom.

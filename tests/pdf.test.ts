@@ -48,6 +48,33 @@ describe("printSvgAsPdf", () => {
     expect((blobArg as Blob).type).toMatch(/html/);
   });
 
+  it("cleans up gracefully if iframe.contentWindow is null on load", () => {
+    const origCreateElement = document.createElement.bind(document);
+    const createSpy = vi
+      .spyOn(document, "createElement")
+      .mockImplementation((tag: string) => {
+        const el = origCreateElement(tag);
+        if (tag === "iframe") {
+          Object.defineProperty(el, "contentWindow", {
+            get() {
+              return null;
+            },
+            configurable: true,
+          });
+        }
+        return el;
+      });
+    try {
+      printSvgAsPdf("<svg xmlns='http://www.w3.org/2000/svg'/>", makeScore());
+      const iframe = document.querySelector("iframe")!;
+      // Dispatching load should hit the null-contentWindow branch and
+      // call cleanup without throwing.
+      expect(() => iframe.dispatchEvent(new Event("load"))).not.toThrow();
+    } finally {
+      createSpy.mockRestore();
+    }
+  });
+
   it("calls iframe.contentWindow.print() after the iframe loads", async () => {
     const fakeWin = {
       focus: vi.fn(),

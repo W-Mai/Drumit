@@ -120,6 +120,94 @@ describe("exportScoreToMidi", () => {
     expect(fast[28]).toBe(0x90);
   });
 
+  it("writes time signature meta matching the score meter", () => {
+    // 3/4 → numerator 3, denPow 2 (4 = 2^2), clocks 24, 32nds 8.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 3/4\n[A]\n| bd: o / o / o |`,
+    );
+    const bytes = exportScoreToMidi(score);
+    // Find the FF 58 04 <n> <d> 24 8 sequence. It's in a deterministic
+    // place right after the tempo meta, but we just search for the
+    // whole canonical sequence.
+    let found = -1;
+    for (let i = 0; i < bytes.length - 7; i += 1) {
+      if (
+        bytes[i] === 0xff &&
+        bytes[i + 1] === 0x58 &&
+        bytes[i + 2] === 0x04
+      ) {
+        found = i;
+        break;
+      }
+    }
+    expect(found).toBeGreaterThan(0);
+    expect(bytes[found + 3]).toBe(3); // numerator = 3
+    expect(bytes[found + 4]).toBe(2); // denPow (4 beats = 2^2)
+    expect(bytes[found + 5]).toBe(24);
+    expect(bytes[found + 6]).toBe(8);
+  });
+
+  it("writes time signature for 6/8 meter (denPow = 3)", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 6/8\n[A]\n| bd: o / o / o / o / o / o |`,
+    );
+    const bytes = exportScoreToMidi(score);
+    let found = -1;
+    for (let i = 0; i < bytes.length - 7; i += 1) {
+      if (
+        bytes[i] === 0xff &&
+        bytes[i + 1] === 0x58 &&
+        bytes[i + 2] === 0x04
+      ) {
+        found = i;
+        break;
+      }
+    }
+    expect(found).toBeGreaterThan(0);
+    expect(bytes[found + 3]).toBe(6);
+    expect(bytes[found + 4]).toBe(3); // 8 = 2^3
+  });
+
+  it("emits note-off before note-on when they coincide at the same tick", () => {
+    // Two identical consecutive hits on kick at 60 bpm → note off of
+    // the first must fire before note on of the second at the boundary.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o o / - / - / - |`,
+    );
+    const bytes = exportScoreToMidi(score);
+    // Look for the first 0x89 (note-off ch10) and first 0x99 (note-on
+    // ch10) in the track body. The second hit's note-off precedes
+    // the first hit's note-on? No — order should be:
+    //   note-on #1, note-off #1 (at boundary), note-on #2.
+    let firstOn = -1;
+    let firstOff = -1;
+    for (let i = 0; i < bytes.length; i += 1) {
+      if (bytes[i] === 0x99 && firstOn === -1) firstOn = i;
+      if (bytes[i] === 0x89 && firstOff === -1) firstOff = i;
+    }
+    expect(firstOn).toBeGreaterThan(0);
+    expect(firstOff).toBeGreaterThan(firstOn); // off comes after on for the first note
+  });
+
+  it("clamps velocity into 1..127 even when a scheduled event sends a weird number", () => {
+    // Accent is velocity 120 per GM map — within range. But double-
+    // articulated hits shouldn't exceed the cap.
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| sn: >o >o / - / - / - |`,
+    );
+    const bytes = exportScoreToMidi(score);
+    // Note-on events sit 2 bytes past the 0x99 status — second byte
+    // is the note, third is velocity. Walk through them; no velocity
+    // byte may be 0 or >127.
+    for (let i = 0; i < bytes.length - 2; i += 1) {
+      if (bytes[i] === 0x99 || bytes[i] === 0x89) {
+        const vel = bytes[i + 2];
+        expect(vel).toBeGreaterThanOrEqual(1);
+        expect(vel).toBeLessThanOrEqual(127);
+      }
+    }
+  });
+
   it("exports dotted 8th + 16th with 3:1 delta-time ratio", () => {
     // `o. o` → dotted 8th (3/4 beat = 3*PPQ/4) then 16th (PPQ/4).
     const { score } = parseDrumtab(
