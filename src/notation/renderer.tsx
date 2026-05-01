@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import type { LaidOutBar, LaidOutHit, LaidOutLayout, RowGroup } from "./layout";
 import type { Hit } from "./types";
 import { instrumentSizeScale } from "./instruments";
+import { cn } from "../lib/utils";
 
 function navigationLabel(nav: import("./types").NavigationMarker): string {
   switch (nav.kind) {
@@ -241,13 +242,14 @@ function BarView({
         width={width}
         height={height - 4}
         rx={4}
-        className={
+        className={cn(
+          "transition-[fill,stroke] duration-150 ease-out",
           isPlayhead
-            ? `${playhead.bar}`
+            ? playhead.bar
             : selected
               ? "fill-amber-200/60 stroke-amber-500"
-              : "fill-transparent stroke-transparent hover:fill-stone-200/40"
-        }
+              : "fill-transparent stroke-transparent hover:fill-stone-200/40",
+        )}
         strokeWidth={isPlayhead || selected ? 1.5 : 0}
         data-bar-highlight="true"
       />

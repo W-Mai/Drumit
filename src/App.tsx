@@ -60,6 +60,7 @@ import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
 import { StaffView } from "./notation/staff/renderer";
 import { Badge, Button, Panel, PanelHeader, ViewFader } from "./components/ui";
+import { AnimatePresence, motion } from "motion/react";
 import type { Bar, Score } from "./notation/types";
 import { cn } from "./lib/utils";
 import { useHistory } from "./lib/useHistory";
@@ -979,41 +980,64 @@ export default function App() {
       <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-3 lg:flex-row">
         {/* Sidebar is desktop-only. On <lg, it's replaced by a drawer
             opened from the header hamburger — see S3. */}
-        {sidebarCollapsed ? (
-          <div className="hidden flex-none items-start justify-center lg:flex">
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed(false)}
-              title="Show documents"
-              aria-label="Show documents"
-              className="flex size-8 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
-            >
-              <span className="text-[14px] font-bold leading-none">⇥</span>
-            </button>
-          </div>
-        ) : (
-          <div className="relative hidden w-[200px] flex-none flex-col transition-[width] duration-150 lg:flex">
-            <DocumentList
-              documents={documents.map((d) => ({
-                id: d.id,
-                name: d.name,
-                source: d.source,
-              }))}
-              activeId={activeId}
-              onSelect={handleSelectDoc}
-              onCreate={handleCreateDoc}
-              onDuplicate={handleDuplicateDoc}
-              onRename={handleRenameDoc}
-              onDelete={handleDeleteDoc}
-              onExport={handleExportDoc}
-              onExportMidi={handleExportDocMidi}
-              onImport={handleImportDoc}
-              samples={samples.map(({ id, label }) => ({ id, label }))}
-              onLoadSample={handleLoadSample}
-              onCollapse={() => setSidebarCollapsed(true)}
-            />
-          </div>
-        )}
+        <motion.div
+          className="relative hidden flex-none flex-col overflow-hidden lg:flex"
+          initial={false}
+          animate={{ width: sidebarCollapsed ? 36 : 200 }}
+          transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {sidebarCollapsed ? (
+              <motion.div
+                key="collapsed"
+                className="flex items-start justify-center pt-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(false)}
+                  title="Show documents"
+                  aria-label="Show documents"
+                  className="motion-press flex size-8 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
+                >
+                  <span className="text-[14px] font-bold leading-none">⇥</span>
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="expanded"
+                className="flex h-full flex-col"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12, delay: 0.05 }}
+              >
+                <DocumentList
+                  documents={documents.map((d) => ({
+                    id: d.id,
+                    name: d.name,
+                    source: d.source,
+                  }))}
+                  activeId={activeId}
+                  onSelect={handleSelectDoc}
+                  onCreate={handleCreateDoc}
+                  onDuplicate={handleDuplicateDoc}
+                  onRename={handleRenameDoc}
+                  onDelete={handleDeleteDoc}
+                  onExport={handleExportDoc}
+                  onExportMidi={handleExportDocMidi}
+                  onImport={handleImportDoc}
+                  samples={samples.map(({ id, label }) => ({ id, label }))}
+                  onLoadSample={handleLoadSample}
+                  onCollapse={() => setSidebarCollapsed(true)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
         <button
           type="button"
           onClick={() => setSidebarCollapsed((v) => !v)}
@@ -1249,8 +1273,16 @@ export default function App() {
             </HoverClickPopover>
           </PanelHeader>
 
+          <AnimatePresence initial={false}>
           {editorCollapsed ? null : (
-          <div className="min-h-0 flex-1 overflow-auto p-4">
+          <motion.div
+            key="editor-body"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+            className="min-h-0 flex-1 overflow-auto p-4"
+          >
             {mode === "source" ? (
               <textarea
                 value={currentSource}
@@ -1411,8 +1443,9 @@ export default function App() {
                 Click a bar in the preview above to edit it.
               </div>
             )}
-          </div>
+          </motion.div>
           )}
+          </AnimatePresence>
           </Panel>
         </div>
       </section>
