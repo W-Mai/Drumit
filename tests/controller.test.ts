@@ -375,6 +375,38 @@ describe("PlaybackController — transport", () => {
     expect(ctrl.cursorAt(9).barIndex).toBe(2);
   });
 
+  it("cursorAt returns a zero position on an empty score", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    expect(ctrl.cursorAt(0)).toEqual({
+      barIndex: 0,
+      beatIndex: 0,
+      expandedBarIndex: 0,
+      time: 0,
+    });
+    expect(ctrl.cursorAt(10)).toMatchObject({
+      barIndex: 0,
+      beatIndex: 0,
+      expandedBarIndex: 0,
+    });
+  });
+
+  it("setStartBar past the end clamps against totalDuration", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const { engine } = makeFakeEngine();
+    const ctrl = new PlaybackController({ engine, score });
+    // Bar index way beyond the single bar — should still be accepted
+    // and not throw; cursorAt(4) is past totalDuration (4s) so it
+    // clamps to the final bar.
+    ctrl.setStartBar(99);
+    expect(ctrl.cursorAt(3.9).barIndex).toBe(0);
+  });
+
   it("onEnd listener can be registered and unregistered", () => {
     // Full end-of-playback requires real timers; just check that the
     // listener registration API returns an unregister function and

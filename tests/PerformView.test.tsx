@@ -193,4 +193,181 @@ describe("PerformView", () => {
     fireEvent.click(screen.getByLabelText("Play"));
     expect(onTogglePlay).toHaveBeenCalled();
   });
+
+  it("short tap (pointerDown + pointerUp within LONG_PRESS) seeks without opening popover", () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+      );
+      const onSeekTime = vi.fn();
+      render(
+        <PerformView
+          score={score}
+          cursor={null}
+          viewMode="drumit"
+          engineKind="synth"
+          isPlaying={false}
+          onSeekTime={onSeekTime}
+          onTogglePlay={() => {}}
+          onExit={() => {}}
+        />,
+      );
+      const chips = screen.getAllByTestId("bar-chip");
+      fireEvent.pointerDown(chips[1]);
+      act(() => {
+        vi.advanceTimersByTime(100); // well under 450ms long-press
+      });
+      fireEvent.pointerUp(chips[1]);
+      fireEvent.click(chips[1]);
+      expect(onSeekTime).toHaveBeenCalledWith(4); // 2nd pass at 60 bpm
+      expect(screen.queryByTestId("bar-chip-popover")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows ×pass/total text on chips whose source bar plays multiple times", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+    );
+    render(
+      <PerformView
+        score={score}
+        cursor={null}
+        viewMode="drumit"
+        engineKind="synth"
+        isPlaying={false}
+        onSeekTime={() => {}}
+        onTogglePlay={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    // Each chip should show the pass number (×N/3).
+    const chips = screen.getAllByTestId("bar-chip");
+    expect(chips.map((c) => c.textContent)).toEqual([
+      expect.stringMatching(/1.*1\/3/),
+      expect.stringMatching(/1.*2\/3/),
+      expect.stringMatching(/1.*3\/3/),
+    ]);
+  });
+
+  it("does not show pass suffix on chips whose source bar plays once", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    render(
+      <PerformView
+        score={score}
+        cursor={null}
+        viewMode="drumit"
+        engineKind="synth"
+        isPlaying={false}
+        onSeekTime={() => {}}
+        onTogglePlay={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    const chips = screen.getAllByTestId("bar-chip");
+    expect(chips[0].textContent).not.toMatch(/×\d/);
+  });
+
+  it("escape key closes an open pass popover", () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+      );
+      render(
+        <PerformView
+          score={score}
+          cursor={null}
+          viewMode="drumit"
+          engineKind="synth"
+          isPlaying={false}
+          onSeekTime={() => {}}
+          onTogglePlay={() => {}}
+          onExit={() => {}}
+        />,
+      );
+      const chips = screen.getAllByTestId("bar-chip");
+      fireEvent.pointerDown(chips[0]);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(chips[0]);
+      expect(screen.getByTestId("bar-chip-popover")).toBeDefined();
+      act(() => {
+        fireEvent.keyDown(document, { key: "Escape" });
+      });
+      expect(screen.queryByTestId("bar-chip-popover")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clicking the popover backdrop dismisses it", () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+      );
+      render(
+        <PerformView
+          score={score}
+          cursor={null}
+          viewMode="drumit"
+          engineKind="synth"
+          isPlaying={false}
+          onSeekTime={() => {}}
+          onTogglePlay={() => {}}
+          onExit={() => {}}
+        />,
+      );
+      const chips = screen.getAllByTestId("bar-chip");
+      fireEvent.pointerDown(chips[0]);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.pointerUp(chips[0]);
+      const popover = screen.getByTestId("bar-chip-popover");
+      // The popover's outer backdrop is the parent .fixed div.
+      const backdrop = popover.parentElement as HTMLElement;
+      fireEvent.click(backdrop);
+      expect(screen.queryByTestId("bar-chip-popover")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("pointerLeave / pointerCancel cancels a pending long-press", () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+      );
+      render(
+        <PerformView
+          score={score}
+          cursor={null}
+          viewMode="drumit"
+          engineKind="synth"
+          isPlaying={false}
+          onSeekTime={() => {}}
+          onTogglePlay={() => {}}
+          onExit={() => {}}
+        />,
+      );
+      const chips = screen.getAllByTestId("bar-chip");
+      fireEvent.pointerDown(chips[0]);
+      fireEvent.pointerLeave(chips[0]);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      // No popover — the leave should have cleared the timer.
+      expect(screen.queryByTestId("bar-chip-popover")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

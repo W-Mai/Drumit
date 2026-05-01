@@ -18,6 +18,7 @@ import {
   setBarRepeatPrevious,
   setLaneDivision,
   setGroupDivision,
+  setSticking,
   splitBeatIntoGroups,
   toggleArticulation,
   toggleBarRepeatEnd,
@@ -526,6 +527,51 @@ describe("findOrCreateLane path", () => {
     );
     expect(snareLane).toBeDefined();
     expect(snareLane!.slots[0]).not.toBeNull();
+  });
+});
+
+describe("setSticking", () => {
+  it("sets R/L on a flat-lane hit", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o / o / o / o |`,
+    );
+    const s = setSticking(score, 0, 0, "snare", 0, "R");
+    const hit = s.sections[0].bars[0].beats[0].lanes[0].slots[0];
+    expect(hit?.sticking).toBe("R");
+  });
+
+  it("setSticking(null) clears", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o/R / o / o / o |`,
+    );
+    const s = setSticking(score, 0, 0, "snare", 0, null);
+    const hit = s.sections[0].bars[0].beats[0].lanes[0].slots[0];
+    expect(hit?.sticking).toBeUndefined();
+  });
+
+  it("is a no-op on a rest slot", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: - / o / o / o |`,
+    );
+    const s = setSticking(score, 0, 0, "snare", 0, "R");
+    expect(s.sections[0].bars[0].beats[0].lanes[0].slots[0]).toBeNull();
+  });
+
+  it("is a no-op on missing lane", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const s = setSticking(score, 0, 0, "snare", 0, "R");
+    expect(s).toEqual(score);
+  });
+
+  it("sets sticking on a split-lane slot via groupIndex", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: oo , oo / - / - / - |`,
+    );
+    const s = setSticking(score, 0, 0, "snare", 1, "L", 1);
+    const lane = s.sections[0].bars[0].beats[0].lanes[0];
+    expect(lane.groups![1].slots[1]?.sticking).toBe("L");
   });
 });
 
