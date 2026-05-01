@@ -184,102 +184,142 @@ describe("beam merging across groups", () => {
     });
   });
 
-  it("two rows with identical 16th stacks collapse onto the bottom row", () => {
-    // `bd` 16ths + `rb` 16ths (rideBell is on the cymbals row): both
-    // rows have identical stacks (d=1 + d=2 at matching x). The
-    // upper row's under-lines are redundant and collapse onto kick.
-    const bar = layoutBarOf(
+  it("regression: bd+rb 16ths — exact beam snapshot (collapse to kick)", () => {
+    const layout = layoutScoreOf(
       `title: T\nmeter: 4/4\n[A]\n| bd: o--- / -o-- / --o- / ---o  hho: - / -- / - / -  rb: -xx- / -x-x / x--- / xxxx |`,
+      1200,
     );
-    for (const bt of bar.beats) {
-      const rows = new Set(bt.beams.map((b) => b.rowGroup));
-      expect(rows).toEqual(new Set(["kick"]));
-      const kickDepths = new Set(
-        bt.beams.filter((b) => b.rowGroup === "kick").map((b) => b.depth),
-      );
-      expect(kickDepths).toEqual(new Set([1, 2]));
+    const bar = layout.rows[0][0];
+    const snap = bar.beats.map((bt) =>
+      bt.beams.map((b) => ({
+        rowGroup: b.rowGroup,
+        depth: b.depth,
+        x1: Number(b.x1.toFixed(1)),
+        x2: Number(b.x2.toFixed(1)),
+        y: b.y,
+      })),
+    );
+    // Identical stacks on cymbals and kick collapse to a single kick
+    // stack per beat (cymbals disappears, kick keeps d=1 + d=2).
+    expect(snap).toHaveLength(4);
+    for (let i = 0; i < 4; i += 1) {
+      expect(snap[i].map((b) => `${b.rowGroup}:${b.depth}`)).toEqual([
+        "kick:2",
+        "kick:1",
+      ]);
     }
   });
 
-  it("regression: `cr/hh/bd/sn/ft` dotted+split multi-lane bar", () => {
-    // User-reported bar (spec: dotted 8ths on hh, 16th splits on bd
-    // and sn, ft 16th). Lock the exact beam structure the accepted
-    // baseline produces.
-    const bar = layoutBarOf(
+  it("regression: `cr/hh/bd/sn/ft` dotted+split multi-lane bar — exact beam snapshot", () => {
+    // User-reported bar, pinned to the exact beams layoutScore
+    // produces at width 1200. Any per-beam change (rowGroup, depth,
+    // x1, x2, y) will break this and force a conscious decision.
+    const layout = layoutScoreOf(
       `title: T\nmeter: 4/4\n[A]\n| cr: -- / - / - / -  hh: oo / o , o- / o- , o / oo  bd: o- / - , -o / -o , o / - , --  sn: - / x- / -- / x-  ft: - / - , -- / - / - |`,
+      1200,
     );
-    const shapes = bar.beats.map((bt) => ({
-      rows: [...new Set(bt.beams.map((b) => b.rowGroup))].sort(),
-      depths: bt.beams.map((b) => b.depth).sort(),
-    }));
-    expect(shapes).toEqual([
-      { rows: ["kick"], depths: [1] },
-      { rows: ["kick"], depths: [1, 2] },
-      { rows: ["kick"], depths: [1, 2] },
-      { rows: ["snare"], depths: [1] },
+    const bar = layout.rows[0][0];
+    const snapshot = bar.beats.map((bt) =>
+      bt.beams.map((b) => ({
+        rowGroup: b.rowGroup,
+        depth: b.depth,
+        x1: Number(b.x1.toFixed(1)),
+        x2: Number(b.x2.toFixed(1)),
+        y: b.y,
+      })),
+    );
+    expect(snapshot).toEqual([
+      [{ rowGroup: "kick", depth: 1, x1: 29, x2: 79.4, y: 128 }],
+      [
+        { rowGroup: "kick", depth: 2, x1: 107.6, x2: 131.8, y: 131 },
+        { rowGroup: "kick", depth: 1, x1: 81.4, x2: 131.8, y: 128 },
+      ],
+      [
+        { rowGroup: "kick", depth: 2, x1: 133.8, x2: 158, y: 131 },
+        { rowGroup: "kick", depth: 1, x1: 133.8, x2: 184.2, y: 128 },
+      ],
+      [{ rowGroup: "snare", depth: 1, x1: 186.2, x2: 236.6, y: 128 }],
     ]);
   });
 
-  it("regression: hh 16ths + multi-voice bar collapses primary to kick", () => {
-    // User-reported: hi-hat plays 16ths across all 4 beats; kick/sn/
-    // aux cymbals add colour. cymbals share the same 16th stack with
-    // one cross-row folded primary per beat.
-    const bar = layoutBarOf(
-      `title: T\nmeter: 4/4\n[A]\n| hh: oooo / oooo / oooo / oooo  bd: oooo / o- / o- / o-  sn: -- / -x / -x / -x  hho: ---- / - / - / -  ride: - / o--- / - / -  cr: - / -o-- / - / -  cr2: - / --o- / - / -  t1: - / ---o / - / - |`,
-    );
-    expect(bar.beats).toHaveLength(4);
-    for (const bt of bar.beats) {
-      const depths = new Set(bt.beams.map((b) => b.depth));
-      expect(depths).toEqual(new Set([1, 2]));
-    }
-  });
-
-  it("regression: kick `o-` + snare `-x` — primary covers whole beat on kick row", () => {
-    // When kick plays the first 8th and snare answers on the 2nd 8th,
-    // the two rows' primaries fold into a single continuous kick-row
-    // beam covering the beat.
-    const bar = layoutBarOf(
+  it("regression: kick `o-` + snare `-x` — exact beam snapshot", () => {
+    const layout = layoutScoreOf(
       `title: T\nmeter: 4/4\n[A]\n| hh: oooo / oooo / oooo / oooo  bd: o- / o- / o- / o-  sn: -x / -x / -x / -x |`,
+      900,
     );
-    for (const bt of bar.beats) {
-      const kickD1 = bt.beams.find(
-        (b) => b.rowGroup === "kick" && b.depth === 1,
-      );
-      expect(kickD1).toBeDefined();
-      expect(kickD1!.x2 - kickD1!.x1).toBeGreaterThan(bt.width * 0.85);
+    const bar = layout.rows[0][0];
+    const snap = bar.beats.map((bt) =>
+      bt.beams.map((b) => ({
+        rowGroup: b.rowGroup,
+        depth: b.depth,
+        x1: Number(b.x1.toFixed(1)),
+        x2: Number(b.x2.toFixed(1)),
+        y: b.y,
+      })),
+    );
+    // All four beats share the same triple-stack (cymbals d=2, cymbals
+    // d=1, kick d=1) across equal x-ranges per beat.
+    expect(snap).toHaveLength(4);
+    for (let i = 0; i < 4; i += 1) {
+      expect(snap[i]).toHaveLength(3);
+      expect(snap[i].map((b) => `${b.rowGroup}:${b.depth}`)).toEqual([
+        "cymbals:2",
+        "kick:1",
+        "cymbals:1",
+      ]);
     }
   });
 
-  it("regression: dotted 8th + 16th (o.o) draws primary across beat + secondary at 1/4", () => {
-    const bar = layoutBarOf(
+  it("regression: dotted 8th + 16th (o.o) — exact beam snapshot", () => {
+    const layout = layoutScoreOf(
       `title: T\nmeter: 4/4\n[A]\n| hh: o.o / oo / oo / oo |`,
+      900,
     );
-    const b0 = bar.beats[0];
-    const d1 = b0.beams.find((b) => b.depth === 1)!;
-    const d2 = b0.beams.find((b) => b.depth === 2)!;
-    expect(d1.x2 - d1.x1).toBeGreaterThan(b0.width * 0.85);
-    expect(d2.x2 - d2.x1).toBeLessThan(b0.width * 0.35);
-    expect(d2.x2).toBeCloseTo(d1.x2, 0);
+    const bar = layout.rows[0][0];
+    const snap = bar.beats.map((bt) =>
+      bt.beams.map((b) => ({
+        rowGroup: b.rowGroup,
+        depth: b.depth,
+        x1: Number(b.x1.toFixed(1)),
+        x2: Number(b.x2.toFixed(1)),
+        y: b.y,
+      })),
+    );
+    expect(snap).toEqual([
+      [
+        { rowGroup: "cymbals", depth: 2, x1: 65.2, x2: 75.3, y: 103 },
+        { rowGroup: "cymbals", depth: 1, x1: 29, x2: 75.3, y: 100 },
+      ],
+      [{ rowGroup: "cymbals", depth: 1, x1: 77.3, x2: 123.5, y: 100 }],
+      [{ rowGroup: "cymbals", depth: 1, x1: 125.5, x2: 171.8, y: 100 }],
+      [{ rowGroup: "cymbals", depth: 1, x1: 173.8, x2: 220, y: 100 }],
+    ]);
   });
 
-  it("hh 16ths + bd/sn 8ths: cymbals keeps its own depth=1 base under the depth=2 short beam", () => {
-    // Pop-rock bar pattern: hh=xxxx (16ths) with bd=o- / sn=-o on
-    // top. The cymbals row must show BOTH its depth=1 basis and
-    // depth=2 short beam (the two stacked under-lines that read as
-    // "16th note"), while the kick still gets the beat-level
-    // primary folded onto it.
-    const bar = layoutBarOf(
+  it("regression: pop-rock `hh: xxxx + bd: o- + sn: -o` — exact beam snapshot", () => {
+    const layout = layoutScoreOf(
       `title: T\nmeter: 4/4\n[A]\n| hh: xxxx / xxxx / xxxx / xxxx  bd: o - / o - / o - / o -  sn: - o / - o / - o / - o |`,
+      1200,
     );
-    const b0 = bar.beats[0];
-    const cymDepths = new Set(
-      b0.beams.filter((b) => b.rowGroup === "cymbals").map((b) => b.depth),
+    const bar = layout.rows[0][0];
+    const snap = bar.beats.map((bt) =>
+      bt.beams.map((b) => ({
+        rowGroup: b.rowGroup,
+        depth: b.depth,
+        x1: Number(b.x1.toFixed(1)),
+        x2: Number(b.x2.toFixed(1)),
+        y: b.y,
+      })),
     );
-    expect(cymDepths).toEqual(new Set([1, 2]));
-    const kickPrimary = b0.beams.find(
-      (b) => b.rowGroup === "kick" && b.depth === 1,
-    );
-    expect(kickPrimary).toBeDefined();
+    // Each beat: cymbals d=2 + kick d=1 + cymbals d=1 (self-primary).
+    expect(snap).toHaveLength(4);
+    for (let i = 0; i < 4; i += 1) {
+      expect(snap[i].map((b) => `${b.rowGroup}:${b.depth}`)).toEqual([
+        "cymbals:2",
+        "kick:1",
+        "cymbals:1",
+      ]);
+    }
   });
 
   it("whole-beat 4 × 16ths has 2 merged beams spanning the beat", () => {
