@@ -184,6 +184,44 @@ describe("beam merging across groups", () => {
     });
   });
 
+  it("regression: dotted extension on one lane punches out other lanes' beams in that range", () => {
+    // `bd: o.-` (dotted 8th + 16th rest) extends through the second
+    // 16th slot of beat 0. Snare plays `- , -x` on the same beat —
+    // its 16th-rest slot sits exactly where kick's dot extends, so
+    // snare's d=2 beam must shrink to only the final hit slot.
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| sn: - , -x / - / - / -  bd: o.- / - / - / - |`,
+      900,
+    );
+    const bar = layout.rows[0][0];
+    const snap = bar.beats[0].beams.map((b) => ({
+      rowGroup: b.rowGroup,
+      depth: b.depth,
+      x1: Number(b.x1.toFixed(1)),
+      x2: Number(b.x2.toFixed(1)),
+    }));
+    const d2 = snap.find((b) => b.depth === 2)!;
+    // Without the punch the d=2 would be the full [53.1, 75.3]; with
+    // it, it shrinks to cover only the last 16th slot (~10 px wide).
+    expect(d2.x2 - d2.x1).toBeLessThan(15);
+    expect(d2.x2).toBeCloseTo(75.3, 0);
+  });
+
+  it("regression: dotted lane keeps its own short beam (no self-punch)", () => {
+    // `bd: o.o` — the dotted 8th extends into what would be the 16th
+    // slot, and that slot has its own 16th hit after. The kick row
+    // must still draw its own d=2 short beam for the final 16th.
+    const layout = layoutScoreOf(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o.o / - / - / - |`,
+      900,
+    );
+    const bar = layout.rows[0][0];
+    const beams = bar.beats[0].beams;
+    const kickD2 = beams.find((b) => b.rowGroup === "kick" && b.depth === 2);
+    expect(kickD2).toBeDefined();
+    expect(kickD2!.x2 - kickD2!.x1).toBeGreaterThan(5);
+  });
+
   it("regression: bd+rb 16ths — exact beam snapshot (collapse to kick)", () => {
     const layout = layoutScoreOf(
       `title: T\nmeter: 4/4\n[A]\n| bd: o--- / -o-- / --o- / ---o  hho: - / -- / - / -  rb: -xx- / -x-x / x--- / xxxx |`,

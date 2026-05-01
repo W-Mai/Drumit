@@ -255,6 +255,35 @@ function layoutBar(
     const beatX = innerLeft + beatIndex * beatWidth;
     const laidLanes: LaidOutLane[] = [];
 
+    // First pass: collect x-ranges where a dotted note on *some* lane
+    // extends over what would otherwise be the next slot. Other lanes'
+    // beam segments get these ranges punched out so the dot's extension
+    // visually "owns" that slot instead of sharing it with a phantom
+    // 16th under-line.
+    const dotExtendRanges: Array<{ x1: number; x2: number }> = [];
+    beat.lanes.forEach((lane) => {
+      const groups = lane.groups ?? [
+        { ratio: 1, division: lane.division, tuplet: lane.tuplet, slots: lane.slots },
+      ];
+      let gx = beatX;
+      for (const g of groups) {
+        const gw = beatWidth * g.ratio;
+        const slotW = gw / Math.max(1, g.division);
+        g.slots.forEach((s, si) => {
+          const dots = s?.dots ?? 0;
+          if (dots <= 0) return;
+          // slot's nominal (undotted) duration within this group
+          const base = slotW / (1 + 0.5 * dots);
+          const slotX = gx + si * slotW;
+          dotExtendRanges.push({
+            x1: slotX + base,
+            x2: slotX + slotW,
+          });
+        });
+        gx += gw;
+      }
+    });
+
     beat.lanes.forEach((lane) => {
       const category = instrumentCategory[lane.instrument];
       const group = rowGroupFor(lane.instrument);
@@ -273,23 +302,38 @@ function layoutBar(
       groups.forEach((groupData) => {
         const groupWidth = beatWidth * groupData.ratio;
         const tickXs = evenTicks(groupX, groupWidth, groupData.division);
-        // Rests under a beam don't get an underline in handwritten jianpu
-        // style: the beam only spans consecutive hit notes. If this group
-        // has no hits at all, drop the beam entirely.
         const hasAnyHit = groupData.slots.some((s) => s !== null);
         const beamDepth = hasAnyHit ? beamDepthForGroup(groupData) : 0;
-        const beamSegments =
+        let beamSegments: Array<{ x1: number; x2: number }> =
           beamDepth > 0
             ? [
                 {
-                  // Small 1px inset keeps a visible gap at beat
-                  // boundaries without swallowing narrow (16th / 32nd)
-                  // groups the way the old 3px inset did.
                   x1: groupX + 1,
                   x2: groupX + groupWidth - 1,
                 },
               ]
             : [];
+        // Punch out any range that another lane's dotted extension
+        // already claims — except the extension belongs to *this*
+        // group (we can't erase our own dot).
+        if (beamSegments.length && dotExtendRanges.length) {
+          const ownRanges = new Set(
+            groupData.slots
+              .map((s, si) => {
+                const dots = s?.dots ?? 0;
+                if (dots <= 0) return null;
+                const slotW = groupWidth / Math.max(1, groupData.division);
+                const base = slotW / (1 + 0.5 * dots);
+                const slotX = groupX + si * slotW;
+                return `${slotX + base}:${slotX + slotW}`;
+              })
+              .filter((k): k is string => k !== null),
+          );
+          const punchers = dotExtendRanges.filter(
+            (r) => !ownRanges.has(`${r.x1}:${r.x2}`),
+          );
+          beamSegments = subtractRanges(beamSegments, punchers);
+        }
 
         laidLanes.push({
           instrument: lane.instrument,
@@ -521,6 +565,38 @@ function mergeBeams(
     x1: b.x1,
     x2: b.x2,
   }));
+}
+
+/**
+ * Remove punch ranges from a list of spans. Each input span either
+ * clears an intersecting punch (producing up to two remnants), or
+ * passes through unchanged. Punch ranges themselves aren't merged —
+ * they come straight from dot-extension detection.
+ */
+function subtractRanges(
+  spans: Array<{ x1: number; x2: number }>,
+  punches: Array<{ x1: number; x2: number }>,
+): Array<{ x1: number; x2: number }> {
+  if (!punches.length) return spans;
+  let out = spans.slice();
+  for (const p of punches) {
+    const next: Array<{ x1: number; x2: number }> = [];
+    for (const s of out) {
+      // No overlap
+      if (p.x2 <= s.x1 || p.x1 >= s.x2) {
+        next.push(s);
+        continue;
+      }
+      // Fully covers
+      if (p.x1 <= s.x1 && p.x2 >= s.x2) continue;
+      // Left remnant
+      if (p.x1 > s.x1) next.push({ x1: s.x1, x2: p.x1 });
+      // Right remnant
+      if (p.x2 < s.x2) next.push({ x1: p.x2, x2: s.x2 });
+    }
+    out = next;
+  }
+  return out;
 }
 
 /** Merge sorted span list; two spans are joined if their gap is <= tolerance. */
