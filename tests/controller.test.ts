@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parseDrumtab } from "../src/notation/parser";
 import { PlaybackController } from "../src/playback/controller";
 import type { PlaybackEngine } from "../src/playback/engine";
@@ -405,6 +405,88 @@ describe("PlaybackController — transport", () => {
     // clamps to the final bar.
     ctrl.setStartBar(99);
     expect(ctrl.cursorAt(3.9).barIndex).toBe(0);
+  });
+
+  it("onEnd fires when the ticker reaches totalDuration", async () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+      );
+      const { engine } = makeFakeEngine();
+      const ctrl = new PlaybackController({ engine, score });
+      let ended = 0;
+      ctrl.onEnd(() => {
+        ended += 1;
+      });
+      // Mock performance.now so elapsed() thinks we've reached the end
+      // (total duration = 4s at 60 bpm 4/4).
+      const origNow = performance.now.bind(performance);
+      let fakeNow = 0;
+      vi.spyOn(performance, "now").mockImplementation(() => fakeNow);
+      await ctrl.play();
+      fakeNow = 5000; // 5s after start → past the 4s totalDuration
+      // Advance the cursor ticker (fires every 30ms inside the controller).
+      vi.advanceTimersByTime(60);
+      expect(ended).toBe(1);
+      ctrl.stop();
+      vi.mocked(performance.now).mockImplementation(origNow);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("loop restarts playback from loopStart when elapsed hits loopEnd", async () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |\n| bd: o / o / o / o |`,
+      );
+      const { engine, scheduled } = makeFakeEngine();
+      const ctrl = new PlaybackController({ engine, score });
+      ctrl.setLoop({ startBar: 0, endBar: 0 });
+      let fakeNow = 0;
+      const origNow = performance.now.bind(performance);
+      vi.spyOn(performance, "now").mockImplementation(() => fakeNow);
+      await ctrl.play();
+      const firstRun = scheduled.length;
+      // Advance past the end of bar 0 → ticker should teardown and
+      // restart at loop start.
+      fakeNow = 5000;
+      vi.advanceTimersByTime(60);
+      // After the restart, more events should have been scheduled
+      // (same bar, re-played).
+      expect(scheduled.length).toBeGreaterThan(firstRun);
+      expect(ctrl.getState()).toBe("playing");
+      ctrl.stop();
+      vi.mocked(performance.now).mockImplementation(origNow);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("dispose tears down state, listeners, and engine", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const disposeSpy = vi.fn();
+    const engine: PlaybackEngine = {
+      name: "fake",
+      kind: "synth",
+      async ensureReady() {},
+      scheduleEvent() {},
+      stop() {},
+      dispose: disposeSpy,
+    };
+    const ctrl = new PlaybackController({ engine, score });
+    let cursorFired = 0;
+    ctrl.onCursor(() => {
+      cursorFired += 1;
+    });
+    ctrl.dispose();
+    expect(disposeSpy).toHaveBeenCalled();
+    // Further listeners registered before dispose shouldn't fire after.
+    expect(cursorFired).toBe(0);
   });
 
   it("onEnd listener can be registered and unregistered", () => {

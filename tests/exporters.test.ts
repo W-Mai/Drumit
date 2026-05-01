@@ -1,7 +1,9 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { parseDrumtab } from "../src/notation/parser";
 import {
   renderScoreToSvg,
+  renderScoreToSvgFromDom,
   wrapSvgInStaticHtml,
   wrapSvgInDynamicHtml,
   postProcessSvg,
@@ -148,6 +150,21 @@ describe("wrapSvgInDynamicHtml", () => {
     const evilCount = (evilHtml.match(/<\/script>/g) ?? []).length;
     expect(evilCount).toBe(safeCount);
     expect(evilHtml).toContain("&lt;/script&gt;");
+  });
+});
+
+describe("renderScoreToSvgFromDom", () => {
+  it("delegates to postProcessSvg using the element's outerHTML", () => {
+    // Build a minimal SVGSVGElement via jsdom.
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"><rect width="10" height="10"/></svg>',
+      "image/svg+xml",
+    );
+    const svgEl = doc.documentElement as unknown as SVGSVGElement;
+    const out = renderScoreToSvgFromDom(svgEl, "My Chart");
+    expect(out).toContain("<svg");
+    expect(out).toContain("<title>My Chart</title>");
   });
 });
 

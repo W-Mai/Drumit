@@ -474,6 +474,17 @@ describe("parseDrumtab", () => {
     expect(score.sections[0].bars).toHaveLength(2);
   });
 
+  it("unclosed ghost paren in packed form doesn't crash the tokenizer", () => {
+    // `(o` missing the closing `)` — parser should still finish parsing
+    // without throwing; diagnostic may or may not appear.
+    const { score, diagnostics } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: (o / - / - / - |`,
+    );
+    // Either it parses somehow, or emits a diagnostic — just don't throw.
+    expect(score.sections[0].bars.length).toBeGreaterThan(0);
+    expect(Array.isArray(diagnostics)).toBe(true);
+  });
+
   it("bar with only whitespace between pipes is a valid empty bar", () => {
     const { score } = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n|   |`,

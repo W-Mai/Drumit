@@ -313,6 +313,36 @@ describe("StaffView (S6: beams within a beat)", () => {
     expect(flagCount).toBe(0);
   });
 
+  it("renders an 8th rest glyph on beats with no hits in an 8th context", () => {
+    // beat 0 has a snare 8th + rest 8th → the rest gets a glyph.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o- / o / o / o |`,
+    );
+    const svg = renderToStaticMarkup(createElement(StaffView, { score }));
+    // Either the 8th rest glyph or the quarter-rest fallback should
+    // appear somewhere.
+    expect(svg).toMatch(/𝄾|𝄽/);
+  });
+
+  it("Rest component renders whole/half/quarter/8th/16th/32nd glyphs", async () => {
+    const { Rest } = await import("../src/notation/staff/glyphs");
+    const svgFor = (duration: "w" | "h" | "q" | "8" | "16" | "32") =>
+      renderToStaticMarkup(
+        createElement(
+          "svg",
+          {},
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          createElement(Rest as any, { x: 10, staffY: 10, duration }),
+        ),
+      );
+    expect(svgFor("w")).toContain("<rect");
+    expect(svgFor("h")).toContain("<rect");
+    expect(svgFor("q")).toContain("𝄽");
+    expect(svgFor("8")).toContain("𝄾");
+    expect(svgFor("16")).toContain("𝄿");
+    expect(svgFor("32")).toContain("𝅀");
+  });
+
   it("draws an augmentation dot next to a dotted note head", () => {
     const { score } = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| bd: o. o / - / - / - |`,

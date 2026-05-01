@@ -530,6 +530,52 @@ describe("findOrCreateLane path", () => {
   });
 });
 
+describe("toggleSlot grows a split-group's division when needed", () => {
+  it("writing past a group's current division pads it with nulls", () => {
+    // Start with a 2-slot group; toggle slot 5 → group must grow to 6.
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oo , -- / - / - / - |`,
+    );
+    const next = toggleSlot(score, 0, 0, "kick", 5, 1);
+    const g = next.sections[0].bars[0].beats[0].lanes[0].groups![1];
+    expect(g.slots.length).toBe(6);
+    expect(g.slots[5]).not.toBeNull();
+  });
+
+  it("toggle-off on a single hit slot turns into a null", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / - / - / - |`,
+    );
+    const s = toggleSlot(score, 0, 0, "kick", 0);
+    expect(
+      s.sections[0].bars[0].beats[0].lanes[0].slots[0],
+    ).toBeNull();
+  });
+});
+
+describe("toggleArticulation toggles on and off", () => {
+  it("adds the articulation when absent, removes when present", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| sn: o / - / - / - |`,
+    );
+    const addAccent = toggleArticulation(score, 0, 0, "snare", 0, "accent");
+    expect(
+      addAccent.sections[0].bars[0].beats[0].lanes[0].slots[0]!.articulations,
+    ).toContain("accent");
+    const removeAccent = toggleArticulation(
+      addAccent,
+      0,
+      0,
+      "snare",
+      0,
+      "accent",
+    );
+    expect(
+      removeAccent.sections[0].bars[0].beats[0].lanes[0].slots[0]!.articulations,
+    ).not.toContain("accent");
+  });
+});
+
 describe("setSticking", () => {
   it("sets R/L on a flat-lane hit", () => {
     const { score } = parseDrumtab(

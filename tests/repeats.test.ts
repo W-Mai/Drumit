@@ -160,6 +160,16 @@ meter: 4/4
     expect(order.map((x) => x.barIndex)).toEqual([0, 1, 2, 3, 0, 1, 2]);
   });
 
+  it("D.C. al Coda with a to-coda marker leaps over to the Coda bar", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n@to-coda\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n@dc al coda\n| bd: o / o / o / o |\n@coda`;
+    const { score } = parse(src);
+    const flat = score.sections.flatMap((s) => s.bars);
+    const order = expandPlayOrder(flat);
+    // Bars 0, 1(@to-coda), 2, 3(@dc al coda), 4(@coda).
+    // Pass 1: 0 1 2 3 → D.C. → 0 1 → skip to coda → 4.
+    expect(order.map((x) => x.barIndex)).toEqual([0, 1, 2, 3, 0, 1, 4]);
+  });
+
   it("does not infinitely loop when repeats are malformed", () => {
     // Repeat end with no matching repeat start — should just play once.
     const b = bars(

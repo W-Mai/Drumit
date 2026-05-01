@@ -340,6 +340,133 @@ describe("PerformView", () => {
     }
   });
 
+  it("section-labelled bar (first in a section) renders a section badge on its chip", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n[Verse]\n| sn: o / o / o / o |`,
+    );
+    render(
+      <PerformView
+        score={score}
+        cursor={null}
+        viewMode="drumit"
+        engineKind="synth"
+        isPlaying={false}
+        onSeekTime={() => {}}
+        onTogglePlay={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    // The second chip belongs to section "Verse" — the section label
+    // appears once, above that chip.
+    const chips = screen.getAllByTestId("bar-chip");
+    expect(chips).toHaveLength(2);
+    // Query for the section label text node.
+    expect(screen.getByText("Verse")).toBeDefined();
+  });
+
+  it("contextmenu on a multi-pass chip is prevented (long-press won't open native menu)", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+    );
+    render(
+      <PerformView
+        score={score}
+        cursor={null}
+        viewMode="drumit"
+        engineKind="synth"
+        isPlaying={false}
+        onSeekTime={() => {}}
+        onTogglePlay={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    const chip = screen.getAllByTestId("bar-chip")[0];
+    const ev = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    const prevented = !chip.dispatchEvent(ev);
+    expect(prevented).toBe(true);
+  });
+
+  it("pointerCancel cancels a pending long-press (same as pointerLeave)", () => {
+    vi.useFakeTimers();
+    try {
+      const { score } = parseDrumtab(
+        `title: T\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+      );
+      render(
+        <PerformView
+          score={score}
+          cursor={null}
+          viewMode="drumit"
+          engineKind="synth"
+          isPlaying={false}
+          onSeekTime={() => {}}
+          onTogglePlay={() => {}}
+          onExit={() => {}}
+        />,
+      );
+      const chips = screen.getAllByTestId("bar-chip");
+      fireEvent.pointerDown(chips[0]);
+      fireEvent.pointerCancel(chips[0]);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(screen.queryByTestId("bar-chip-popover")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("follows the playback cursor's expandedBarIndex (active chip changes)", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n|: bd: o / o / o / o :| x3`,
+    );
+    const { rerender } = render(
+      <PerformView
+        score={score}
+        cursor={{
+          barIndex: 0,
+          beatIndex: 0,
+          expandedBarIndex: 0,
+          time: 0,
+        }}
+        viewMode="drumit"
+        engineKind="synth"
+        isPlaying={false}
+        onSeekTime={() => {}}
+        onTogglePlay={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    // First chip active.
+    let chips = screen.getAllByTestId("bar-chip");
+    expect(chips[0].getAttribute("data-active")).toBe("true");
+    expect(chips[1].hasAttribute("data-active")).toBe(false);
+    // Move cursor to bar 1.
+    rerender(
+      <PerformView
+        score={score}
+        cursor={{
+          barIndex: 0,
+          beatIndex: 0,
+          expandedBarIndex: 1,
+          time: 4,
+        }}
+        viewMode="drumit"
+        engineKind="synth"
+        isPlaying={false}
+        onSeekTime={() => {}}
+        onTogglePlay={() => {}}
+        onExit={() => {}}
+      />,
+    );
+    chips = screen.getAllByTestId("bar-chip");
+    expect(chips[1].getAttribute("data-active")).toBe("true");
+    expect(chips[0].hasAttribute("data-active")).toBe(false);
+  });
+
   it("pointerLeave / pointerCancel cancels a pending long-press", () => {
     vi.useFakeTimers();
     try {

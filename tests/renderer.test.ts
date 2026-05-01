@@ -238,6 +238,60 @@ describe("DrumChart", () => {
     expect(svg).not.toContain("×1/1");
   });
 
+  it("showLabels=true renders row group labels including toms", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| hh: x / x / x / x  bd: o / - / o / -  sn: - / o / - / o  t1: o / - / - / -  ft: - / o / - / - |`,
+    );
+    const layout = layoutScore(score, {
+      showLabels: true,
+      expanded: false,
+      width: 900,
+    });
+    const svg = renderToStaticMarkup(
+      createElement(DrumChart, { layout, showLabels: true }),
+    );
+    // Row group labels come out as plain text — tom, cymbal, snare, kick.
+    expect(svg).toContain("Tom");
+    expect(svg).toContain("Cymbal");
+    expect(svg).toContain("Snare");
+    expect(svg).toContain("Kick");
+  });
+
+  it("renders playhead with each engine kind without throwing", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`,
+    );
+    const layout = layoutScore(score, {
+      showLabels: false,
+      expanded: false,
+      width: 900,
+    });
+    for (const kind of ["synth", "sample", "midi"] as const) {
+      const svg = renderToStaticMarkup(
+        createElement(DrumChart, {
+          layout,
+          showLabels: false,
+          playCursor: { barIndex: 0, beatIndex: 0 },
+          playheadEngine: kind,
+        }),
+      );
+      expect(svg.startsWith("<svg")).toBe(true);
+    }
+  });
+
+  it("renders navigation marker text labels", () => {
+    const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n@segno\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n@to-coda\n| bd: o / o / o / o |\n@fine\n| bd: o / o / o / o |\n@dc al fine\n| bd: o / o / o / o |\n@coda\n| bd: o / o / o / o |\n@dc al coda\n| bd: o / o / o / o |\n@ds al fine\n| bd: o / o / o / o |\n@ds al coda`;
+    const svg = renderSvg(src, 1400);
+    // Each navigation token appears as visible text.
+    expect(svg).toContain("𝄋"); // segno
+    expect(svg).toContain("𝄌"); // coda
+    expect(svg).toContain("To Coda");
+    expect(svg).toContain("Fine");
+    expect(svg).toContain("D.C. al Fine");
+    expect(svg).toContain("D.C. al Coda");
+    expect(svg).toContain("D.S. al Fine");
+  });
+
   it("emits data-bar-index attributes on every bar group", () => {
     const svg = renderSvg(
       `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n| sn: o / o / o / o |`,

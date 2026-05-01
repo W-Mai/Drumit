@@ -102,6 +102,20 @@ describe("scheduler", () => {
     expect(met[3].time).toBeCloseTo(3, 3);
   });
 
+  it("leading `%` (no previous bar) still consumes bar duration with no events", () => {
+    const { score } = parseDrumtab(
+      `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| % |\n| bd: o / o / o / o |`,
+    );
+    const { events, totalDuration } = schedule(score);
+    expect(totalDuration).toBeCloseTo(8, 2); // 2 bars × 4 beats × 1s
+    // Bar 0 (`%` with no predecessor) yields no hit events.
+    const bar0Events = events.filter((e) => e.barIndex === 0);
+    expect(bar0Events).toHaveLength(0);
+    // Bar 1's hits exist and start at t=4 (after the silent `%`).
+    expect(events[0].barIndex).toBe(1);
+    expect(events[0].time).toBeCloseTo(4, 2);
+  });
+
   it("tempoOverride in schedule doubles / halves the total duration", () => {
     const src = `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o / o / o / o |`;
     const { score } = parseDrumtab(src);
