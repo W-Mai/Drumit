@@ -26,6 +26,7 @@ import {
   Spinner,
   Switch,
 } from "./ui";
+import { MobilePlaybackBar } from "./MobilePlaybackBar";
 
 export type EngineKind = "synth" | "sample" | "midi";
 
@@ -277,143 +278,182 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
     },
   ]);
 
-  return (
-    <div
-      className="
-        mobile-safe-scroll-x
-        fixed bottom-0 z-30
-        left-[max(0.5rem,env(safe-area-inset-left))]
-        right-[max(0.5rem,env(safe-area-inset-right))]
-        flex items-center gap-3 overflow-x-auto
-        rounded-t-xl border border-b-0 border-stone-200 bg-white px-3 py-2 text-xs shadow-lg
-        pb-[max(0.5rem,env(safe-area-inset-bottom))]
-        lg:static lg:flex-wrap lg:overflow-visible
-        lg:rounded-xl lg:border lg:pb-2 lg:shadow-none
-      "
+  const playButton = (
+    <Button
+      onClick={playing ? handlePause : handlePlay}
+      variant={playing ? "accent" : "success"}
+      pressable
     >
-      <div className="flex items-center gap-1">
-        <Button
-          onClick={playing ? handlePause : handlePlay}
-          variant={playing ? "accent" : "success"}
-          pressable
-        >
-          {playing
-            ? "❚❚ Pause"
-            : paused
-              ? "▶ Resume"
-              : typeof startBar === "number" && startBar > 0
-                ? `▶ Play @${startBar + 1}`
-                : "▶ Play"}
-        </Button>
-        <Button
-          onClick={handleStop}
-          disabled={playState === "idle"}
-          variant="primary"
-          pressable
-        >
-          ■ Stop
-        </Button>
+      {playing
+        ? "❚❚ Pause"
+        : paused
+          ? "▶ Resume"
+          : typeof startBar === "number" && startBar > 0
+            ? `▶ Play @${startBar + 1}`
+            : "▶ Play"}
+    </Button>
+  );
+  const stopButton = (
+    <Button
+      onClick={handleStop}
+      disabled={playState === "idle"}
+      variant="primary"
+      pressable
+    >
+      ■ Stop
+    </Button>
+  );
+  const clickSwitch = (
+    <Switch
+      checked={metronome}
+      onChange={setMetronome}
+      label={
+        <span className="flex items-center gap-1.5">
+          Click
+          <span
+            key={beatTick.key}
+            className={cn(
+              "inline-block size-1.5 rounded-full",
+              metronome && playState === "playing"
+                ? beatTick.downbeat
+                  ? "bg-emerald-500 motion-pulse-soft"
+                  : "bg-emerald-300/70 motion-pulse-soft"
+                : "bg-stone-300",
+            )}
+          />
+        </span>
+      }
+    />
+  );
+  const loopSwitch = (
+    <Switch
+      checked={loopEnabled}
+      disabled={typeof startBar !== "number"}
+      onChange={setLoopEnabled}
+      label="Loop bar"
+      title={
+        typeof startBar === "number"
+          ? `Loop bar ${startBar + 1}`
+          : "Select a bar first"
+      }
+    />
+  );
+  const engineField = (
+    <Field label="Engine:">
+      <SelectMenu
+        value={engineKind}
+        onChange={(v) => setEngineKind(v as EngineKind)}
+        options={[
+          { value: "synth", label: "Synth", description: "internal" },
+          { value: "sample", label: "Samples", description: "WAV" },
+          ...(midiAvailable
+            ? [{ value: "midi", label: "Web MIDI", description: "device" }]
+            : []),
+        ]}
+      />
+    </Field>
+  );
+  const sampleStatus = engineKind === "sample" ? (
+    <span className="flex items-center gap-1.5 text-[11px] text-stone-500">
+      {samplesLoading ? (
+        <>
+          <Spinner size={11} />
+          loading samples…
+        </>
+      ) : samplesLoaded ? null : (
+        "no samples installed — silent"
+      )}
+    </span>
+  ) : null;
+  const portField = engineKind === "midi" ? (
+    <Field label="Port:">
+      <SelectMenu
+        value={selectedOutput}
+        onChange={setSelectedOutput}
+        placeholder="(no ports)"
+        options={
+          midiOutputs.length === 0
+            ? [{ value: "", label: "(no ports)", disabled: true }]
+            : midiOutputs.map((o) => ({
+                value: o.id,
+                label: o.name ?? o.id,
+              }))
+        }
+      />
+    </Field>
+  ) : null;
+  const tempoField = (
+    <Field label="Tempo:">
+      <NumberStepper
+        min={40}
+        max={300}
+        value={tempoOverride || score.tempo?.bpm || 100}
+        onChange={(v) => setTempoOverride(v)}
+        suffix="bpm"
+      />
+    </Field>
+  );
+
+  return (
+    <>
+      {/* Desktop: one-row layout, unchanged */}
+      <div
+        className="
+          hidden
+          lg:static lg:flex lg:flex-wrap lg:items-center lg:gap-3 lg:overflow-visible
+          lg:rounded-xl lg:border lg:border-stone-200 lg:bg-white lg:px-3 lg:py-2 lg:text-xs
+        "
+      >
+        <div className="flex items-center gap-1">
+          {playButton}
+          {stopButton}
+        </div>
+        {engineField}
+        {sampleStatus}
+        {portField}
+        {tempoField}
+        {clickSwitch}
+        {loopSwitch}
+        <span className="ml-auto text-[10px] text-stone-400 tabular-nums">
+          {playState}
+        </span>
+        {error ? <Badge tone="danger">{error}</Badge> : null}
+        {!midiAvailable && engineKind === "midi" ? (
+          <span className="text-stone-500">
+            Web MIDI unavailable — try Chrome / Edge
+          </span>
+        ) : null}
       </div>
 
-      <Field label="Engine:">
-        <SelectMenu
-          value={engineKind}
-          onChange={(v) => setEngineKind(v as EngineKind)}
-          options={[
-            { value: "synth", label: "Synth", description: "internal" },
-            { value: "sample", label: "Samples", description: "WAV" },
-            ...(midiAvailable
-              ? [{ value: "midi", label: "Web MIDI", description: "device" }]
-              : []),
-          ]}
-        />
-      </Field>
-
-      {engineKind === "sample" ? (
-        <span className="flex items-center gap-1.5 text-[11px] text-stone-500">
-          {samplesLoading ? (
-            <>
-              <Spinner size={11} />
-              loading samples…
-            </>
-          ) : samplesLoaded ? null : (
-            "no samples installed — silent"
-          )}
-        </span>
-      ) : null}
-
-      {engineKind === "midi" ? (
-        <Field label="Port:">
-          <SelectMenu
-            value={selectedOutput}
-            onChange={setSelectedOutput}
-            placeholder="(no ports)"
-            options={
-              midiOutputs.length === 0
-                ? [{ value: "", label: "(no ports)", disabled: true }]
-                : midiOutputs.map((o) => ({
-                    value: o.id,
-                    label: o.name ?? o.id,
-                  }))
-            }
-          />
-        </Field>
-      ) : null}
-
-      <Field label="Tempo:">
-        <NumberStepper
-          min={40}
-          max={300}
-          value={tempoOverride || score.tempo?.bpm || 100}
-          onChange={(v) => setTempoOverride(v)}
-          suffix="bpm"
-        />
-      </Field>
-
-      <Switch
-        checked={metronome}
-        onChange={setMetronome}
-        label={
-          <span className="flex items-center gap-1.5">
-            Click
-            <span
-              key={beatTick.key}
-              className={cn(
-                "inline-block size-1.5 rounded-full",
-                metronome && playState === "playing"
-                  ? beatTick.downbeat
-                    ? "bg-emerald-500 motion-pulse-soft"
-                    : "bg-emerald-300/70 motion-pulse-soft"
-                  : "bg-stone-300",
-              )}
-            />
-          </span>
+      {/* Mobile: single row of primary controls, no overflow; everything
+          secondary lives in a pull-up sheet. */}
+      <MobilePlaybackBar
+        playButton={playButton}
+        stopButton={stopButton}
+        clickSwitch={clickSwitch}
+        loopSwitch={loopSwitch}
+        moreContent={
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              {engineField}
+              {portField}
+              {tempoField}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-stone-500">
+              {sampleStatus}
+              <span className="ml-auto tabular-nums text-stone-400">
+                {playState}
+              </span>
+            </div>
+            {error ? <Badge tone="danger">{error}</Badge> : null}
+            {!midiAvailable && engineKind === "midi" ? (
+              <span className="text-stone-500">
+                Web MIDI unavailable — try Chrome / Edge
+              </span>
+            ) : null}
+          </div>
         }
       />
-
-      <Switch
-        checked={loopEnabled}
-        disabled={typeof startBar !== "number"}
-        onChange={setLoopEnabled}
-        label="Loop bar"
-        title={
-          typeof startBar === "number"
-            ? `Loop bar ${startBar + 1}`
-            : "Select a bar first"
-        }
-      />
-
-      <span className="ml-auto text-[10px] text-stone-400 tabular-nums">
-        {playState}
-      </span>
-
-      {error ? <Badge tone="danger">{error}</Badge> : null}
-
-      {!midiAvailable && engineKind === "midi" ? (
-        <span className="text-stone-500">
-          Web MIDI unavailable — try Chrome / Edge
-        </span>
-      ) : null}
-    </div>
+    </>
   );
 });
