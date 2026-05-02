@@ -868,7 +868,7 @@ function AppInner() {
             onClick={() => setMobileNavOpen(true)}
             aria-label="打开文档列表"
             title="文档"
-            className="flex size-8 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900 lg:hidden"
+            className="motion-press flex size-8 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 lg:hidden"
           >
             <svg
               viewBox="0 0 24 24"
@@ -958,54 +958,66 @@ function AppInner() {
       </header>
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
 
-      {mobileNavOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="文档列表"
-          className="fixed inset-0 z-50 flex lg:hidden"
-        >
-          <button
-            type="button"
-            aria-label="关闭文档列表"
-            onClick={() => setMobileNavOpen(false)}
-            className="absolute inset-0 bg-stone-900/50"
-          />
-          <div className="relative flex h-full w-[85vw] max-w-sm flex-col bg-white shadow-xl">
-            <DocumentList
-              documents={documents.map((d) => ({
-                id: d.id,
-                name: d.name,
-                source: d.source,
-              }))}
-              activeId={activeId}
-              onSelect={(id) => {
-                handleSelectDoc(id);
-                setMobileNavOpen(false);
-              }}
-              onCreate={() => {
-                handleCreateDoc();
-                setMobileNavOpen(false);
-              }}
-              onDuplicate={handleDuplicateDoc}
-              onRename={handleRenameDoc}
-              onDelete={handleDeleteDoc}
-              onExport={handleExportDoc}
-              onExportMidi={handleExportDocMidi}
-              onImport={(src) => {
-                handleImportDoc(src);
-                setMobileNavOpen(false);
-              }}
-              samples={samples.map(({ id, label }) => ({ id, label }))}
-              onLoadSample={(id) => {
-                handleLoadSample(id);
-                setMobileNavOpen(false);
-              }}
-              onCollapse={() => setMobileNavOpen(false)}
+      <AnimatePresence>
+        {mobileNavOpen ? (
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="文档列表"
+            className="fixed inset-0 z-50 flex lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <button
+              type="button"
+              aria-label="关闭文档列表"
+              onClick={() => setMobileNavOpen(false)}
+              className="absolute inset-0 bg-stone-900/50"
             />
-          </div>
-        </div>
-      ) : null}
+            <motion.div
+              className="relative flex h-full w-[85vw] max-w-sm flex-col bg-white shadow-xl"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            >
+              <DocumentList
+                documents={documents.map((d) => ({
+                  id: d.id,
+                  name: d.name,
+                  source: d.source,
+                }))}
+                activeId={activeId}
+                onSelect={(id) => {
+                  handleSelectDoc(id);
+                  setMobileNavOpen(false);
+                }}
+                onCreate={() => {
+                  handleCreateDoc();
+                  setMobileNavOpen(false);
+                }}
+                onDuplicate={handleDuplicateDoc}
+                onRename={handleRenameDoc}
+                onDelete={handleDeleteDoc}
+                onExport={handleExportDoc}
+                onExportMidi={handleExportDocMidi}
+                onImport={(src) => {
+                  handleImportDoc(src);
+                  setMobileNavOpen(false);
+                }}
+                samples={samples.map(({ id, label }) => ({ id, label }))}
+                onLoadSample={(id) => {
+                  handleLoadSample(id);
+                  setMobileNavOpen(false);
+                }}
+                onCollapse={() => setMobileNavOpen(false)}
+              />
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-3 lg:flex-row">
         {/* Sidebar is desktop-only. On <lg, it's replaced by a drawer
