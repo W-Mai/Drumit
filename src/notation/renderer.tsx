@@ -168,6 +168,38 @@ export function DrumChart({
         </g>
       ))}
 
+      {(() => {
+        if (!playCursor) return null;
+        const bar = layout.rows
+          .flat()
+          .find((b) => b.index - 1 === playCursor.barIndex);
+        if (!bar) return null;
+        const beat = bar.beats[playCursor.beatIndex];
+        if (!beat) return null;
+        const palette = PLAYHEAD_PALETTE[playheadEngine];
+        const y = bar.y + 8;
+        const height = bar.rowMaxHeight - 16;
+        const REF_W = 10;
+        const scaleX = (beat.width + 2) / REF_W;
+        return (
+          <rect
+            x={0}
+            y={0}
+            width={REF_W}
+            height={height}
+            className={cn(
+              "pointer-events-none transition-transform duration-[60ms] ease-linear",
+              palette.beat,
+            )}
+            style={{
+              transformOrigin: "0 0",
+              transform: `translate(${beat.x - 1}px, ${y}px) scaleX(${scaleX})`,
+            }}
+            data-beat-rect="playhead-global"
+          />
+        );
+      })()}
+
       {layout.rows.flatMap((row) =>
         row.map((bar, indexInRow) => {
           const globalIdx = bar.index - 1;
@@ -185,7 +217,6 @@ export function DrumChart({
                 globalIdx <= selectionHi
               }
               isPlayhead={isPlayhead}
-              playBeatIndex={isPlayhead ? playCursor?.beatIndex : undefined}
               playheadEngine={playheadEngine}
               repeatPass={isPlayhead ? repeatPass : null}
               onSelect={
@@ -207,7 +238,6 @@ function BarView({
   isRowStart,
   selected,
   isPlayhead,
-  playBeatIndex,
   playheadEngine = "synth",
   repeatPass,
   onSelect,
@@ -217,7 +247,6 @@ function BarView({
   isRowStart?: boolean;
   selected?: boolean;
   isPlayhead?: boolean;
-  playBeatIndex?: number;
   playheadEngine?: "synth" | "sample" | "midi";
   repeatPass?: { pass: number; total: number } | null;
   onSelect?: (shiftKey: boolean) => void;
@@ -254,15 +283,7 @@ function BarView({
         data-bar-highlight="true"
       />
 
-      {isPlayhead && typeof playBeatIndex === "number" && beats[playBeatIndex] ? (
-        <rect
-          x={beats[playBeatIndex].x - 1}
-          y={barlineTop}
-          width={beats[playBeatIndex].width + 2}
-          height={barlineBottom - barlineTop}
-          className={playhead.beat}
-        />
-      ) : null}
+
 
       {/* "×pass/total" badge on the active bar when it's a repeat that
           plays more than once. Placed on the right of the bar header
