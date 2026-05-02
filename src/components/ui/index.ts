@@ -1,5 +1,7 @@
 export { Button } from "./Button";
 export { ViewFader } from "./ViewFader";
+export { DialogProvider } from "./Dialog";
+export { useDialog } from "./useDialog";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button";
 export { Chip, ChipGroup } from "./Chip";
 export { Panel, PanelHeader } from "./Panel";

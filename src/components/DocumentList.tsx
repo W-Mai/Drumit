@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "../lib/utils";
-import { Button } from "./ui";
+import { Button, useDialog } from "./ui";
 
 export interface DocumentSummary {
   id: string;
@@ -170,14 +170,33 @@ function DocumentItem({
   onExport: () => void;
   onExportMidi: () => void;
 }) {
+  const dialog = useDialog();
   const titleFromSource =
     doc.source.match(/^\s*title:\s*(.+)$/m)?.[1].trim() ?? "";
   const displayName = doc.name || titleFromSource || "Untitled";
 
-  function promptRename() {
-    const next = window.prompt("Rename document", displayName);
-    if (next !== null && next.trim() !== displayName)
-      onRename(next.trim());
+  async function promptRename() {
+    const next = await dialog.prompt({
+      title: "重命名文档",
+      message: "给这个文档换个名字吧。",
+      defaultValue: displayName,
+      placeholder: "文档名",
+    });
+    if (next !== null && next.trim() !== displayName) onRename(next.trim());
+  }
+
+  async function promptDelete() {
+    const ok = await dialog.confirm({
+      title: "删除文档？",
+      message: (
+        <span>
+          确定要删除 <b>{displayName}</b> 吗？删除后无法恢复。
+        </span>
+      ),
+      confirmLabel: "删除",
+      tone: "danger",
+    });
+    if (ok) onDelete();
   }
 
   return (
@@ -210,13 +229,7 @@ function DocumentItem({
         <IconButton title="Export .mid" onClick={onExportMidi}>
           ♪
         </IconButton>
-        <IconButton
-          title="Delete"
-          onClick={() => {
-            if (window.confirm(`Delete "${displayName}"?`)) onDelete();
-          }}
-          danger
-        >
+        <IconButton title="Delete" onClick={() => void promptDelete()} danger>
           ✕
         </IconButton>
       </div>

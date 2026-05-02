@@ -16,7 +16,7 @@ import type {
 import { AnimatePresence, motion } from "motion/react";
 import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
-import { Button, Chip, ChipGroup } from "./ui";
+import { Button, Chip, ChipGroup, useDialog } from "./ui";
 import { useHotkeys, type Hotkey } from "../lib/useHotkeys";
 import {
   DIGIT_BY_INSTRUMENT,
@@ -755,20 +755,25 @@ function SectionStrip({
   onInsertAfter: (label: string) => void;
   onDelete: () => void;
 }) {
-  function promptRename() {
-    const next = window.prompt("Section name", label);
-    if (next !== null && next.trim() !== "" && next !== label) {
-      onRename(next.trim());
-    }
+  const dialog = useDialog();
+  async function promptRename() {
+    const next = await dialog.prompt({
+      title: "重命名段落",
+      message: "给当前段落起个新名字。",
+      defaultValue: label,
+      placeholder: "A / Verse / Chorus …",
+      validate: (v) => (v.trim() === "" ? "名字不能为空" : null),
+    });
+    if (next !== null && next.trim() !== label) onRename(next.trim());
   }
-  function promptSplit() {
-    const next = window.prompt(
-      "Start a new section after this bar.\nName for the new section:",
-      "",
-    );
-    if (next !== null && next.trim() !== "") {
-      onInsertAfter(next.trim());
-    }
+  async function promptSplit() {
+    const next = await dialog.prompt({
+      title: "新段落",
+      message: "在当前 bar 之后起一个新段落。",
+      placeholder: "段落名（如 Chorus）",
+      validate: (v) => (v.trim() === "" ? "名字不能为空" : null),
+    });
+    if (next !== null && next.trim() !== "") onInsertAfter(next.trim());
   }
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-stone-200 bg-stone-50 px-3 py-1.5">

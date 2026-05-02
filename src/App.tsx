@@ -59,7 +59,15 @@ import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
 import { StaffView } from "./notation/staff/renderer";
-import { Badge, Button, Panel, PanelHeader, ViewFader } from "./components/ui";
+import {
+  Badge,
+  Button,
+  DialogProvider,
+  Panel,
+  PanelHeader,
+  ViewFader,
+  useDialog,
+} from "./components/ui";
 import { AnimatePresence, motion } from "motion/react";
 import type { Bar, Score } from "./notation/types";
 import { cn } from "./lib/utils";
@@ -113,6 +121,14 @@ function loadInitialWorkspace(): {
 }
 
 export default function App() {
+  return (
+    <DialogProvider>
+      <AppInner />
+    </DialogProvider>
+  );
+}
+
+function AppInner() {
   const [documents, setDocuments] = useState<DocumentRecord[]>(
     () => loadInitialWorkspace().documents,
   );
@@ -580,6 +596,7 @@ export default function App() {
   // between docs preserves each doc's timeline independently.
   const history = useHistory();
   const { flashes, flash } = useFlashBars();
+  const dialog = useDialog();
   // When true, `writeActiveDocSource` should skip pushing a new history
   // entry — used while applying an undo/redo result to avoid looping.
   const suppressRecordRef = useRef(false);
@@ -798,7 +815,10 @@ export default function App() {
     if (!doc) return;
     const parsedDoc = parseDrumtab(doc.source);
     if (parsedDoc.score.sections.length === 0) {
-      alert("Nothing to export — the document is empty.");
+      void dialog.alert({
+        title: "无法导出",
+        message: "这个文档是空的，没有可导出的内容。",
+      });
       return;
     }
     const bytes = exportScoreToMidi(parsedDoc.score);
@@ -818,7 +838,11 @@ export default function App() {
   function handleImportDoc(source: string) {
     const parsedImport = parseDrumtab(source);
     if (parsedImport.score.sections.length === 0) {
-      alert("Couldn't parse the file as a .drumtab document.");
+      void dialog.alert({
+        title: "导入失败",
+        message: "文件无法被识别为 .drumtab 文档。",
+        tone: "danger",
+      });
       return;
     }
     const id = newId();
@@ -903,26 +927,28 @@ export default function App() {
           </button>
           <Button
             variant="danger"
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Reset all documents to the default example? Your saved edits will be cleared.",
-                )
-              ) {
-                clearWorkspace();
-                const id = newId();
-                setDocuments([
-                  {
-                    id,
-                    name: "",
-                    source: defaultSample().source,
-                    savedAt: Date.now(),
-                  },
-                ]);
-                setActiveId(id);
-                setTextDraft(null);
-                setSelectedBar(0);
-              }
+            onClick={async () => {
+              const ok = await dialog.confirm({
+                title: "重置所有文档？",
+                message:
+                  "所有保存过的编辑都会丢失，当前所有文档都会被替换为示例。",
+                confirmLabel: "重置",
+                tone: "danger",
+              });
+              if (!ok) return;
+              clearWorkspace();
+              const id = newId();
+              setDocuments([
+                {
+                  id,
+                  name: "",
+                  source: defaultSample().source,
+                  savedAt: Date.now(),
+                },
+              ]);
+              setActiveId(id);
+              setTextDraft(null);
+              setSelectedBar(0);
             }}
             title="Clear saved data and reset"
           >
