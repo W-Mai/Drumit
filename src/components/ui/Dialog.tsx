@@ -14,12 +14,14 @@ import {
   type DialogApi,
   type DialogRequest,
 } from "./useDialog";
+import { useI18n } from "../../i18n/useI18n";
 
 interface Resolver {
   resolve: (v: unknown) => void;
 }
 
 export function DialogProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [req, setReq] = useState<(DialogRequest & { id: number }) | null>(null);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                           onClick={handleCancel}
                           pressable
                         >
-                          {req.cancelLabel ?? "取消"}
+                          {req.cancelLabel ?? t("dialog.cancel")}
                         </Button>
                       ) : null}
                       <Button
@@ -174,8 +176,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                         pressable
                         autoFocus={req.kind !== "prompt"}
                       >
-                        {req.confirmLabel ??
-                          (req.kind === "alert" ? "知道了" : "确定")}
+                        {req.confirmLabel ?? t("dialog.confirm")}
                       </Button>
                     </div>
                   </motion.div>

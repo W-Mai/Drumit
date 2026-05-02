@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "../lib/utils";
 import { Button, SelectMenu, useDialog } from "./ui";
+import { useI18n } from "../i18n/useI18n";
 
 export interface DocumentSummary {
   id: string;
@@ -166,29 +167,26 @@ function DocumentItem({
   onExportMidi: () => void;
 }) {
   const dialog = useDialog();
+  const { t } = useI18n();
   const titleFromSource =
     doc.source.match(/^\s*title:\s*(.+)$/m)?.[1].trim() ?? "";
   const displayName = doc.name || titleFromSource || "Untitled";
 
   async function promptRename() {
     const next = await dialog.prompt({
-      title: "重命名文档",
-      message: "给这个文档换个名字吧。",
+      title: t("doclist.rename_title"),
+      message: t("doclist.rename_message"),
       defaultValue: displayName,
-      placeholder: "文档名",
+      placeholder: t("doclist.new_placeholder"),
     });
     if (next !== null && next.trim() !== displayName) onRename(next.trim());
   }
 
   async function promptDelete() {
     const ok = await dialog.confirm({
-      title: "删除文档？",
-      message: (
-        <span>
-          确定要删除 <b>{displayName}</b> 吗？删除后无法恢复。
-        </span>
-      ),
-      confirmLabel: "删除",
+      title: t("doclist.delete_title"),
+      message: t("doclist.delete_message", { name: displayName }),
+      confirmLabel: t("doclist.delete_confirm"),
       tone: "danger",
     });
     if (ok) onDelete();

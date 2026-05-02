@@ -73,6 +73,7 @@ import type { Bar, Score } from "./notation/types";
 import { cn } from "./lib/utils";
 import { useHistory } from "./lib/useHistory";
 import { useFlashBars } from "./lib/useFlashBars";
+import { useI18n } from "./i18n/useI18n";
 
 type Mode = "source" | "visual";
 
@@ -597,6 +598,7 @@ function AppInner() {
   const history = useHistory();
   const { flashes, flash } = useFlashBars();
   const dialog = useDialog();
+  const { t } = useI18n();
   // When true, `writeActiveDocSource` should skip pushing a new history
   // entry — used while applying an undo/redo result to avoid looping.
   const suppressRecordRef = useRef(false);
@@ -816,8 +818,8 @@ function AppInner() {
     const parsedDoc = parseDrumtab(doc.source);
     if (parsedDoc.score.sections.length === 0) {
       void dialog.alert({
-        title: "无法导出",
-        message: "这个文档是空的，没有可导出的内容。",
+        title: t("export.empty_title"),
+        message: t("export.empty_message"),
       });
       return;
     }
@@ -839,8 +841,8 @@ function AppInner() {
     const parsedImport = parseDrumtab(source);
     if (parsedImport.score.sections.length === 0) {
       void dialog.alert({
-        title: "导入失败",
-        message: "文件无法被识别为 .drumtab 文档。",
+        title: t("import.failed_title"),
+        message: t("import.failed_message"),
         tone: "danger",
       });
       return;
@@ -866,8 +868,8 @@ function AppInner() {
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
-            aria-label="打开文档列表"
-            title="文档"
+            aria-label={t("header.open_docs")}
+            title={t("header.docs")}
             className="motion-press flex size-8 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 lg:hidden"
           >
             <svg
@@ -894,8 +896,8 @@ function AppInner() {
             href="https://github.com/W-Mai/Drumit"
             target="_blank"
             rel="noreferrer noopener"
-            title="GitHub 源码"
-            aria-label="GitHub 源码"
+            title={t("header.github")}
+            aria-label={t("header.github")}
             className="motion-press flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
           >
             <svg
@@ -910,8 +912,8 @@ function AppInner() {
             href="https://benign.host"
             target="_blank"
             rel="noreferrer noopener"
-            title="博客 · benign.host"
-            aria-label="博客"
+            title={t("header.blog")}
+            aria-label={t("header.blog_short")}
             className="motion-press hidden h-7 items-center justify-center rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 sm:flex"
           >
             benign.host
@@ -919,8 +921,8 @@ function AppInner() {
           <button
             type="button"
             onClick={() => setAboutOpen(true)}
-            title="关于"
-            aria-label="关于"
+            title={t("header.about")}
+            aria-label={t("header.about")}
             className="motion-press flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-sm font-semibold text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
           >
             i
@@ -929,10 +931,9 @@ function AppInner() {
             variant="danger"
             onClick={async () => {
               const ok = await dialog.confirm({
-                title: "重置所有文档？",
-                message:
-                  "所有保存过的编辑都会丢失，当前所有文档都会被替换为示例。",
-                confirmLabel: "重置",
+                title: t("header.reset_confirm_title"),
+                message: t("header.reset_confirm_message"),
+                confirmLabel: t("header.reset_confirm_label"),
                 tone: "danger",
               });
               if (!ok) return;
@@ -963,7 +964,7 @@ function AppInner() {
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="文档列表"
+            aria-label={t("header.mobile_docs_title")}
             className="fixed inset-0 z-50 flex lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -972,7 +973,7 @@ function AppInner() {
           >
             <button
               type="button"
-              aria-label="关闭文档列表"
+              aria-label={t("header.close_docs")}
               onClick={() => setMobileNavOpen(false)}
               className="absolute inset-0 bg-stone-900/50"
             />
@@ -1159,7 +1160,9 @@ function AppInner() {
             <Button
               variant={showLabels ? "primary" : "secondary"}
               onClick={() => setShowLabels((v) => !v)}
-              title={showLabels ? "隐藏乐器名" : "显示乐器名"}
+              title={
+                showLabels ? t("preview.hide_labels") : t("preview.show_labels")
+              }
             >
               <span className="sm:hidden">{showLabels ? "🏷" : "🏷︎"}</span>
               <span className="hidden sm:inline">

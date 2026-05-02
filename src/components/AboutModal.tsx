@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { buildInfo } from "../lib/buildInfo";
+import { useI18n } from "../i18n/useI18n";
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ const REPO_URL = "https://github.com/W-Mai/Drumit";
  * close button.
  */
 export function AboutModal({ open, onClose }: Props) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -66,13 +68,13 @@ export function AboutModal({ open, onClose }: Props) {
               id="about-title"
               className="text-ink font-serif text-xl leading-tight font-semibold tracking-tight"
             >
-              关于
+              {t("about.title")}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t("about.close")}
             className="motion-press flex size-7 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900"
           >
             <span className="text-base leading-none">×</span>
@@ -82,44 +84,42 @@ export function AboutModal({ open, onClose }: Props) {
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-stone-700">
           {/* Tagline */}
           <blockquote className="border-l-2 border-amber-400 pl-3 text-stone-600 italic">
-            白天练，夜里扒，做梦都在找鼓点打。
+            {t("about.tagline_line1")}
             <br />
-            一个鼓谱工具，给不想啃五线谱的人。
+            {t("about.tagline_line2")}
           </blockquote>
 
           {/* Why */}
           <section>
-            <SectionTitle>为什么写这个</SectionTitle>
-            <p className="mb-2">
-              我不是专业鼓手，五线谱苦手，看到一堆线就晕。但我想扒歌、想练。
-            </p>
+            <SectionTitle>{t("about.section.why")}</SectionTitle>
+            <p className="mb-2">{t("about.why_body_1")}</p>
             <p>
-              Drumit 的思路：镲类一行、鼓类一行；声部撞了才多拆几行；符干省掉。源文件叫{" "}
-              <code className="rounded bg-stone-100 px-1 text-[12px]">.drumtab</code>
-              ，纯文本，能 diff、能 copy-paste、能提 PR。
+              {t("about.why_body_2_pre")}
+              <code className="rounded bg-stone-100 px-1 text-[12px]">
+                .drumtab
+              </code>
+              {t("about.why_body_2_post")}
             </p>
           </section>
 
           {/* Acknowledgements */}
           <section>
-            <SectionTitle>鸣谢</SectionTitle>
+            <SectionTitle>{t("about.section.thanks")}</SectionTitle>
             <p>
-              感谢 <strong className="text-stone-900">董波老师</strong>
-              。Drumit 采用的这套两行压缩鼓谱记法 ——
-              镲类在上、鼓类在下、符干全省、一拍切若干格 ——
-              正是我在小米音乐社团跟董老师学打鼓时记下来的那套东西。
-              他的谱面简单、直接、好读，真正做到了拿起就能打。
-              这个项目本质上就是想把那种手写谱的体验搬到屏幕上。
+              <strong className="text-stone-900">
+                {t("about.thanks_teacher_name")}
+              </strong>
+              {t("about.thanks_body")}
             </p>
           </section>
 
           {/* Build + source */}
           <section>
-            <SectionTitle>构建信息</SectionTitle>
+            <SectionTitle>{t("about.section.build")}</SectionTitle>
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[12px]">
-              <dt className="text-stone-500">版本</dt>
+              <dt className="text-stone-500">{t("about.build.version")}</dt>
               <dd className="text-stone-900">{versionLabel}</dd>
-              <dt className="text-stone-500">提交</dt>
+              <dt className="text-stone-500">{t("about.build.commit")}</dt>
               <dd>
                 <a
                   href={commitUrl}
@@ -140,20 +140,22 @@ export function AboutModal({ open, onClose }: Props) {
                   </span>
                 ) : null}
               </dd>
-              <dt className="text-stone-500">构建时间</dt>
+              <dt className="text-stone-500">{t("about.build.time")}</dt>
               <dd className="text-stone-900">{builtAt}</dd>
             </dl>
           </section>
 
           {/* Links */}
           <section>
-            <SectionTitle>相关链接</SectionTitle>
+            <SectionTitle>{t("about.section.links")}</SectionTitle>
             <ul className="space-y-1">
-              <Link href={REPO_URL}>源码仓库 · GitHub</Link>
+              <Link href={REPO_URL}>{t("about.link.repo")}</Link>
               <Link href={`${REPO_URL}/blob/main/CHANGELOG.md`}>
-                更新日志 · CHANGELOG
+                {t("about.link.changelog")}
               </Link>
-              <Link href={`${REPO_URL}/blob/main/LICENSE`}>协议 · MIT</Link>
+              <Link href={`${REPO_URL}/blob/main/LICENSE`}>
+                {t("about.link.license")}
+              </Link>
             </ul>
           </section>
         </div>

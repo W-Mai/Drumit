@@ -18,6 +18,7 @@ import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
 import { Button, Chip, ChipGroup, useDialog } from "./ui";
 import { useHotkeys, type Hotkey } from "../lib/useHotkeys";
+import { useI18n } from "../i18n/useI18n";
 import {
   DIGIT_BY_INSTRUMENT,
   INSTRUMENT_BY_DIGIT,
@@ -756,22 +757,23 @@ function SectionStrip({
   onDelete: () => void;
 }) {
   const dialog = useDialog();
+  const { t } = useI18n();
   async function promptRename() {
     const next = await dialog.prompt({
-      title: "重命名段落",
-      message: "给当前段落起个新名字。",
+      title: t("editor.rename_section_title"),
+      message: t("editor.rename_section_message"),
       defaultValue: label,
       placeholder: "A / Verse / Chorus …",
-      validate: (v) => (v.trim() === "" ? "名字不能为空" : null),
+      validate: (v) => (v.trim() === "" ? t("editor.name_required") : null),
     });
     if (next !== null && next.trim() !== label) onRename(next.trim());
   }
   async function promptSplit() {
     const next = await dialog.prompt({
-      title: "新段落",
-      message: "在当前 bar 之后起一个新段落。",
-      placeholder: "段落名（如 Chorus）",
-      validate: (v) => (v.trim() === "" ? "名字不能为空" : null),
+      title: t("editor.new_section_title"),
+      message: t("editor.new_section_message"),
+      placeholder: t("editor.section_name_placeholder"),
+      validate: (v) => (v.trim() === "" ? t("editor.name_required") : null),
     });
     if (next !== null && next.trim() !== "") onInsertAfter(next.trim());
   }
