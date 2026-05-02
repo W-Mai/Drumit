@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
+import { motion } from "motion/react";
 import type { Score } from "../notation/types";
 import type { EngineKind } from "./PlaybackBar";
 import { DrumChart } from "../notation/renderer";
@@ -180,7 +181,7 @@ export function PerformView({
     : {};
 
   return (
-    <div
+    <motion.div
       ref={rootRef}
       className="fixed inset-0 z-[9999] flex flex-col bg-stone-950 text-stone-100"
       style={{
@@ -190,6 +191,10 @@ export function PerformView({
         paddingBottom: "env(safe-area-inset-bottom)",
         ...rotatedStyle,
       }}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
     >
       {/* Top bar */}
       <div className="flex shrink-0 items-center gap-3 px-3 py-2">
@@ -270,11 +275,11 @@ export function PerformView({
           >
             <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-b bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-stone-950">
               ▾
-            </div>
+             </div>
           </div>
         ) : null}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -693,9 +698,9 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
         aria-label={`Bar ${chip.sourceIndex + 1}${hasMultiplePasses ? ` pass ${chip.pass} of ${chip.total} — long-press to pick pass` : ""}`}
         aria-haspopup={hasMultiplePasses ? "menu" : undefined}
         aria-controls={hasMultiplePasses ? popoverId : undefined}
-        className={`flex h-8 min-w-9 flex-col items-center justify-center rounded px-1 text-[10px] font-semibold leading-none tabular-nums transition select-none ${
+        className={`motion-press flex h-8 min-w-9 flex-col items-center justify-center rounded px-1 text-[10px] font-semibold leading-none tabular-nums transition-[background-color,color,transform,box-shadow] duration-150 ease-out select-none ${
           active
-            ? "bg-amber-400 text-stone-950"
+            ? "scale-105 bg-amber-400 text-stone-950 shadow-lg shadow-amber-500/30"
             : "bg-stone-800 text-stone-200 hover:bg-stone-700"
         } ${hasMultiplePasses ? "ring-1 ring-amber-400/40" : ""}`}
         style={{ touchAction: "manipulation" }}
