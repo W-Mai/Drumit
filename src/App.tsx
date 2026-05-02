@@ -1319,7 +1319,7 @@ function AppInner() {
                 value={currentSource}
                 onChange={(event) => handleSourceChange(event.target.value)}
                 spellCheck={false}
-                className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 outline-none"
+                className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-stone-900 p-4 font-mono text-sm leading-relaxed text-amber-100 caret-amber-400 outline-none ring-1 ring-stone-800 transition-shadow focus:ring-2 focus:ring-amber-400/40"
               />
             ) : expandedPreview ? (
               <div className="grid min-h-[280px] place-items-center p-6 text-center text-sm text-stone-500">

@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { INSTRUMENT_BY_DIGIT } from "../notation/hotkeyMap";
 import { instrumentLabels } from "../notation/instruments";
 import { InstrumentIcon } from "./InstrumentIcon";
@@ -73,7 +74,15 @@ export function HotkeyPanel() {
     ([digit, instrument]) => ({ digit, instrument }),
   );
   return (
-    <div className="flex flex-col gap-2 p-1 text-[11px] text-stone-700">
+    <motion.div
+      className="flex flex-col gap-2 p-1 text-[11px] text-stone-700"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: 0.02 } },
+      }}
+    >
       <header className="px-1">
         <h3 className="text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
           Shortcuts
@@ -86,8 +95,12 @@ export function HotkeyPanel() {
             {instruments.map(({ digit, instrument }) => {
               const isCurrent = currentInstrument === instrument;
               return (
-                <li
+                <motion.li
                   key={digit}
+                  variants={{
+                    hidden: { opacity: 0, x: -4 },
+                    visible: { opacity: 1, x: 0 },
+                  }}
                   className={
                     "flex items-center gap-1.5 rounded px-1 py-0.5 " +
                     (isCurrent ? "bg-amber-100 text-stone-900" : "")
@@ -101,7 +114,7 @@ export function HotkeyPanel() {
                   <span className="truncate">
                     {instrumentLabels[instrument]}
                   </span>
-                </li>
+                </motion.li>
               );
             })}
           </ul>
@@ -116,7 +129,7 @@ export function HotkeyPanel() {
           <Section s={SECTIONS[4]} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -17,7 +17,14 @@ import { MidiEngine } from "../playback/midiEngine";
 import { SampleEngine } from "../playback/sampleEngine";
 import { useHotkeys } from "../lib/useHotkeys";
 import { cn } from "../lib/utils";
-import { Badge, Button, Field, SelectMenu, Switch, TextInput } from "./ui";
+import {
+  Badge,
+  Button,
+  Field,
+  NumberStepper,
+  SelectMenu,
+  Switch,
+} from "./ui";
 
 export type EngineKind = "synth" | "sample" | "midi";
 
@@ -347,17 +354,13 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       ) : null}
 
       <Field label="Tempo:">
-        <TextInput
-          type="number"
+        <NumberStepper
           min={40}
           max={300}
           value={tempoOverride || score.tempo?.bpm || 100}
-          onChange={(e) =>
-            setTempoOverride(Number.parseInt(e.target.value, 10) || 0)
-          }
-          className="w-16 text-right"
+          onChange={(v) => setTempoOverride(v)}
+          suffix="bpm"
         />
-        <span>bpm</span>
       </Field>
 
       <Switch
