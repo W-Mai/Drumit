@@ -195,7 +195,9 @@ function DocumentItem({
   return (
     <li
       className={cn(
-        "group mb-1 flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px]",
+        "group mb-1 flex items-center gap-1 rounded-lg px-2 text-[12px]",
+        // Taller touch target on mobile (44px class) while staying compact on desktop.
+        "py-2.5 sm:py-1.5",
         active
           ? "bg-amber-100 text-stone-900"
           : "text-stone-700 hover:bg-stone-100",
@@ -209,7 +211,10 @@ function DocumentItem({
       >
         {displayName}
       </button>
-      <div className="flex flex-shrink-0 gap-0.5 opacity-0 group-hover:opacity-100">
+      {/* On touch devices (no hover) we keep the actions always visible so
+          they're actually reachable. On pointer:fine they stay hover-only
+          to keep the list calm. */}
+      <div className="flex flex-shrink-0 gap-0.5 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
         <IconButton title="Rename" onClick={promptRename}>
           ✎
         </IconButton>

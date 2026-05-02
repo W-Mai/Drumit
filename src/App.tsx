@@ -899,7 +899,7 @@ function AppInner() {
             rel="noreferrer noopener"
             title={t("header.github")}
             aria-label={t("header.github")}
-            className="motion-press flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
+            className="motion-press hidden size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 sm:flex"
           >
             <svg
               viewBox="0 0 16 16"
@@ -954,9 +954,13 @@ function AppInner() {
               setTextDraft(null);
               setSelectedBar(0);
             }}
-            title="Clear saved data and reset"
+            title={t("header.reset")}
+            aria-label={t("header.reset")}
           >
-            Reset
+            <span className="sm:hidden" aria-hidden="true">
+              ↺
+            </span>
+            <span className="hidden sm:inline">{t("header.reset")}</span>
           </Button>
         </div>
       </header>
