@@ -2,8 +2,28 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Drumit</title>
+    <script>
+      /* FOUC guard: set data-theme before first paint so stone/background
+         overrides take effect immediately. Keep this tiny. */
+      (function () {
+        try {
+          var v = localStorage.getItem("drumit.theme") || "auto";
+          var resolved = v;
+          if (v === "auto") {
+            resolved = window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          document.documentElement.setAttribute("data-theme", resolved);
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body class="bg-stone-50 text-stone-900">
     <div id="root"></div>
