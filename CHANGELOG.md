@@ -11,6 +11,48 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.03.2]
+
+### Added
+
+- **Internationalisation** — zh / en with live switching via a header
+  toggle. Hand-rolled `useI18n()` hook, dictionary under `src/i18n/`,
+  `{var}` interpolation. Locale persists to `localStorage` and falls
+  back to `navigator.language`. First paint sets `<html lang>` correctly.
+- **Theme system** — light / dark / sepia / auto with a header toggle.
+  "Auto" follows `prefers-color-scheme` live. Implemented by overriding
+  the Tailwind stone palette under `[data-theme="dark"]` /
+  `[data-theme="sepia"]` so existing `bg-stone-*` classes respond
+  automatically. Inline FOUC guard in `index.html` applies the theme
+  before React mounts.
+- **Mobile PlaybackBar redesign** — the old single-row overflow-x bar
+  is desktop-only. On `<lg` the bar shows only Play / Stop / Click /
+  Loop plus a `⋯` button that opens a bottom sheet with Engine, MIDI
+  Port, Tempo, status and errors. No more horizontal scrolling on
+  phones.
+- `MobilePlaybackBar` component, `ThemeToggle` + `LocaleToggle`
+  primitives.
+
+### Changed
+
+- **iOS edge-swipe fix** — the bottom PlaybackBar no longer sticks to
+  the viewport edges (`left-[max(0.5rem,...)]` / `right-[…]`). Added a
+  `.mobile-safe-scroll-x` utility applied to the playback bar, Perform
+  view bar strip, PadEditor grid, and preview scroller; it sets
+  `overscroll-behavior-x: contain` + `touch-action: pan-x pan-y` so
+  iOS Safari doesn't promote horizontal pans to its "back" gesture.
+- `<body>` now has `overscroll-behavior: none` + `touch-action:
+  manipulation` globally, killing pull-to-refresh and the 300 ms tap
+  delay on iOS.
+- Mobile nav drawer animates in with a spring slide + fade (was a
+  hard-switch before).
+- Header trimmed on `<sm`: GitHub and blog links move to icons only
+  above `sm`; Reset button shows a ↺ glyph on phones.
+- DocumentList item actions always visible on touch devices (via
+  `@media(hover:hover)`), and item rows get a taller tap target.
+- `index.html` viewport uses `viewport-fit=cover` so the safe-area
+  insets we respect everywhere actually have room to be non-zero.
+
 ## [2026.05.03.1]
 
 ### Added
