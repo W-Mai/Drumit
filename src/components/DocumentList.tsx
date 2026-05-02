@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "../lib/utils";
-import { Button, useDialog } from "./ui";
+import { Button, SelectMenu, useDialog } from "./ui";
 
 export interface DocumentSummary {
   id: string;
@@ -89,25 +89,20 @@ export function DocumentList({
             ↑ Import
           </Button>
           {samples && onLoadSample ? (
-            <select
+            <SelectMenu
+              size="xs"
               value=""
-              onChange={(e) => {
-                const id = e.target.value;
-                if (id) onLoadSample(id);
-                e.currentTarget.value = "";
-              }}
+              placeholder="♪ Example…"
               title="Load a bundled example"
-              className="h-6 rounded-full border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700 hover:bg-stone-50"
-            >
-              <option value="" disabled>
-                ♪ Example…
-              </option>
-              {samples.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+              options={samples.map((s) => ({
+                value: s.id,
+                label: s.label,
+              }))}
+              onChange={(id) => {
+                if (id) onLoadSample(id);
+              }}
+              className="h-6 rounded-full"
+            />
           ) : null}
           <input
             ref={fileInput}

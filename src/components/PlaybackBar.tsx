@@ -17,7 +17,7 @@ import { MidiEngine } from "../playback/midiEngine";
 import { SampleEngine } from "../playback/sampleEngine";
 import { useHotkeys } from "../lib/useHotkeys";
 import { cn } from "../lib/utils";
-import { Badge, Button, Field, Select, TextInput } from "./ui";
+import { Badge, Button, Field, SelectMenu, Switch, TextInput } from "./ui";
 
 export type EngineKind = "synth" | "sample" | "midi";
 
@@ -305,14 +305,17 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       </div>
 
       <Field label="Engine:">
-        <Select
+        <SelectMenu
           value={engineKind}
-          onChange={(e) => setEngineKind(e.target.value as EngineKind)}
-        >
-          <option value="synth">Synth (internal)</option>
-          <option value="sample">Samples (WAV)</option>
-          {midiAvailable ? <option value="midi">Web MIDI</option> : null}
-        </Select>
+          onChange={(v) => setEngineKind(v as EngineKind)}
+          options={[
+            { value: "synth", label: "Synth", description: "internal" },
+            { value: "sample", label: "Samples", description: "WAV" },
+            ...(midiAvailable
+              ? [{ value: "midi", label: "Web MIDI", description: "device" }]
+              : []),
+          ]}
+        />
       </Field>
 
       {engineKind === "sample" ? (
@@ -327,20 +330,19 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
 
       {engineKind === "midi" ? (
         <Field label="Port:">
-          <Select
+          <SelectMenu
             value={selectedOutput}
-            onChange={(e) => setSelectedOutput(e.target.value)}
-          >
-            {midiOutputs.length === 0 ? (
-              <option value="">(no ports)</option>
-            ) : (
-              midiOutputs.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name ?? o.id}
-                </option>
-              ))
-            )}
-          </Select>
+            onChange={setSelectedOutput}
+            placeholder="(no ports)"
+            options={
+              midiOutputs.length === 0
+                ? [{ value: "", label: "(no ports)", disabled: true }]
+                : midiOutputs.map((o) => ({
+                    value: o.id,
+                    label: o.name ?? o.id,
+                  }))
+            }
+          />
         </Field>
       ) : null}
 
@@ -358,45 +360,38 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
         <span>bpm</span>
       </Field>
 
-      <Field label={null}>
-        <input
-          type="checkbox"
-          checked={metronome}
-          onChange={(e) => setMetronome(e.target.checked)}
-        />
-        <span className="flex items-center gap-1.5">
-          Click
-          <span
-            key={beatTick.key}
-            className={cn(
-              "inline-block size-1.5 rounded-full",
-              metronome && playState === "playing"
-                ? beatTick.downbeat
-                  ? "bg-emerald-500 motion-pulse-soft"
-                  : "bg-emerald-300/70 motion-pulse-soft"
-                : "bg-stone-300",
-            )}
-          />
-        </span>
-      </Field>
+      <Switch
+        checked={metronome}
+        onChange={setMetronome}
+        label={
+          <span className="flex items-center gap-1.5">
+            Click
+            <span
+              key={beatTick.key}
+              className={cn(
+                "inline-block size-1.5 rounded-full",
+                metronome && playState === "playing"
+                  ? beatTick.downbeat
+                    ? "bg-emerald-500 motion-pulse-soft"
+                    : "bg-emerald-300/70 motion-pulse-soft"
+                  : "bg-stone-300",
+              )}
+            />
+          </span>
+        }
+      />
 
-      <Field
-        label={null}
+      <Switch
+        checked={loopEnabled}
         disabled={typeof startBar !== "number"}
+        onChange={setLoopEnabled}
+        label="Loop bar"
         title={
           typeof startBar === "number"
             ? `Loop bar ${startBar + 1}`
             : "Select a bar first"
         }
-      >
-        <input
-          type="checkbox"
-          checked={loopEnabled}
-          disabled={typeof startBar !== "number"}
-          onChange={(e) => setLoopEnabled(e.target.checked)}
-        />
-        <span>Loop bar</span>
-      </Field>
+      />
 
       <span className="ml-auto text-[10px] text-stone-400 tabular-nums">
         {playState}
