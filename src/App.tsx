@@ -58,6 +58,7 @@ import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
+import { ThemeToggle, LocaleToggle } from "./components/ThemeLocaleToggles";
 import { StaffView } from "./notation/staff/renderer";
 import {
   Badge,
@@ -918,6 +919,8 @@ function AppInner() {
           >
             benign.host
           </a>
+          <LocaleToggle />
+          <ThemeToggle />
           <button
             type="button"
             onClick={() => setAboutOpen(true)}
