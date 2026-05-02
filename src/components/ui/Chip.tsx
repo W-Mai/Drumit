@@ -41,7 +41,7 @@ export function Chip({
       disabled={disabled}
       title={title}
       className={cn(
-        "rounded-full px-2.5 py-0.5 text-[11px] font-bold transition",
+        "motion-press rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-[background-color,color,box-shadow] duration-150 ease-out",
         active
           ? "bg-stone-900 text-white shadow-sm"
           : "text-stone-600 hover:bg-stone-200",

@@ -14,6 +14,7 @@ import { exportScoreToMidi } from "../notation/midiExport";
 import { serializeScore } from "../notation/serialize";
 import { buildInfo } from "../lib/buildInfo";
 import { HoverClickPopover } from "./HoverClickPopover";
+import { AnimatePresence, motion } from "motion/react";
 import { cn } from "../lib/utils";
 
 const EXPORT_QR_URL = "https://w-mai.github.io/Drumit/";
@@ -178,11 +179,31 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
         <span
           title="Export…"
           className={cn(
-            "flex h-7 cursor-pointer items-center gap-1 rounded-full border border-stone-200 bg-white px-3 text-xs font-semibold text-stone-700 select-none hover:bg-stone-50",
-            open && "border-amber-400 bg-amber-100 text-stone-900",
+            "flex h-7 cursor-pointer items-center gap-1 rounded-full border px-3 text-xs font-semibold select-none transition-colors",
+            status === "error"
+              ? "border-red-300 bg-red-50 text-red-700"
+              : status === "pending"
+                ? "border-amber-300 bg-amber-50 text-amber-800"
+                : open
+                  ? "border-amber-400 bg-amber-100 text-stone-900"
+                  : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
           )}
         >
-          {status === "pending" ? "Exporting…" : status === "error" ? "Failed" : "↓ Export"}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={status}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.12 }}
+            >
+              {status === "pending"
+                ? "Exporting…"
+                : status === "error"
+                  ? "Failed"
+                  : "↓ Export"}
+            </motion.span>
+          </AnimatePresence>
         </span>
       )}
     >

@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui";
 
@@ -122,19 +123,29 @@ export function DocumentList({
         </div>
       </header>
       <ul className="flex-1 overflow-y-auto p-1">
-        {documents.map((doc) => (
-          <DocumentItem
-            key={doc.id}
-            doc={doc}
-            active={doc.id === activeId}
-            onSelect={() => onSelect(doc.id)}
-            onRename={(name) => onRename(doc.id, name)}
-            onDuplicate={() => onDuplicate(doc.id)}
-            onDelete={() => onDelete(doc.id)}
-            onExport={() => onExport(doc.id)}
-            onExportMidi={() => onExportMidi(doc.id)}
-          />
-        ))}
+        <AnimatePresence initial={false}>
+          {documents.map((doc) => (
+            <motion.div
+              key={doc.id}
+              layout
+              initial={{ opacity: 0, height: 0, scale: 0.95 }}
+              animate={{ opacity: 1, height: "auto", scale: 1 }}
+              exit={{ opacity: 0, height: 0, scale: 0.95 }}
+              transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+            >
+              <DocumentItem
+                doc={doc}
+                active={doc.id === activeId}
+                onSelect={() => onSelect(doc.id)}
+                onRename={(name) => onRename(doc.id, name)}
+                onDuplicate={() => onDuplicate(doc.id)}
+                onDelete={() => onDelete(doc.id)}
+                onExport={() => onExport(doc.id)}
+                onExportMidi={() => onExportMidi(doc.id)}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </ul>
     </aside>
   );

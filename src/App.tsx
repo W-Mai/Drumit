@@ -1523,15 +1523,34 @@ function Diagnostics({
 }) {
   const errors = diagnostics.filter((d) => d.level === "error").length;
   const warnings = diagnostics.filter((d) => d.level === "warning").length;
-  if (errors === 0 && warnings === 0) return <Badge tone="success">OK</Badge>;
+  const state =
+    errors === 0 && warnings === 0
+      ? "ok"
+      : errors > 0
+        ? "error"
+        : "warn";
   const title = diagnostics
     .map((d) => `${d.level}@${d.line}: ${d.message}`)
     .join("\n");
   return (
-    <Badge tone={errors > 0 ? "danger" : "warning"} title={title}>
-      {errors > 0 ? `${errors} error${errors > 1 ? "s" : ""}` : ""}
-      {errors > 0 && warnings > 0 ? " · " : ""}
-      {warnings > 0 ? `${warnings} warn` : ""}
-    </Badge>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.span
+        key={state}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.14 }}
+      >
+        {state === "ok" ? (
+          <Badge tone="success">OK</Badge>
+        ) : (
+          <Badge tone={state === "error" ? "danger" : "warning"} title={title}>
+            {errors > 0 ? `${errors} error${errors > 1 ? "s" : ""}` : ""}
+            {errors > 0 && warnings > 0 ? " · " : ""}
+            {warnings > 0 ? `${warnings} warn` : ""}
+          </Badge>
+        )}
+      </motion.span>
+    </AnimatePresence>
   );
 }
