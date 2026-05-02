@@ -11,6 +11,49 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.03.1]
+
+### Added
+
+- **Motion system** — design tokens (4 durations × 4 easings),
+  keyframes (fade / scale / pop / pulse / flash) and a global
+  `prefers-reduced-motion` handler. Shipped with 10+ micro-
+  interactions: play/stop button press, editor cell write+erase,
+  popover enter/exit, view cross-fade (Drumit↔Staff, Compact↔Expand),
+  metronome beat pulse with downbeat emphasis, copy/cut/paste bar
+  flash, panel open/close, playhead bar and beat highlight sliding,
+  Perform view enter/exit, document list reorder, diagnostics /
+  export status cross-fade, and more.
+- **Custom Dialog system** — motion-based alert / confirm / prompt
+  replacing every `window.*` dialog; Esc + Enter + validation.
+- **Framed exports** — SVG/PNG/PDF/HTML exports wrap the chart in
+  a bleed margin + footer with title, subtitle, URL, version, and
+  a QR code pointing at the landing page. Transient playhead
+  `×N/M` badge no longer leaks into exports.
+- **UI primitives** — SelectMenu (desktop dropdown / touch native
+  fallback), Switch (spring knob toggle replacing checkboxes),
+  NumberStepper (custom −/+ replacing number input spinner),
+  Spinner (loading indicator).
+
+### Changed
+
+- Tighter Preview spacing: bars ~15–20% shorter.
+- Unified note-head stroke widths (single `strokeForSize` helper).
+- Staff view proportions closer to SMuFL (stem 1.2, beam 0.5×space).
+- PadEditor cells colour by row group (cymbals / toms / snare / kick).
+- Every button has a visible keyboard focus ring; primary actions
+  scale down on press.
+
+### Fixed
+
+- `×pass/total` playhead badge stripped from exports (was leaking
+  through DOM-based SVG capture).
+
+### Dependencies
+
+- Added `motion` for component animations (~40 kB gzipped).
+- Added `qrcode` for export footer QR codes.
+
 ## [2026.05.02.2]
 
 ### Added
