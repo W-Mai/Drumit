@@ -23,6 +23,7 @@ import {
   Field,
   NumberStepper,
   SelectMenu,
+  Spinner,
   Switch,
 } from "./ui";
 
@@ -326,12 +327,15 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       </Field>
 
       {engineKind === "sample" ? (
-        <span className="text-[11px] text-stone-500">
-          {samplesLoading
-            ? "loading samples…"
-            : samplesLoaded
-              ? null
-              : "no samples installed — silent"}
+        <span className="flex items-center gap-1.5 text-[11px] text-stone-500">
+          {samplesLoading ? (
+            <>
+              <Spinner size={11} />
+              loading samples…
+            </>
+          ) : samplesLoaded ? null : (
+            "no samples installed — silent"
+          )}
         </span>
       ) : null}
 

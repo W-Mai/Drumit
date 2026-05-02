@@ -6,6 +6,7 @@ export { SelectMenu } from "./SelectMenu";
 export type { SelectOption } from "./SelectMenu";
 export { Switch } from "./Switch";
 export { NumberStepper } from "./NumberStepper";
+export { Spinner } from "./Spinner";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button";
 export { Chip, ChipGroup } from "./Chip";
 export { Panel, PanelHeader } from "./Panel";
