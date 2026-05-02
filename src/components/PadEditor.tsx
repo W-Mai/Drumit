@@ -1751,7 +1751,7 @@ function AddInstrumentMenu({
                     onPick(i);
                     setOpen(false);
                   }}
-                  className="group relative flex flex-col items-center gap-1 rounded-lg border border-stone-200 bg-white p-2 text-[10px] font-bold text-stone-700 transition hover:border-stone-900 hover:bg-stone-900 hover:text-amber-100"
+                  className="motion-press group relative flex flex-col items-center gap-1 rounded-lg border border-stone-200 bg-white p-2 text-[10px] font-bold text-stone-700 transition-[background-color,color,border-color,transform] duration-150 ease-out hover:border-stone-900 hover:bg-stone-900 hover:text-amber-100"
                   title={`${instrumentLabels[i]} (${canonicalAlias[i]})${digit ? ` — press ${digit}` : ""}`}
                 >
                   {digit ? (

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "motion/react";
 import { buildInfo } from "../lib/buildInfo";
 
 interface Props {
@@ -25,21 +26,25 @@ export function AboutModal({ open, onClose }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
-
   const builtAt = formatDate(buildInfo.builtAt);
   const commitUrl = `${REPO_URL}/commit/${buildInfo.gitHash}`;
   const versionLabel = buildInfo.version === "dev" ? "dev" : `v${buildInfo.version}`;
 
   return createPortal(
-    <div
+    <AnimatePresence>
+      {open ? (
+    <motion.div
       role="dialog"
       aria-modal="true"
       aria-labelledby="about-title"
       className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 sm:items-center sm:p-4"
       onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
     >
-      <div
+      <motion.div
         className="
           flex w-full flex-col overflow-hidden bg-white shadow-xl
           max-h-[85dvh] rounded-t-2xl
@@ -47,6 +52,10 @@ export function AboutModal({ open, onClose }: Props) {
           pb-[env(safe-area-inset-bottom)]
         "
         onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: 24, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
       >
         <header className="flex items-start justify-between gap-4 border-b border-stone-200 px-6 py-4">
           <div>
@@ -64,7 +73,7 @@ export function AboutModal({ open, onClose }: Props) {
             type="button"
             onClick={onClose}
             aria-label="关闭"
-            className="flex size-7 items-center justify-center rounded-full text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+            className="motion-press flex size-7 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900"
           >
             <span className="text-base leading-none">×</span>
           </button>
@@ -152,8 +161,10 @@ export function AboutModal({ open, onClose }: Props) {
         <footer className="border-t border-stone-200 bg-stone-50 px-6 py-2.5 text-[11px] text-stone-500">
           © 2026 W-Mai · MIT License
         </footer>
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>
+      ) : null}
+    </AnimatePresence>,
     document.body,
   );
 }

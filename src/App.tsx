@@ -872,7 +872,7 @@ export default function App() {
             rel="noreferrer noopener"
             title="GitHub 源码"
             aria-label="GitHub 源码"
-            className="flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+            className="motion-press flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
           >
             <svg
               viewBox="0 0 16 16"
@@ -888,7 +888,7 @@ export default function App() {
             rel="noreferrer noopener"
             title="博客 · benign.host"
             aria-label="博客"
-            className="hidden h-7 items-center justify-center rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-600 hover:bg-stone-50 hover:text-stone-900 sm:flex"
+            className="motion-press hidden h-7 items-center justify-center rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 sm:flex"
           >
             benign.host
           </a>
@@ -897,7 +897,7 @@ export default function App() {
             onClick={() => setAboutOpen(true)}
             title="关于"
             aria-label="关于"
-            className="flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+            className="motion-press flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-sm font-semibold text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
           >
             i
           </button>
