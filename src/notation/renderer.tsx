@@ -75,6 +75,7 @@ interface Props {
    * (every bar there is unique).
    */
   repeatPass?: { pass: number; total: number } | null;
+  flashes?: Map<number, "amber" | "emerald">;
 }
 
 export function DrumChart({
@@ -86,6 +87,7 @@ export function DrumChart({
   playCursor,
   playheadEngine = "synth",
   repeatPass,
+  flashes,
 }: Props) {
   const selectionLo =
     selectedBarIndex === null || selectedBarIndex === undefined
@@ -219,6 +221,7 @@ export function DrumChart({
               isPlayhead={isPlayhead}
               playheadEngine={playheadEngine}
               repeatPass={isPlayhead ? repeatPass : null}
+              flash={flashes?.get(globalIdx) ?? null}
               onSelect={
                 onSelectBar
                   ? (shiftKey) => onSelectBar(globalIdx, shiftKey)
@@ -240,6 +243,7 @@ function BarView({
   isPlayhead,
   playheadEngine = "synth",
   repeatPass,
+  flash,
   onSelect,
 }: {
   bar: LaidOutBar;
@@ -249,6 +253,7 @@ function BarView({
   isPlayhead?: boolean;
   playheadEngine?: "synth" | "sample" | "midi";
   repeatPass?: { pass: number; total: number } | null;
+  flash?: "amber" | "emerald" | null;
   onSelect?: (shiftKey: boolean) => void;
 }) {
   const { x, y, width, rowMaxHeight, rowGroups, rowY, beats } = bar;
@@ -266,6 +271,7 @@ function BarView({
       data-bar-index={bar.index - 1}
     >
       <rect
+        key={flash ? `flash-${flash}-${bar.index}` : `plain-${bar.index}`}
         x={x}
         y={y + 2}
         width={width}
@@ -278,6 +284,8 @@ function BarView({
             : selected
               ? "fill-amber-200/60 stroke-amber-500"
               : "fill-transparent stroke-transparent hover:fill-stone-200/40",
+          flash === "amber" && "motion-flash-amber",
+          flash === "emerald" && "motion-flash-emerald",
         )}
         strokeWidth={isPlayhead || selected ? 1.5 : 0}
         data-bar-highlight="true"

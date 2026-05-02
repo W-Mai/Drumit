@@ -64,6 +64,7 @@ import { AnimatePresence, motion } from "motion/react";
 import type { Bar, Score } from "./notation/types";
 import { cn } from "./lib/utils";
 import { useHistory } from "./lib/useHistory";
+import { useFlashBars } from "./lib/useFlashBars";
 
 type Mode = "source" | "visual";
 
@@ -314,6 +315,10 @@ export default function App() {
     if (!selectionRange) return;
     const bars = extractBars(score, selectionRange[0], selectionRange[1]);
     void writeBarsToClipboard(bars);
+    const [lo, hi] = selectionRange;
+    const indices: number[] = [];
+    for (let i = lo; i <= hi; i += 1) indices.push(i);
+    flash(indices, "amber");
   }
 
   function handleCutBars() {
@@ -323,8 +328,6 @@ export default function App() {
     void writeBarsToClipboard(bars);
     const [lo, hi] = selectionRange;
     applyScoreUpdate((s) => deleteBars(s, lo, hi));
-    // Cursor collapses to the bar right before the removed range
-    // (or 0 if we just removed the head).
     setSelectionEnd(null);
     setSelectedBar(Math.max(0, lo - 1));
   }
@@ -374,12 +377,12 @@ export default function App() {
     if (selectedBar === null) return;
     const target = selectionRange ? selectionRange[0] : selectedBar;
     applyScoreUpdate((s) => pasteBarsBefore(s, target, bars));
-    // Move the selection to the pasted span so the user can immediately
-    // see / operate on what landed.
     setSelectionEnd(null);
     setSelectedBar(target);
-    // End of the pasted range for visual affordance.
     if (bars.length > 1) setSelectionEnd(target + bars.length - 1);
+    const indices: number[] = [];
+    for (let i = 0; i < bars.length; i += 1) indices.push(target + i);
+    flash(indices, "emerald");
   }
 
   useHotkeys([
@@ -576,6 +579,7 @@ export default function App() {
   // Per-document undo/redo history. Keyed by document id so switching
   // between docs preserves each doc's timeline independently.
   const history = useHistory();
+  const { flashes, flash } = useFlashBars();
   // When true, `writeActiveDocSource` should skip pushing a new history
   // entry — used while applying an undo/redo result to avoid looping.
   const suppressRecordRef = useRef(false);
@@ -1178,6 +1182,7 @@ export default function App() {
                     playCursor={viewPlayCursor}
                     playheadEngine={engineKind}
                     repeatPass={viewRepeatPass}
+                    flashes={expandedPreview ? undefined : flashes}
                   />
                 )}
               </ViewFader>

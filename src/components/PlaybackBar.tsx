@@ -3,6 +3,7 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { Score } from "../notation/types";
@@ -15,6 +16,7 @@ import { SynthEngine } from "../playback/synthEngine";
 import { MidiEngine } from "../playback/midiEngine";
 import { SampleEngine } from "../playback/sampleEngine";
 import { useHotkeys } from "../lib/useHotkeys";
+import { cn } from "../lib/utils";
 import { Badge, Button, Field, Select, TextInput } from "./ui";
 
 export type EngineKind = "synth" | "sample" | "midi";
@@ -66,6 +68,11 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
   const [error, setError] = useState<string | null>(null);
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [playState, setPlayState] = useState<PlaybackState>("idle");
+  const [beatTick, setBeatTick] = useState<{ key: number; downbeat: boolean }>({
+    key: 0,
+    downbeat: false,
+  });
+  const lastBeatRef = useRef<number>(-1);
 
   const midiAvailable =
     typeof navigator !== "undefined" && !!navigator.requestMIDIAccess;
@@ -156,7 +163,16 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       setPlayState(s);
       onStateChange?.(s);
     });
-    const offCursor = controller.onCursor((p) => onCursor?.(p));
+    const offCursor = controller.onCursor((p) => {
+      if (lastBeatRef.current !== p.beatIndex) {
+        lastBeatRef.current = p.beatIndex;
+        setBeatTick((prev) => ({
+          key: prev.key + 1,
+          downbeat: p.beatIndex === 0,
+        }));
+      }
+      onCursor?.(p);
+    });
     const offEnd = controller.onEnd(() => onStop?.());
     return () => {
       offState();
@@ -348,7 +364,20 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
           checked={metronome}
           onChange={(e) => setMetronome(e.target.checked)}
         />
-        <span>Click</span>
+        <span className="flex items-center gap-1.5">
+          Click
+          <span
+            key={beatTick.key}
+            className={cn(
+              "inline-block size-1.5 rounded-full",
+              metronome && playState === "playing"
+                ? beatTick.downbeat
+                  ? "bg-emerald-500 motion-pulse-soft"
+                  : "bg-emerald-300/70 motion-pulse-soft"
+                : "bg-stone-300",
+            )}
+          />
+        </span>
       </Field>
 
       <Field

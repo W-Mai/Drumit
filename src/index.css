@@ -55,12 +55,12 @@ body {
   50% { filter: brightness(1.35); opacity: 0.9; }
 }
 @keyframes motion-flash-amber {
-  0% { background-color: rgba(245, 158, 11, 0.55); }
-  100% { background-color: transparent; }
+  0% { fill: rgba(245, 158, 11, 0.55); }
+  100% { fill: rgba(245, 158, 11, 0); }
 }
 @keyframes motion-flash-emerald {
-  0% { background-color: rgba(16, 185, 129, 0.55); }
-  100% { background-color: transparent; }
+  0% { fill: rgba(16, 185, 129, 0.55); }
+  100% { fill: rgba(16, 185, 129, 0); }
 }
 
 .motion-press {
