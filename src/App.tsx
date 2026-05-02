@@ -1095,7 +1095,7 @@ function AppInner() {
         </button>
 
 
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 pb-[calc(3.25rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         <PlaybackBar
           ref={playbackRef}
           score={score}
@@ -1184,7 +1184,7 @@ function AppInner() {
             ref={setChartContainer}
             data-drumit-scope="preview"
             tabIndex={0}
-            className="min-h-0 flex-1 overflow-auto bg-stone-100/40 p-2 outline-none focus:ring-2 focus:ring-amber-300/60 focus:ring-inset sm:p-4"
+            className="mobile-safe-scroll-x min-h-0 flex-1 overflow-auto bg-stone-100/40 p-2 outline-none focus:ring-2 focus:ring-amber-300/60 focus:ring-inset sm:p-4"
           >
             {hasErrors ? (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">

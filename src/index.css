@@ -92,6 +92,27 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Mobile UX polish:
+   1. Disable iOS bounce / rubber-band on the root. Any inner scrolls opt
+      back in via default overscroll-behavior: auto on their own container.
+   2. Disable the 300ms tap delay and double-tap-to-zoom so taps feel native.
+   3. Kill horizontal overscroll on any scrolling panel we explicitly mark,
+      so iOS doesn't hand off the horizontal swipe to Safari's "back" gesture.
+*/
+html,
+body {
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+.mobile-safe-scroll-x {
+  /* Panels that scroll horizontally on mobile: keep the swipe inside, don't
+     surrender it to Safari's history gesture. */
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
 @keyframes motion-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }

@@ -971,7 +971,7 @@ function StepGrid({
   onCycleDots: Props["onCycleDots"];
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+    <div className="mobile-safe-scroll-x overflow-x-auto rounded-xl border border-stone-200 bg-white">
       <div
         className="grid min-w-max"
         style={{

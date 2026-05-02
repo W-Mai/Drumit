@@ -280,12 +280,15 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
   return (
     <div
       className="
-        fixed inset-x-0 bottom-0 z-30
+        mobile-safe-scroll-x
+        fixed bottom-0 z-30
+        left-[max(0.5rem,env(safe-area-inset-left))]
+        right-[max(0.5rem,env(safe-area-inset-right))]
         flex items-center gap-3 overflow-x-auto
-        border-t border-stone-200 bg-white px-3 py-2 text-xs
+        rounded-t-xl border border-b-0 border-stone-200 bg-white px-3 py-2 text-xs shadow-lg
         pb-[max(0.5rem,env(safe-area-inset-bottom))]
         lg:static lg:flex-wrap lg:overflow-visible
-        lg:rounded-xl lg:border lg:pb-2
+        lg:rounded-xl lg:border lg:pb-2 lg:shadow-none
       "
     >
       <div className="flex items-center gap-1">

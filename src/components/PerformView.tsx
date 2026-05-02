@@ -532,7 +532,7 @@ function MiniMap({
 
       {/* Chip row */}
       <div
-        className="flex gap-1 overflow-x-auto px-3 py-1.5"
+        className="mobile-safe-scroll-x flex gap-1 overflow-x-auto px-3 py-1.5"
         style={{ scrollbarWidth: "none" }}
         data-testid="perform-minimap-strip"
       >
