@@ -1049,8 +1049,8 @@ function AppInner() {
                 <button
                   type="button"
                   onClick={() => setSidebarCollapsed(false)}
-                  title="Show documents"
-                  aria-label="Show documents"
+                  title={t("panel.show_documents")}
+                  aria-label={t("panel.show_documents")}
                   className="motion-press flex size-8 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
                 >
                   <span className="text-[14px] font-bold leading-none">⇥</span>
@@ -1091,8 +1091,16 @@ function AppInner() {
         <button
           type="button"
           onClick={() => setSidebarCollapsed((v) => !v)}
-          title={sidebarCollapsed ? "Show documents" : "Hide documents"}
-          aria-label={sidebarCollapsed ? "Show documents" : "Hide documents"}
+          title={
+            sidebarCollapsed
+              ? t("panel.show_documents")
+              : t("panel.hide_documents")
+          }
+          aria-label={
+            sidebarCollapsed
+              ? t("panel.show_documents")
+              : t("panel.hide_documents")
+          }
           className="group mx-0.5 hidden w-2.5 flex-none items-center justify-center hover:bg-stone-200/70 lg:flex"
         >
           <span className="h-10 w-[2px] rounded-full bg-stone-200 group-hover:bg-stone-400" />
@@ -1310,7 +1318,7 @@ function AppInner() {
               trigger={({ open }) => (
                 <span
                   aria-expanded={open}
-                  title="Keyboard shortcuts"
+                  title={t("hotkeys.title")}
                   className={cn(
                     "flex size-7 items-center justify-center rounded-full border text-sm font-bold select-none",
                     open
@@ -1346,7 +1354,7 @@ function AppInner() {
             ) : expandedPreview ? (
               <div className="grid min-h-[280px] place-items-center p-6 text-center text-sm text-stone-500">
                 <div>
-                  <p>Editing is disabled in the expanded preview.</p>
+                  <p>{t("panel.preview_readonly")}</p>
                   <p className="mt-1 text-xs text-stone-400">
                     Switch back to the compact view to edit bars.
                   </p>

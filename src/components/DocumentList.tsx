@@ -48,6 +48,7 @@ export function DocumentList({
   onLoadSample,
   onCollapse,
 }: Props) {
+  const { t } = useI18n();
   const fileInput = useRef<HTMLInputElement>(null);
 
   function handleImport(file: File) {
@@ -64,14 +65,14 @@ export function DocumentList({
       <header className="flex flex-col gap-1.5 border-b border-stone-200 px-3 py-2">
         <div className="flex items-center justify-between">
           <h3 className="text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-            Documents
+            {t("panel.documents")}
           </h3>
           {onCollapse ? (
             <button
               type="button"
               onClick={onCollapse}
-              title="Hide documents"
-              aria-label="Hide documents"
+              title={t("doclist.hide")}
+              aria-label={t("doclist.hide")}
               className="flex size-5 items-center justify-center rounded text-stone-500 hover:bg-stone-100 hover:text-stone-900"
             >
               <span className="text-[12px] font-bold leading-none">⇤</span>
@@ -79,13 +80,13 @@ export function DocumentList({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <Button size="xs" onClick={onCreate} title="New document">
+          <Button size="xs" onClick={onCreate} title={t("doclist.new_document")}>
             + New
           </Button>
           <Button
             size="xs"
             onClick={() => fileInput.current?.click()}
-            title="Import .drumtab file"
+            title={t("doclist.import_file")}
           >
             ↑ Import
           </Button>
@@ -94,7 +95,7 @@ export function DocumentList({
               size="xs"
               value=""
               placeholder="♪ Example…"
-              title="Load a bundled example"
+              title={t("doclist.load_example")}
               options={samples.map((s) => ({
                 value: s.id,
                 label: s.label,
@@ -215,19 +216,23 @@ function DocumentItem({
           they're actually reachable. On pointer:fine they stay hover-only
           to keep the list calm. */}
       <div className="flex flex-shrink-0 gap-0.5 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
-        <IconButton title="Rename" onClick={promptRename}>
+        <IconButton title={t("doclist.rename")} onClick={promptRename}>
           ✎
         </IconButton>
-        <IconButton title="Duplicate" onClick={onDuplicate}>
+        <IconButton title={t("doclist.duplicate")} onClick={onDuplicate}>
           ⎘
         </IconButton>
-        <IconButton title="Export .drumtab" onClick={onExport}>
+        <IconButton title={`${t("doclist.export")} .drumtab`} onClick={onExport}>
           ↓
         </IconButton>
-        <IconButton title="Export .mid" onClick={onExportMidi}>
+        <IconButton title={`${t("doclist.export")} .mid`} onClick={onExportMidi}>
           ♪
         </IconButton>
-        <IconButton title="Delete" onClick={() => void promptDelete()} danger>
+        <IconButton
+          title={t("doclist.delete_confirm")}
+          onClick={() => void promptDelete()}
+          danger
+        >
           ✕
         </IconButton>
       </div>

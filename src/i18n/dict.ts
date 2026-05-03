@@ -83,6 +83,85 @@ const zh: Dict = {
   "about.link.repo": "源码仓库 · GitHub",
   "about.link.changelog": "更新日志 · CHANGELOG",
   "about.link.license": "协议 · MIT",
+
+  // Panels / layout
+  "panel.documents": "文档",
+  "panel.preview": "预览",
+  "panel.editor": "编辑器",
+  "panel.perform": "演奏",
+  "panel.hotkeys": "快捷键",
+  "panel.show_documents": "展开文档列表",
+  "panel.hide_documents": "折叠文档列表",
+  "panel.preview_readonly": "展开预览中无法编辑。",
+
+  // Playback bar
+  "playback.play": "▶ 播放",
+  "playback.resume": "▶ 继续",
+  "playback.play_at": "▶ 从 {bar} 开始",
+  "playback.pause": "❚❚ 暂停",
+  "playback.stop": "■ 停止",
+  "playback.engine": "音源",
+  "playback.engine.synth": "合成器",
+  "playback.engine.synth_desc": "内置",
+  "playback.engine.sample": "采样",
+  "playback.engine.sample_desc": "WAV",
+  "playback.engine.midi": "Web MIDI",
+  "playback.engine.midi_desc": "外接",
+  "playback.port": "端口",
+  "playback.port_none": "（无可用端口）",
+  "playback.tempo": "速度",
+  "playback.click": "节拍器",
+  "playback.loop": "循环小节",
+  "playback.loop_title": "循环第 {bar} 小节",
+  "playback.loop_title_none": "先选择一个小节",
+  "playback.samples_loading": "采样加载中…",
+  "playback.samples_missing": "未装采样 — 静音",
+  "playback.midi_unavailable": "Web MIDI 不可用 — 试试 Chrome / Edge",
+  "playback.more": "更多",
+  "playback.more_options": "更多播放选项",
+  "playback.close": "关闭",
+
+  // PlaybackState
+  "playstate.idle": "空闲",
+  "playstate.playing": "播放中",
+  "playstate.paused": "已暂停",
+  "playstate.stopped": "已停止",
+
+  // PadEditor / BarEditor
+  "editor.pattern": "节奏",
+  "editor.subdivision": "细分",
+  "editor.all_instruments_added": "所有乐器已添加",
+  "editor.tab_autoadvance_hint": "Tab 可切换录入后自动前进",
+  "editor.rename_section_tip": "重命名当前段落",
+  "editor.new_section_tip": "在下一小节开新段落",
+  "editor.instruments": "乐器",
+
+  // PerformView
+  "perform.exit": "退出演奏视图",
+  "perform.stage": "演奏舞台",
+
+  // DocumentList
+  "doclist.hide": "折叠文档列表",
+  "doclist.show": "展开文档列表",
+  "doclist.new_document": "新建文档",
+  "doclist.import_file": "导入 .drumtab 文件",
+  "doclist.load_example": "载入内置示例",
+  "doclist.rename": "重命名",
+  "doclist.duplicate": "复制",
+  "doclist.export": "导出",
+
+  // Common
+  "common.loading": "加载中",
+  "common.decrease": "减少",
+  "common.increase": "增加",
+  "common.close": "关闭",
+
+  // Chart ARIA
+  "chart.aria_drum": "鼓谱",
+  "chart.aria_staff": "五线谱鼓谱",
+
+  // Hotkeys panel
+  "hotkeys.title": "快捷键",
 };
 
 const en: Dict = {
@@ -156,6 +235,77 @@ const en: Dict = {
   "about.link.repo": "Source · GitHub",
   "about.link.changelog": "Changelog",
   "about.link.license": "License · MIT",
+
+  "panel.documents": "Documents",
+  "panel.preview": "Preview",
+  "panel.editor": "Editor",
+  "panel.perform": "Perform",
+  "panel.hotkeys": "Hotkeys",
+  "panel.show_documents": "Show documents",
+  "panel.hide_documents": "Hide documents",
+  "panel.preview_readonly": "Editing is disabled in the expanded preview.",
+
+  "playback.play": "▶ Play",
+  "playback.resume": "▶ Resume",
+  "playback.play_at": "▶ Play @{bar}",
+  "playback.pause": "❚❚ Pause",
+  "playback.stop": "■ Stop",
+  "playback.engine": "Engine",
+  "playback.engine.synth": "Synth",
+  "playback.engine.synth_desc": "internal",
+  "playback.engine.sample": "Samples",
+  "playback.engine.sample_desc": "WAV",
+  "playback.engine.midi": "Web MIDI",
+  "playback.engine.midi_desc": "device",
+  "playback.port": "Port",
+  "playback.port_none": "(no ports)",
+  "playback.tempo": "Tempo",
+  "playback.click": "Click",
+  "playback.loop": "Loop bar",
+  "playback.loop_title": "Loop bar {bar}",
+  "playback.loop_title_none": "Select a bar first",
+  "playback.samples_loading": "loading samples…",
+  "playback.samples_missing": "no samples installed — silent",
+  "playback.midi_unavailable": "Web MIDI unavailable — try Chrome / Edge",
+  "playback.more": "More",
+  "playback.more_options": "More playback options",
+  "playback.close": "Close",
+
+  "playstate.idle": "idle",
+  "playstate.playing": "playing",
+  "playstate.paused": "paused",
+  "playstate.stopped": "stopped",
+
+  "editor.pattern": "Pattern",
+  "editor.subdivision": "Subdivision",
+  "editor.all_instruments_added": "All instruments added",
+  "editor.tab_autoadvance_hint":
+    "Tab to toggle auto-advance after entering a hit",
+  "editor.rename_section_tip": "Rename this section",
+  "editor.new_section_tip": "Start a new section at the next bar",
+  "editor.instruments": "Instruments",
+
+  "perform.exit": "Exit perform view",
+  "perform.stage": "Perform stage",
+
+  "doclist.hide": "Hide documents",
+  "doclist.show": "Show documents",
+  "doclist.new_document": "New document",
+  "doclist.import_file": "Import .drumtab file",
+  "doclist.load_example": "Load a bundled example",
+  "doclist.rename": "Rename",
+  "doclist.duplicate": "Duplicate",
+  "doclist.export": "Export",
+
+  "common.loading": "Loading",
+  "common.decrease": "Decrease",
+  "common.increase": "Increase",
+  "common.close": "Close",
+
+  "chart.aria_drum": "Drum chart",
+  "chart.aria_staff": "Standard notation drum chart",
+
+  "hotkeys.title": "Keyboard shortcuts",
 };
 
 export const dict: Record<Locale, Dict> = { zh, en };

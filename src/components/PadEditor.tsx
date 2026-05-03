@@ -798,13 +798,13 @@ function SectionStrip({
         </span>
       </div>
       <div className="flex gap-1">
-        <Button size="xs" onClick={promptRename} title="Rename this section">
+        <Button size="xs" onClick={promptRename} title={t("editor.rename_section_tip")}>
           ✎ Rename
         </Button>
         <Button
           size="xs"
           onClick={promptSplit}
-          title="Start a new section at the next bar"
+          title={t("editor.new_section_tip")}
         >
           + Split
         </Button>
@@ -1974,6 +1974,7 @@ function CursorStatusBar({
   autoAdvance: boolean;
   onToggleAutoAdvance: () => void;
 }) {
+  const { t } = useI18n();
   const instLabel = currentInstrument
     ? instrumentLabels[currentInstrument]
     : "—";
@@ -1991,7 +1992,7 @@ function CursorStatusBar({
             ? "border-sky-500 bg-sky-100 text-sky-900"
             : "border-stone-200 bg-white text-stone-500",
         )}
-        title="Tab to toggle auto-advance after entering a hit"
+        title={t("editor.tab_autoadvance_hint")}
       >
         Tab: Auto-advance {autoAdvance ? "ON" : "OFF"}
       </button>

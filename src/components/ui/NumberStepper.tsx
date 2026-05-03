@@ -1,4 +1,5 @@
 import { cn } from "../../lib/utils";
+import { useI18n } from "../../i18n/useI18n";
 
 interface Props {
   value: number;
@@ -23,6 +24,7 @@ export function NumberStepper({
   title,
   suffix,
 }: Props) {
+  const { t } = useI18n();
   const clamp = (n: number) => Math.max(min, Math.min(max, n));
   const commit = (n: number) => {
     if (Number.isNaN(n)) return;
@@ -43,7 +45,7 @@ export function NumberStepper({
         disabled={disabled || value <= min}
         onClick={() => commit(value - step)}
         className="motion-press flex w-5 items-center justify-center text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-40"
-        aria-label="Decrease"
+        aria-label={t("common.decrease")}
         tabIndex={-1}
       >
         −
@@ -64,7 +66,7 @@ export function NumberStepper({
         disabled={disabled || value >= max}
         onClick={() => commit(value + step)}
         className="motion-press flex w-5 items-center justify-center text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-40"
-        aria-label="Increase"
+        aria-label={t("common.increase")}
         tabIndex={-1}
       >
         +

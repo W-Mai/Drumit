@@ -27,6 +27,7 @@ import {
   Switch,
 } from "./ui";
 import { MobilePlaybackBar } from "./MobilePlaybackBar";
+import { useI18n } from "../i18n/useI18n";
 
 export type EngineKind = "synth" | "sample" | "midi";
 
@@ -69,6 +70,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
   { score, startBar, onCursor, onStop, onEngineChange, onStateChange },
   ref,
 ) {
+  const { t } = useI18n();
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [tempoOverride, setTempoOverride] = useState<number>(0);
   const [metronome, setMetronome] = useState(false);
@@ -285,12 +287,12 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       pressable
     >
       {playing
-        ? "❚❚ Pause"
+        ? t("playback.pause")
         : paused
-          ? "▶ Resume"
+          ? t("playback.resume")
           : typeof startBar === "number" && startBar > 0
-            ? `▶ Play @${startBar + 1}`
-            : "▶ Play"}
+            ? t("playback.play_at", { bar: startBar + 1 })
+            : t("playback.play")}
     </Button>
   );
   const stopButton = (
@@ -300,7 +302,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       variant="primary"
       pressable
     >
-      ■ Stop
+      {t("playback.stop")}
     </Button>
   );
   const clickSwitch = (
@@ -309,7 +311,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       onChange={setMetronome}
       label={
         <span className="flex items-center gap-1.5">
-          Click
+          {t("playback.click")}
           <span
             key={beatTick.key}
             className={cn(
@@ -330,60 +332,82 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       checked={loopEnabled}
       disabled={typeof startBar !== "number"}
       onChange={setLoopEnabled}
-      label="Loop bar"
+      label={t("playback.loop")}
       title={
         typeof startBar === "number"
-          ? `Loop bar ${startBar + 1}`
-          : "Select a bar first"
+          ? t("playback.loop_title", { bar: startBar + 1 })
+          : t("playback.loop_title_none")
       }
     />
   );
   const engineField = (
-    <Field label="Engine:">
+    <Field label={`${t("playback.engine")}:`}>
       <SelectMenu
         value={engineKind}
         onChange={(v) => setEngineKind(v as EngineKind)}
         options={[
-          { value: "synth", label: "Synth", description: "internal" },
-          { value: "sample", label: "Samples", description: "WAV" },
+          {
+            value: "synth",
+            label: t("playback.engine.synth"),
+            description: t("playback.engine.synth_desc"),
+          },
+          {
+            value: "sample",
+            label: t("playback.engine.sample"),
+            description: t("playback.engine.sample_desc"),
+          },
           ...(midiAvailable
-            ? [{ value: "midi", label: "Web MIDI", description: "device" }]
+            ? [
+                {
+                  value: "midi",
+                  label: t("playback.engine.midi"),
+                  description: t("playback.engine.midi_desc"),
+                },
+              ]
             : []),
         ]}
       />
     </Field>
   );
-  const sampleStatus = engineKind === "sample" ? (
-    <span className="flex items-center gap-1.5 text-[11px] text-stone-500">
-      {samplesLoading ? (
-        <>
-          <Spinner size={11} />
-          loading samples…
-        </>
-      ) : samplesLoaded ? null : (
-        "no samples installed — silent"
-      )}
-    </span>
-  ) : null;
-  const portField = engineKind === "midi" ? (
-    <Field label="Port:">
-      <SelectMenu
-        value={selectedOutput}
-        onChange={setSelectedOutput}
-        placeholder="(no ports)"
-        options={
-          midiOutputs.length === 0
-            ? [{ value: "", label: "(no ports)", disabled: true }]
-            : midiOutputs.map((o) => ({
-                value: o.id,
-                label: o.name ?? o.id,
-              }))
-        }
-      />
-    </Field>
-  ) : null;
+  const sampleStatus =
+    engineKind === "sample" ? (
+      <span className="flex items-center gap-1.5 text-[11px] text-stone-500">
+        {samplesLoading ? (
+          <>
+            <Spinner size={11} />
+            {t("playback.samples_loading")}
+          </>
+        ) : samplesLoaded ? null : (
+          t("playback.samples_missing")
+        )}
+      </span>
+    ) : null;
+  const portField =
+    engineKind === "midi" ? (
+      <Field label={`${t("playback.port")}:`}>
+        <SelectMenu
+          value={selectedOutput}
+          onChange={setSelectedOutput}
+          placeholder={t("playback.port_none")}
+          options={
+            midiOutputs.length === 0
+              ? [
+                  {
+                    value: "",
+                    label: t("playback.port_none"),
+                    disabled: true,
+                  },
+                ]
+              : midiOutputs.map((o) => ({
+                  value: o.id,
+                  label: o.name ?? o.id,
+                }))
+          }
+        />
+      </Field>
+    ) : null;
   const tempoField = (
-    <Field label="Tempo:">
+    <Field label={`${t("playback.tempo")}:`}>
       <NumberStepper
         min={40}
         max={300}
@@ -415,12 +439,12 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
         {clickSwitch}
         {loopSwitch}
         <span className="ml-auto text-[10px] text-stone-400 tabular-nums">
-          {playState}
+          {t(`playstate.${playState}`)}
         </span>
         {error ? <Badge tone="danger">{error}</Badge> : null}
         {!midiAvailable && engineKind === "midi" ? (
           <span className="text-stone-500">
-            Web MIDI unavailable — try Chrome / Edge
+            {t("playback.midi_unavailable")}
           </span>
         ) : null}
       </div>
@@ -442,13 +466,13 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-stone-500">
               {sampleStatus}
               <span className="ml-auto tabular-nums text-stone-400">
-                {playState}
+                {t(`playstate.${playState}`)}
               </span>
             </div>
             {error ? <Badge tone="danger">{error}</Badge> : null}
             {!midiAvailable && engineKind === "midi" ? (
               <span className="text-stone-500">
-                Web MIDI unavailable — try Chrome / Edge
+                {t("playback.midi_unavailable")}
               </span>
             ) : null}
           </div>

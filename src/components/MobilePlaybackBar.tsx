@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
+import { useI18n } from "../i18n/useI18n";
 
 interface Props {
   playButton: ReactNode;
@@ -24,6 +25,7 @@ export function MobilePlaybackBar({
   loopSwitch,
   moreContent,
 }: Props) {
+  const { t } = useI18n();
   const [sheetOpen, setSheetOpen] = useState(false);
   return (
     <>
@@ -50,8 +52,8 @@ export function MobilePlaybackBar({
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          aria-label="More playback options"
-          title="More"
+          aria-label={t("playback.more_options")}
+          title={t("playback.more")}
           className="motion-press flex size-8 flex-none items-center justify-center rounded-full border border-stone-200 text-stone-700 hover:bg-stone-50 hover:text-stone-900"
         >
           <span className="text-base leading-none">⋯</span>
@@ -73,7 +75,7 @@ export function MobilePlaybackBar({
                 >
                   <button
                     type="button"
-                    aria-label="Close"
+                    aria-label={t("playback.close")}
                     onClick={() => setSheetOpen(false)}
                     className="absolute inset-0 bg-stone-900/50"
                   />

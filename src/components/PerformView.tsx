@@ -20,6 +20,7 @@ import {
   findExpandedIndicesForSourceBar,
 } from "../notation/expand";
 import { computeExpandedBarStartTime } from "../notation/scheduler";
+import { useI18n } from "../i18n/useI18n";
 
 type ViewMode = "drumit" | "staff";
 
@@ -74,6 +75,7 @@ export function PerformView({
   onTogglePlay,
   onExit,
 }: PerformViewProps) {
+  const { t } = useI18n();
   // Staff teleprompter view is not wired up yet — Drumit only for now.
   // Keep the prop in the type so App can pass it without fuss.
   void _viewMode;
@@ -202,7 +204,7 @@ export function PerformView({
           type="button"
           onClick={onExit}
           className="motion-press grid h-10 w-10 place-items-center rounded-full bg-stone-800 text-lg font-bold hover:bg-stone-700"
-          aria-label="Exit perform view"
+          aria-label={t("perform.exit")}
           title="Exit (Esc)"
         >
           ✕
@@ -238,7 +240,7 @@ export function PerformView({
         className="relative flex min-h-0 flex-1 items-center overflow-hidden bg-stone-900"
         onClick={handleStageClick}
         role="region"
-        aria-label="Perform stage"
+        aria-label={t("perform.stage")}
         data-testid="perform-stage"
       >
         {stageWidth > 0 ? (

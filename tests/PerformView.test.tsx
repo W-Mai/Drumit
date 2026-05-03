@@ -1,8 +1,23 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
 import { parseDrumtab } from "../src/notation/parser";
 import { PerformView } from "../src/components/PerformView";
+import { I18nProvider } from "../src/i18n/I18nProvider";
+
+// Every test renders a component tree that touches useI18n (PerformView does
+// via exit/stage labels, Spinner and others). Wrap the default render so
+// individual tests don't need to care.
+function render(ui: ReactElement) {
+  return rtlRender(<I18nProvider>{ui}</I18nProvider>);
+}
 
 // jsdom doesn't implement ResizeObserver; stub it so the useLayoutEffect
 // doesn't throw. PerformView's stage-width defaults to a non-zero
@@ -446,21 +461,23 @@ describe("PerformView", () => {
     expect(chips[1].hasAttribute("data-active")).toBe(false);
     // Move cursor to bar 1.
     rerender(
-      <PerformView
-        score={score}
-        cursor={{
-          barIndex: 0,
-          beatIndex: 0,
-          expandedBarIndex: 1,
-          time: 4,
-        }}
-        viewMode="drumit"
-        engineKind="synth"
-        isPlaying={false}
-        onSeekTime={() => {}}
-        onTogglePlay={() => {}}
-        onExit={() => {}}
-      />,
+      <I18nProvider>
+        <PerformView
+          score={score}
+          cursor={{
+            barIndex: 0,
+            beatIndex: 0,
+            expandedBarIndex: 1,
+            time: 4,
+          }}
+          viewMode="drumit"
+          engineKind="synth"
+          isPlaying={false}
+          onSeekTime={() => {}}
+          onTogglePlay={() => {}}
+          onExit={() => {}}
+        />
+      </I18nProvider>,
     );
     chips = screen.getAllByTestId("bar-chip");
     expect(chips[1].getAttribute("data-active")).toBe("true");
