@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full-bleed background so maskable crops (80% safe area) keep it
+       looking like a solid amber tile even after the OS applies its
+       rounded-rect / circle mask. -->
+  <rect width="512" height="512" fill="#f59e0b"/>
+  <g stroke="#1c1917" stroke-width="44" stroke-linecap="round" fill="none">
+    <line x1="168" y1="168" x2="344" y2="344"/>
+    <line x1="344" y1="168" x2="168" y2="344"/>
+  </g>
+  <circle cx="256" cy="256" r="30" fill="#fef3c7"/>
+</svg>

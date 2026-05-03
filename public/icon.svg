@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Amber round-corner square background (matches app accent). -->
+  <rect width="512" height="512" rx="112" fill="#f59e0b"/>
+  <!-- Two crossed drumsticks + a kick dot. Bias to upper-left since
+       iOS home-screen icons inset into a rounded-square tile. -->
+  <g stroke="#1c1917" stroke-width="48" stroke-linecap="round" fill="none">
+    <line x1="128" y1="120" x2="384" y2="376"/>
+    <line x1="384" y1="120" x2="128" y2="376"/>
+  </g>
+  <circle cx="256" cy="256" r="36" fill="#fef3c7"/>
+</svg>

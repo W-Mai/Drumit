@@ -1,0 +1,28 @@
+{
+  "name": "Drumit",
+  "short_name": "Drumit",
+  "description": "A drum-tab editor and practice tool for people who don't want to wrestle with staff notation.",
+  "id": "/Drumit/",
+  "start_url": "/Drumit/",
+  "scope": "/Drumit/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#fafaf9",
+  "theme_color": "#f59e0b",
+  "categories": ["music", "productivity", "education"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ]
+}
