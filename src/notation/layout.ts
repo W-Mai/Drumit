@@ -197,20 +197,18 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     // Every section gets breathing room above — including the first,
     // so the bookmark tab clears the title-band divider line.
     y += sectionIdx === 0 ? 10 : SECTION_GAP_BEFORE;
-    sectionHeaders.push({ label: section.label, x: leftMargin, y: y + 18 });
+    sectionHeaders.push({ label: section.label, x: leftMargin, y });
     y += SECTION_HEADER_HEIGHT;
 
     if (section.bars.length === 0) {
-      // Clear the bookmark tab's 2px bottom overlap.
-      const topInset = 4;
       sectionPlaceholders.push({
         sectionIndex: sectionIdx,
         x: leftMargin,
-        y: y + topInset,
+        y,
         width: availableWidth,
         height: PLACEHOLDER_HEIGHT,
       });
-      y += topInset + PLACEHOLDER_HEIGHT + ROW_GAP;
+      y += PLACEHOLDER_HEIGHT + ROW_GAP;
       return;
     }
 

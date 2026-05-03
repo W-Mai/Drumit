@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { SECTION_HEADER_HEIGHT } from "./layout";
 import type { LaidOutBar, LaidOutHit, LaidOutLayout, RowGroup } from "./layout";
 import type { Hit } from "./types";
 import { instrumentSizeScale } from "./instruments";
@@ -162,14 +163,13 @@ export function DrumChart({
         />
       </g>
 
-      {/* Section headers: bookmark tab anchored to the row below. */}
+      {/* Bookmark tab: top corners rounded, bottom corners square so
+          the label sits flush against the bar row beneath it. */}
       {layout.sectionHeaders.map((header, i) => {
         const tabX = header.x;
+        const tabY = header.y;
+        const tabH = SECTION_HEADER_HEIGHT;
         const tabW = Math.max(44, header.label.length * 9 + 20);
-        const tabH = 20;
-        const tabY = header.y - 14;
-        // Bookmark path: top corners rounded, bottom corners square so
-        // the label sits flush against the bar row beneath it.
         const r = 4;
         const path = `
           M ${tabX} ${tabY + r}
@@ -188,7 +188,8 @@ export function DrumChart({
             />
             <text
               x={tabX + 10}
-              y={tabY + 14}
+              y={tabY + tabH / 2}
+              dominantBaseline="middle"
               className="fill-amber-100 text-[12px] font-extrabold tracking-wider dark:fill-amber-800 cyber:fill-amber-500"
             >
               {header.label.toUpperCase()}
