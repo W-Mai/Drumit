@@ -212,7 +212,6 @@ const zh: Dict = {
   "editor.cursor_status": "第 {beat}/{total} 拍 · 位 {slot} · {inst}",
   "editor.autoadvance_on": "Tab：自动前进 开",
   "editor.autoadvance_off": "Tab：自动前进 关",
-  "editor.shortcuts_panel_hint": "快捷键面板 →",
 
   // Add instrument menu
   "editor.add": "+ 添加",
@@ -495,7 +494,6 @@ const en: Dict = {
   "editor.cursor_status": "Beat {beat}/{total} · Slot {slot} · {inst}",
   "editor.autoadvance_on": "Tab: Auto-advance ON",
   "editor.autoadvance_off": "Tab: Auto-advance OFF",
-  "editor.shortcuts_panel_hint": "Shortcuts in the Shortcuts panel →",
 
   "editor.add": "+ Add",
   "editor.add_instrument": "Add instrument",

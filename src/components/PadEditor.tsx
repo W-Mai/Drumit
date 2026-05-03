@@ -2005,9 +2005,6 @@ function CursorStatusBar({
       >
         {autoAdvance ? t("editor.autoadvance_on") : t("editor.autoadvance_off")}
       </button>
-      <span className="text-stone-400">
-        {t("editor.shortcuts_panel_hint")}
-      </span>
     </div>
   );
 }
