@@ -179,6 +179,8 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
       mobileSheet
       trigger={({ open }) => (
         <span
+          role="button"
+          aria-label={t("export.trigger_title")}
           title={t("export.trigger_title")}
           className={cn(
             "flex h-7 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border px-3 text-xs font-semibold select-none transition-colors",
@@ -199,11 +201,20 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.12 }}
             >
-              {status === "pending"
-                ? t("export.label_pending")
-                : status === "error"
-                  ? t("export.label_error")
-                  : t("export.label")}
+              {status === "pending" ? (
+                t("export.label_pending")
+              ) : status === "error" ? (
+                t("export.label_error")
+              ) : (
+                <>
+                  {/* Icon-only on narrow screens (↗ = export/out-going);
+                      keep the full label from `export.label` on ≥sm. */}
+                  <span className="sm:hidden" aria-hidden="true">
+                    ↗
+                  </span>
+                  <span className="hidden sm:inline">{t("export.label")}</span>
+                </>
+              )}
             </motion.span>
           </AnimatePresence>
         </span>
