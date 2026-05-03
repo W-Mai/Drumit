@@ -43,7 +43,7 @@ export function Chip({
       className={cn(
         "motion-press rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-[background-color,color,box-shadow] duration-150 ease-out",
         active
-          ? "surface-ink shadow-sm"
+          ? "bg-stone-900 text-stone-50 shadow-sm"
           : "text-stone-600 hover:bg-stone-200",
         disabled && "cursor-not-allowed opacity-40",
         className,

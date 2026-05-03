@@ -998,45 +998,39 @@ function AppInner() {
           >
             i
           </button>
-          <Button
-            variant="danger"
-            onClick={async () => {
-              const ok = await dialog.confirm({
-                title: t("header.reset_confirm_title"),
-                message: t("header.reset_confirm_message"),
-                confirmLabel: t("header.reset_confirm_label"),
-                tone: "danger",
-              });
-              if (!ok) return;
-              clearWorkspace();
-              const id = newId();
-              setDocuments([
-                {
-                  id,
-                  name: "",
-                  source: defaultSample().source,
-                  savedAt: Date.now(),
-                },
-              ]);
-              setActiveId(id);
-              setTextDraft(null);
-              setSelectedBar(0);
-              toast.toast({
-                message: t("toast.workspace_reset"),
-                tone: "warning",
-              });
-            }}
-            title={t("header.reset")}
-            aria-label={t("header.reset")}
-          >
-            <span className="sm:hidden" aria-hidden="true">
-              ↺
-            </span>
-            <span className="hidden sm:inline">{t("header.reset")}</span>
-          </Button>
         </div>
       </header>
-      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <AboutModal
+        open={aboutOpen}
+        onClose={() => setAboutOpen(false)}
+        onResetWorkspace={async () => {
+          const ok = await dialog.confirm({
+            title: t("header.reset_confirm_title"),
+            message: t("header.reset_confirm_message"),
+            confirmLabel: t("header.reset_confirm_label"),
+            tone: "danger",
+          });
+          if (!ok) return;
+          clearWorkspace();
+          const id = newId();
+          setDocuments([
+            {
+              id,
+              name: "",
+              source: defaultSample().source,
+              savedAt: Date.now(),
+            },
+          ]);
+          setActiveId(id);
+          setTextDraft(null);
+          setSelectedBar(0);
+          setAboutOpen(false);
+          toast.toast({
+            message: t("toast.workspace_reset"),
+            tone: "warning",
+          });
+        }}
+      />
 
       <AnimatePresence>
         {mobileNavOpen ? (
@@ -1444,10 +1438,8 @@ function AppInner() {
                 autoCorrect="off"
                 autoComplete="off"
                 /* ≥16px base keeps iOS Safari from zooming on focus;
-                   sm: compacts down once we're past the mobile breakpoint.
-                   `source-editor-surface` pins the dark-on-amber look
-                   across themes so the code view doesn't invert. */
-                className="source-editor-surface block h-full min-h-[200px] w-full resize-none rounded-xl p-4 font-mono text-base leading-relaxed caret-amber-400 outline-none ring-1 ring-stone-800 transition-shadow focus:ring-2 focus:ring-amber-400/40 sm:text-sm"
+                   sm: compacts down once we're past the mobile breakpoint. */
+                className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-stone-900 p-4 font-mono text-base leading-relaxed text-amber-100 caret-amber-400 outline-none ring-1 ring-stone-800 transition-shadow focus:ring-2 focus:ring-amber-400/40 sm:text-sm"
               />
             ) : expandedPreview ? (
               <div className="grid min-h-[280px] place-items-center p-6 text-center text-sm text-stone-500">
@@ -1664,7 +1656,7 @@ function ModeTab({
       className={cn(
         "motion-press rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-[background-color,color,box-shadow] duration-150 ease-out",
         active
-          ? "surface-ink shadow-sm"
+          ? "bg-stone-900 text-stone-50 shadow-sm"
           : "text-stone-600 hover:bg-stone-200/70",
       )}
     >

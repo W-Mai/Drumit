@@ -105,7 +105,7 @@ export function DrumChart({
   return (
     <svg
       viewBox={`0 0 ${layout.width} ${layout.height}`}
-      className="h-auto w-full"
+      className="notation-surface h-auto w-full"
       role="img"
       aria-label={ariaLabel}
     >

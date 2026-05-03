@@ -84,6 +84,10 @@ const zh: Dict = {
   "about.link.repo": "源码仓库 · GitHub",
   "about.link.changelog": "更新日志 · CHANGELOG",
   "about.link.license": "协议 · MIT",
+  "about.section.danger": "危险操作",
+  "about.reset.title": "重置所有文档",
+  "about.reset.hint": "清掉本地保存的所有编辑，恢复成示例。",
+  "about.reset.button": "重置",
 
   // Panels / layout
   "panel.documents": "文档",
@@ -382,6 +386,11 @@ const en: Dict = {
   "about.link.repo": "Source · GitHub",
   "about.link.changelog": "Changelog",
   "about.link.license": "License · MIT",
+  "about.section.danger": "Danger zone",
+  "about.reset.title": "Reset all documents",
+  "about.reset.hint":
+    "Clears every locally saved edit and reseeds with the built-in sample.",
+  "about.reset.button": "Reset",
 
   "panel.documents": "Documents",
   "panel.preview": "Preview",

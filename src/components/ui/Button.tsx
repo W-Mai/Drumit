@@ -21,9 +21,8 @@ export interface ButtonProps
 }
 
 const variantClass: Record<ButtonVariant, string> = {
-  // Primary uses a theme-pinned "ink" surface so dark mode doesn't
-  // invert it into a washed-out off-white rectangle.
-  primary: "surface-ink border border-stone-900 hover:brightness-125",
+  primary:
+    "bg-stone-900 text-stone-50 hover:bg-stone-700 border border-stone-900",
   secondary:
     "bg-white text-stone-700 border border-stone-200 hover:bg-stone-100 hover:text-stone-900",
   ghost: "text-stone-600 hover:bg-stone-100 border border-transparent",

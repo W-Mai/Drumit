@@ -7,6 +7,10 @@ import { useI18n } from "../i18n/useI18n";
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Destructive — clear all saved documents and reseed with the
+   *  default sample. Supplied by App so the modal doesn't depend on
+   *  storage internals. If absent, the button hides. */
+  onResetWorkspace?: () => void | Promise<void>;
 }
 
 const REPO_URL = "https://github.com/W-Mai/Drumit";
@@ -17,7 +21,7 @@ const REPO_URL = "https://github.com/W-Mai/Drumit";
  * static README can't carry. Dismissed via Esc, backdrop click, or the
  * close button.
  */
-export function AboutModal({ open, onClose }: Props) {
+export function AboutModal({ open, onClose, onResetWorkspace }: Props) {
   const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
@@ -158,6 +162,32 @@ export function AboutModal({ open, onClose }: Props) {
               </Link>
             </ul>
           </section>
+
+          {/* Danger zone: destructive actions live here so they stay
+              out of the main app chrome. Hidden when the host doesn't
+              wire a handler. */}
+          {onResetWorkspace ? (
+            <section>
+              <SectionTitle>{t("about.section.danger")}</SectionTitle>
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-900">
+                <div>
+                  <div className="font-semibold">
+                    {t("about.reset.title")}
+                  </div>
+                  <div className="text-[11px] text-red-700/80">
+                    {t("about.reset.hint")}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void onResetWorkspace()}
+                  className="motion-press shrink-0 rounded-md border border-red-300 bg-white px-2.5 py-1 text-[11px] font-bold text-red-700 hover:border-red-600 hover:bg-red-600 hover:text-white"
+                >
+                  {t("about.reset.button")}
+                </button>
+              </div>
+            </section>
+          ) : null}
         </div>
 
         <footer className="border-t border-stone-200 bg-stone-50 px-6 py-2.5 text-[11px] text-stone-500">
