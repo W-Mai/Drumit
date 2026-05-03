@@ -163,12 +163,12 @@ export function DrumChart({
             width={Math.max(44, header.label.length * 9 + 20)}
             height={20}
             rx={6}
-            fill="#1c1917"
+            className="fill-stone-900"
           />
           <text
             x={30}
             y={header.y}
-            className="fill-amber-100 text-[12px] font-extrabold tracking-wider"
+            className="fill-amber-100 text-[12px] font-extrabold tracking-wider dark:fill-amber-800"
           >
             {header.label.toUpperCase()}
           </text>

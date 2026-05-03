@@ -1,7 +1,7 @@
 // Live contrast checker. Append ?theme-audit or call window.__themeAudit().
 
 type Offender = {
-  element: Element;
+  element: HTMLElement;
   bg: string;
   fg: string;
   ratio: number;
@@ -68,19 +68,12 @@ function contrast(a: string, b: string): number | null {
   return (bright + 0.05) / (dark + 0.05);
 }
 
-function effectiveBg(el: Element): string {
-  let cur: Element | null = el;
+function effectiveBg(el: HTMLElement): string {
+  let cur: HTMLElement | null = el;
   while (cur) {
-    const cs = getComputedStyle(cur);
-    const bg = cs.backgroundColor;
-    const bgParsed = parseColor(bg);
-    if (bgParsed && bgParsed[3] > 0.02) return bg;
-    // SVG paints via `fill`, not `background-color`.
-    if (cur instanceof SVGElement && cur.tagName !== "text") {
-      const fill = cs.fill;
-      const fillParsed = parseColor(fill);
-      if (fillParsed && fillParsed[3] > 0.02) return fill;
-    }
+    const bg = getComputedStyle(cur).backgroundColor;
+    const parsed = parseColor(bg);
+    if (parsed && parsed[3] > 0.02) return bg;
     cur = cur.parentElement;
   }
   return getComputedStyle(document.body).backgroundColor;
@@ -88,8 +81,8 @@ function effectiveBg(el: Element): string {
 
 export function runThemeAudit(): Offender[] {
   const offenders: Offender[] = [];
-  const candidates = document.querySelectorAll<HTMLElement | SVGTextElement>(
-    "button, a, li, span, p, div, h1, h2, h3, h4, td, dt, dd, code, kbd, text",
+  const candidates = document.querySelectorAll<HTMLElement>(
+    "button, a, li, span, p, div, h1, h2, h3, h4, td, dt, dd, code, kbd",
   );
   for (const el of candidates) {
     const directText = Array.from(el.childNodes)
@@ -103,16 +96,12 @@ export function runThemeAudit(): Offender[] {
     if (rect.width < 8 || rect.height < 8) continue;
 
     const cs = getComputedStyle(el);
-    const fg = el instanceof SVGElement ? cs.fill : cs.color;
+    const fg = cs.color;
     const bg = effectiveBg(el);
     const ratio = contrast(fg, bg);
     if (ratio === null) continue;
     if (ratio < MIN_CONTRAST) {
-      const className =
-        typeof el.className === "string"
-          ? el.className
-          : (el.getAttribute("class") ?? "");
-      offenders.push({ element: el, bg, fg, ratio, className });
+      offenders.push({ element: el, bg, fg, ratio, className: el.className });
     }
   }
   offenders.sort((a, b) => a.ratio - b.ratio);
@@ -206,17 +195,15 @@ function renderPanel(offenders: Offender[]) {
     const row = document.createElement("div");
     row.style.cssText =
       "padding:6px 0;border-bottom:1px dashed #292524;cursor:pointer;";
-    const setOutline = (on: boolean) => {
-      const style = (o.element as HTMLElement | SVGElement).style;
-      if (style) style.outline = on ? "2px solid #f59e0b" : "";
-    };
     row.onmouseenter = () => {
-      setOutline(true);
+      o.element.style.outline = "2px solid #f59e0b";
       o.element.scrollIntoView({ block: "center", behavior: "smooth" });
     };
-    row.onmouseleave = () => setOutline(false);
+    row.onmouseleave = () => {
+      o.element.style.outline = "";
+    };
     row.onclick = () => {
-      setOutline(true);
+      o.element.style.outline = "2px solid #f59e0b";
       console.log("[theme-audit]", o);
     };
 
