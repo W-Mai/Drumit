@@ -727,7 +727,7 @@ export function PadEditor({
         <summary className="cursor-pointer font-extrabold text-stone-700">
           {t("editor.drumtab_source")}
         </summary>
-        <pre className="mt-2 overflow-auto rounded bg-stone-900 p-2 font-mono text-amber-100">
+        <pre className="mt-2 overflow-auto rounded bg-[#1c1917] p-2 font-mono text-amber-100">
           {serialized}
         </pre>
       </details>
@@ -784,7 +784,7 @@ function SectionStrip({
       <div className="flex items-center gap-2">
         <span
           className={cn(
-            "rounded bg-stone-900 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-100",
+            "rounded bg-[#1c1917] px-2 py-0.5 font-mono text-[11px] font-bold text-amber-100",
             !isFirstBarOfSection && "opacity-60",
           )}
           title={
@@ -1073,7 +1073,7 @@ function InstrumentRow({
       <div
         className={cn(
           "flex h-11 items-center gap-2 border-r border-b border-stone-200 px-2",
-          cursorLaneMatch ? "bg-sky-50" : "bg-white",
+          cursorLaneMatch ? "bg-sky-50 dark:bg-sky-950/60" : "bg-white",
         )}
       >
         <InstrumentIcon
@@ -1084,7 +1084,7 @@ function InstrumentRow({
           <span className="truncate text-[11px] font-bold text-stone-700">
             {instrumentLabels[instrument]}
           </span>
-          <span className="truncate font-mono text-[9px] text-stone-400">
+          <span className="truncate font-mono text-[9px] text-stone-500">
             {canonicalAlias[instrument]}
           </span>
         </div>
@@ -1932,7 +1932,13 @@ function hitBgClass(hit: Hit): string {
     case "snare":
       return "bg-rose-700 text-rose-50 shadow-sm";
     case "kick":
-      return "bg-stone-900 text-amber-100 shadow-sm";
+      // Sibling lanes (cymbals / toms / snare) use specific hue-number
+      // classes that don't flip under the theme override, so they stay
+      // "color block + light ink" in both modes. Mirror that for kick
+      // by forcing stone-950 (the stable near-black end of the ramp,
+      // unaffected by our dark override which swaps 50 ↔ 950 but not
+      // this specific tailwind class) and pin text-amber-100.
+      return "bg-[#1c1917] text-amber-100 shadow-sm";
   }
 }
 

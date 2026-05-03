@@ -16,7 +16,7 @@ function iconClass(active?: boolean) {
   return (
     "motion-press flex size-7 items-center justify-center rounded-full border text-sm font-semibold transition-colors " +
     (active
-      ? "border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200"
+      ? "border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-900 dark:text-amber-100"
       : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900")
   );
 }

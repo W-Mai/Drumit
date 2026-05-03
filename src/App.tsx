@@ -1437,8 +1437,11 @@ function AppInner() {
                 autoCorrect="off"
                 autoComplete="off"
                 /* ≥16px base keeps iOS Safari from zooming on focus;
-                   sm: compacts down once we're past the mobile breakpoint. */
-                className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-stone-900 p-4 font-mono text-base leading-relaxed text-amber-100 caret-amber-400 outline-none ring-1 ring-stone-800 transition-shadow focus:ring-2 focus:ring-amber-400/40 sm:text-sm"
+                   sm: compacts down once we're past the mobile breakpoint.
+                   Use a literal #1c1917 so the \"code surface\" look
+                   stays dark-on-amber in both themes — bg-stone-900
+                   would flip to near-white under our dark override. */
+                className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-[#1c1917] p-4 font-mono text-base leading-relaxed text-amber-100 caret-amber-400 outline-none ring-1 ring-stone-800 transition-shadow focus:ring-2 focus:ring-amber-400/40 sm:text-sm"
               />
             ) : expandedPreview ? (
               <div className="grid min-h-[280px] place-items-center p-6 text-center text-sm text-stone-500">

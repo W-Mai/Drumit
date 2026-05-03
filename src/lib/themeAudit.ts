@@ -26,20 +26,44 @@ type Offender = {
 
 const MIN_CONTRAST = 3; // WCAG AA for large text / UI chrome floor.
 
+// fillStyle setter doesn't normalise oklch() across Chromium versions,
+// so we actually draw a pixel in the requested color and read it back
+// from the image buffer to get true sRGB.
+let colorCanvas: HTMLCanvasElement | null = null;
+function getColorCtx(): CanvasRenderingContext2D | null {
+  if (typeof document === "undefined") return null;
+  if (!colorCanvas) {
+    colorCanvas = document.createElement("canvas");
+    colorCanvas.width = 1;
+    colorCanvas.height = 1;
+  }
+  return colorCanvas.getContext("2d", { willReadFrequently: true });
+}
+
 function parseColor(c: string): [number, number, number, number] | null {
-  // rgb(), rgba(), or color() — jsdom/real browsers normalize to
-  // "rgb(...)" / "rgba(...)". oklab / oklch appear as color() in some
-  // Chromium versions; skip those rather than guess.
-  const m = c.match(
+  if (!c) return null;
+  const rgba = c.match(
     /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)$/,
   );
-  if (!m) return null;
-  return [
-    Number(m[1]),
-    Number(m[2]),
-    Number(m[3]),
-    m[4] ? Number(m[4]) : 1,
-  ];
+  if (rgba) {
+    return [
+      Number(rgba[1]),
+      Number(rgba[2]),
+      Number(rgba[3]),
+      rgba[4] ? Number(rgba[4]) : 1,
+    ];
+  }
+  const ctx = getColorCtx();
+  if (!ctx) return null;
+  try {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = c;
+    ctx.fillRect(0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    return [d[0], d[1], d[2], d[3] / 255];
+  } catch {
+    return null;
+  }
 }
 
 function luminance(r: number, g: number, b: number): number {

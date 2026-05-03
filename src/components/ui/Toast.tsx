@@ -13,9 +13,9 @@ type ToastEntry = ToastInput & { id: number };
 
 const TONE_STYLES: Record<ToastTone, string> = {
   info: "border-stone-200 bg-white text-stone-800",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200",
-  warning: "border-amber-200 bg-amber-50 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200",
-  danger: "border-red-200 bg-red-50 text-red-900 dark:bg-red-500/15 dark:text-red-200",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100",
+  warning: "border-amber-200 bg-amber-50 text-amber-900 dark:bg-amber-900 dark:text-amber-100",
+  danger: "border-red-200 bg-red-50 text-red-900 dark:bg-red-900 dark:text-red-100",
 };
 
 const TONE_DOT: Record<ToastTone, string> = {
