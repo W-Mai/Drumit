@@ -201,14 +201,16 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     y += SECTION_HEADER_HEIGHT;
 
     if (section.bars.length === 0) {
+      // Clear the bookmark tab's 2px bottom overlap.
+      const topInset = 4;
       sectionPlaceholders.push({
         sectionIndex: sectionIdx,
         x: leftMargin,
-        y,
+        y: y + topInset,
         width: availableWidth,
         height: PLACEHOLDER_HEIGHT,
       });
-      y += PLACEHOLDER_HEIGHT + ROW_GAP;
+      y += topInset + PLACEHOLDER_HEIGHT + ROW_GAP;
       return;
     }
 
