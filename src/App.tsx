@@ -59,6 +59,7 @@ import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
 import { ThemeToggle, LocaleToggle } from "./components/ThemeLocaleToggles";
+import { SavedIndicator } from "./components/SavedIndicator";
 import { StaffView } from "./notation/staff/renderer";
 import {
   Badge,
@@ -66,8 +67,10 @@ import {
   DialogProvider,
   Panel,
   PanelHeader,
+  ToastProvider,
   ViewFader,
   useDialog,
+  useToast,
 } from "./components/ui";
 import { AnimatePresence, motion } from "motion/react";
 import type { Bar, Score } from "./notation/types";
@@ -124,9 +127,11 @@ function loadInitialWorkspace(): {
 
 export default function App() {
   return (
-    <DialogProvider>
-      <AppInner />
-    </DialogProvider>
+    <ToastProvider>
+      <DialogProvider>
+        <AppInner />
+      </DialogProvider>
+    </ToastProvider>
   );
 }
 
@@ -195,8 +200,11 @@ function AppInner() {
   const serializedSource = useMemo(() => serializeScore(score), [score]);
   const currentSource = textDraft ?? serializedSource;
 
-  // Debounced workspace persistence.
+  // Debounced workspace persistence. We track savedAt (timestamp of the
+  // most recent successful write) so the header can show a subtle
+  // "Saved · HH:mm" indicator without popping a toast for every keystroke.
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   useEffect(() => {
     if (saveTimer.current !== null) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
@@ -206,6 +214,7 @@ function AppInner() {
         activeId,
         ui: { sidebarCollapsed, editorCollapsed, viewMode },
       });
+      setSavedAt(Date.now());
     }, 400);
     return () => {
       if (saveTimer.current !== null) {
@@ -599,6 +608,7 @@ function AppInner() {
   const history = useHistory();
   const { flashes, flash } = useFlashBars();
   const dialog = useDialog();
+  const toast = useToast();
   const { t } = useI18n();
   // When true, `writeActiveDocSource` should skip pushing a new history
   // entry — used while applying an undo/redo result to avoid looping.
@@ -757,6 +767,14 @@ function AppInner() {
       ...docs.slice(srcIdx + 1),
     ]);
     setActiveId(newDoc.id);
+    const titleFromSource =
+      src.source.match(/^\s*title:\s*(.+)$/m)?.[1].trim() ?? "";
+    const displayName =
+      src.name || titleFromSource || t("editor.untitled");
+    toast.toast({
+      message: t("toast.document_duplicated", { name: displayName }),
+      tone: "info",
+    });
   }
 
   function handleRenameDoc(id: string, name: string) {
@@ -766,6 +784,12 @@ function AppInner() {
   }
 
   function handleDeleteDoc(id: string) {
+    // Snapshot for undo before mutating state.
+    const snapshotIdx = documents.findIndex((d) => d.id === id);
+    const snapshotDoc = documents[snapshotIdx];
+    const snapshotActive = activeId;
+    if (!snapshotDoc) return;
+
     setDocuments((docs) => {
       const idx = docs.findIndex((d) => d.id === id);
       if (idx === -1) return docs;
@@ -785,10 +809,35 @@ function AppInner() {
     });
     // If we deleted the active one, select the previous (or first).
     if (id === activeId) {
-      const idx = documents.findIndex((d) => d.id === id);
-      const fallback = documents[Math.max(0, idx - 1)];
+      const fallback = documents[Math.max(0, snapshotIdx - 1)];
       if (fallback && fallback.id !== id) setActiveId(fallback.id);
     }
+
+    const titleFromSource =
+      snapshotDoc.source.match(/^\s*title:\s*(.+)$/m)?.[1].trim() ?? "";
+    const displayName =
+      snapshotDoc.name || titleFromSource || t("editor.untitled");
+    toast.toast({
+      message: t("toast.document_deleted", { name: displayName }),
+      tone: "info",
+      duration: 6000,
+      action: {
+        label: t("toast.undo"),
+        onClick: () => {
+          // Re-insert at original index and restore active selection.
+          setDocuments((docs) => {
+            if (docs.some((d) => d.id === snapshotDoc.id)) return docs;
+            const clamped = Math.min(snapshotIdx, docs.length);
+            return [
+              ...docs.slice(0, clamped),
+              snapshotDoc,
+              ...docs.slice(clamped),
+            ];
+          });
+          if (snapshotActive === id) setActiveId(id);
+        },
+      },
+    });
   }
 
   function handleSelectDoc(id: string) {
@@ -811,6 +860,10 @@ function AppInner() {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+    toast.toast({
+      message: t("toast.exported", { file: filename }),
+      tone: "success",
+    });
   }
 
   function handleExportDocMidi(id: string) {
@@ -836,6 +889,10 @@ function AppInner() {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+    toast.toast({
+      message: t("toast.exported", { file: filename }),
+      tone: "success",
+    });
   }
 
   function handleImportDoc(source: string) {
@@ -859,6 +916,14 @@ function AppInner() {
     setActiveId(id);
     setTextDraft(null);
     setSelectedBar(0);
+    const importedTitle =
+      parsedImport.score.title ||
+      source.match(/^\s*title:\s*(.+)$/m)?.[1].trim() ||
+      t("editor.untitled");
+    toast.toast({
+      message: t("toast.imported", { name: importedTitle }),
+      tone: "success",
+    });
   }
 
   return (
@@ -919,6 +984,9 @@ function AppInner() {
           >
             benign.host
           </a>
+          {/* Re-key on each save so the "just now" reset doesn't need
+              setState-in-effect; the component simply remounts. */}
+          <SavedIndicator key={savedAt ?? 0} savedAt={savedAt} />
           <LocaleToggle />
           <ThemeToggle />
           <button
@@ -953,6 +1021,10 @@ function AppInner() {
               setActiveId(id);
               setTextDraft(null);
               setSelectedBar(0);
+              toast.toast({
+                message: t("toast.workspace_reset"),
+                tone: "warning",
+              });
             }}
             title={t("header.reset")}
             aria-label={t("header.reset")}

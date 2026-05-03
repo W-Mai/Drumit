@@ -294,6 +294,20 @@ const zh: Dict = {
 
   // Hotkeys panel
   "hotkeys.title": "快捷键",
+
+  // Toasts
+  "toast.exported": "已导出 {file}",
+  "toast.imported": "已导入 {name}",
+  "toast.document_deleted": "已删除「{name}」",
+  "toast.document_duplicated": "已复制「{name}」",
+  "toast.workspace_reset": "已重置所有文档",
+  "toast.undo": "撤销",
+  "toast.dismiss": "关闭",
+
+  // Saved-at indicator
+  "saved.just_now": "刚刚保存",
+  "saved.at": "{time} 已保存",
+  "saved.pending": "保存中…",
 };
 
 const en: Dict = {
@@ -568,6 +582,18 @@ const en: Dict = {
   "chart.aria_staff": "Standard notation drum chart",
 
   "hotkeys.title": "Keyboard shortcuts",
+
+  "toast.exported": "Exported {file}",
+  "toast.imported": "Imported {name}",
+  "toast.document_deleted": "Deleted “{name}”",
+  "toast.document_duplicated": "Duplicated “{name}”",
+  "toast.workspace_reset": "All documents reset",
+  "toast.undo": "Undo",
+  "toast.dismiss": "Dismiss",
+
+  "saved.just_now": "Saved just now",
+  "saved.at": "Saved at {time}",
+  "saved.pending": "Saving…",
 };
 
 export const dict: Record<Locale, Dict> = { zh, en };
