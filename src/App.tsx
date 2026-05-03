@@ -1054,7 +1054,7 @@ function AppInner() {
               type="button"
               aria-label={t("header.close_docs")}
               onClick={() => setMobileNavOpen(false)}
-              className="absolute inset-0 bg-stone-900/50"
+              className="absolute inset-0 bg-overlay-backdrop"
             />
             <motion.div
               className="relative flex h-full w-[85vw] max-w-sm flex-col bg-white shadow-xl"
@@ -1269,6 +1269,7 @@ function AppInner() {
           <div
             ref={setChartContainer}
             data-drumit-scope="preview"
+            data-notation-scope
             tabIndex={0}
             className="mobile-safe-scroll-x min-h-0 flex-1 overflow-auto bg-stone-100/40 p-2 outline-none focus:ring-2 focus:ring-amber-300/60 focus:ring-inset sm:p-4"
           >
@@ -1443,8 +1444,10 @@ function AppInner() {
                 autoCorrect="off"
                 autoComplete="off"
                 /* ≥16px base keeps iOS Safari from zooming on focus;
-                   sm: compacts down once we're past the mobile breakpoint. */
-                className="block h-full min-h-[200px] w-full resize-none rounded-xl bg-stone-900 p-4 font-mono text-base leading-relaxed text-amber-100 caret-amber-400 outline-none ring-1 ring-stone-800 transition-shadow focus:ring-2 focus:ring-amber-400/40 sm:text-sm"
+                   sm: compacts down once we're past the mobile breakpoint.
+                   `source-editor-surface` pins the dark-on-amber look
+                   across themes so the code view doesn't invert. */
+                className="source-editor-surface block h-full min-h-[200px] w-full resize-none rounded-xl p-4 font-mono text-base leading-relaxed caret-amber-400 outline-none ring-1 ring-stone-800 transition-shadow focus:ring-2 focus:ring-amber-400/40 sm:text-sm"
               />
             ) : expandedPreview ? (
               <div className="grid min-h-[280px] place-items-center p-6 text-center text-sm text-stone-500">
@@ -1661,7 +1664,7 @@ function ModeTab({
       className={cn(
         "motion-press rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-[background-color,color,box-shadow] duration-150 ease-out",
         active
-          ? "bg-stone-900 text-white shadow-sm"
+          ? "surface-ink shadow-sm"
           : "text-stone-600 hover:bg-stone-200/70",
       )}
     >

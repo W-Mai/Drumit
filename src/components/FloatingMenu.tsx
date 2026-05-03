@@ -122,7 +122,7 @@ export function FloatingMenu({
       {open && asSheet ? (
         <motion.div
           key="sheet"
-          className="fixed inset-0 z-50 flex items-end bg-stone-900/50"
+          className="bg-overlay-backdrop fixed inset-0 z-50 flex items-end"
           onClick={onClose}
           role="presentation"
           initial={{ opacity: 0 }}

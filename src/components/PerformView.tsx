@@ -185,6 +185,7 @@ export function PerformView({
   return (
     <motion.div
       ref={rootRef}
+      data-perform-scope
       className="fixed inset-0 z-[9999] flex flex-col bg-stone-950 text-stone-100"
       style={{
         paddingTop: "env(safe-area-inset-top)",
@@ -237,7 +238,7 @@ export function PerformView({
       {/* Scrolling stage */}
       <div
         ref={stageRef}
-        className="relative flex min-h-0 flex-1 items-center overflow-hidden bg-stone-900"
+        className="bg-perform-stage relative flex min-h-0 flex-1 items-center overflow-hidden"
         onClick={handleStageClick}
         role="region"
         aria-label={t("perform.stage")}

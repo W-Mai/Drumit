@@ -727,7 +727,7 @@ export function PadEditor({
         <summary className="cursor-pointer font-extrabold text-stone-700">
           {t("editor.drumtab_source")}
         </summary>
-        <pre className="mt-2 overflow-auto rounded bg-stone-900 p-2 font-mono text-amber-100">
+        <pre className="source-editor-surface mt-2 overflow-auto rounded p-2 font-mono">
           {serialized}
         </pre>
       </details>
@@ -784,7 +784,7 @@ function SectionStrip({
       <div className="flex items-center gap-2">
         <span
           className={cn(
-            "rounded bg-stone-900 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-100",
+            "surface-ink-amber rounded px-2 py-0.5 font-mono text-[11px] font-bold",
             !isFirstBarOfSection && "opacity-60",
           )}
           title={
@@ -1603,7 +1603,7 @@ function LaneSettingsPopover({
             className={cn(
               "flex-1 rounded-md border px-2 py-1 text-[11px] font-bold transition",
               groupCount === n
-                ? "border-stone-900 bg-stone-900 text-white"
+                ? "surface-ink border-stone-900"
                 : "border-stone-200 bg-white text-stone-700 hover:border-stone-500",
             )}
           >
@@ -1932,7 +1932,7 @@ function hitBgClass(hit: Hit): string {
     case "snare":
       return "bg-rose-700 text-rose-50 shadow-sm";
     case "kick":
-      return "bg-stone-900 text-amber-100 shadow-sm";
+      return "surface-ink-amber shadow-sm";
   }
 }
 

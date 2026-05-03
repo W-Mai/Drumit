@@ -96,7 +96,7 @@ export function SelectMenu({
                     ? "min-h-11 px-3 py-2.5 text-sm"
                     : "px-2 py-1 text-xs",
                   selected
-                    ? "bg-stone-900 text-amber-100"
+                    ? "surface-ink-amber"
                     : "text-stone-700 hover:bg-stone-100",
                   o.disabled && "cursor-not-allowed opacity-40",
                 )}

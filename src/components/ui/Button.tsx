@@ -21,10 +21,11 @@ export interface ButtonProps
 }
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary:
-    "bg-stone-900 text-white hover:bg-stone-700 border border-stone-900",
+  // Primary uses a theme-pinned "ink" surface so dark mode doesn't
+  // invert it into a washed-out off-white rectangle.
+  primary: "surface-ink border border-stone-900 hover:brightness-125",
   secondary:
-    "bg-white text-stone-700 hover:bg-stone-900 hover:text-white hover:border-stone-900 border border-stone-200",
+    "bg-white text-stone-700 border border-stone-200 hover:bg-stone-100 hover:text-stone-900",
   ghost: "text-stone-600 hover:bg-stone-100 border border-transparent",
   success:
     "bg-emerald-500 text-white hover:bg-emerald-600 border border-emerald-500",

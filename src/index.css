@@ -39,20 +39,32 @@
 [data-theme="sepia"] {
   color-scheme: light;
 
-  --color-stone-50: #faf3e4;
-  --color-stone-100: #f3e9d0;
-  --color-stone-200: #e6d6b0;
-  --color-stone-300: #cbb48a;
-  --color-stone-400: #a6895f;
-  --color-stone-500: #7a6342;
-  --color-stone-600: #5a4a34;
-  --color-stone-700: #453727;
-  --color-stone-800: #2f2519;
-  --color-stone-900: #1f1810;
-  --color-stone-950: #120d07;
+  --color-stone-50: #fbf4e8;
+  --color-stone-100: #f5ecd9;
+  /* ... */
+}
 
-  --color-white: #fbf5e6;
-  --color-ink: #2f2519;
+/* Notation scope: the drum chart / staff SVG is designed around a warm
+   light palette (ink-on-paper). Reverting it per-theme makes staves
+   unreadable, so we pin the stone palette back to the canonical
+   light-mode values inside any [data-notation-scope] region. This way
+   the surrounding app can go dark but the chart keeps its contrast. */
+[data-notation-scope] {
+  color-scheme: light;
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+  --color-stone-950: #0c0a09;
+  --color-white: #ffffff;
+  --color-black: #0c0a09;
+  --color-ink: #1c1917;
 }
 
 @theme {
@@ -111,6 +123,65 @@ body {
   overscroll-behavior-x: contain;
   touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Modal / sheet backdrop. Needs to stay dim-on-light in every theme
+   (using bg-stone-900/50 inverted under dark, turning the overlay into
+   a washed-out whitish film), so we pin the color with a literal rgba
+   here. */
+.bg-overlay-backdrop {
+  background-color: rgb(12 10 9 / 0.55);
+}
+
+/* Perform stage always stays black-on-amber regardless of theme —
+   it's a performance surface, not a document. */
+.bg-perform-stage {
+  background-color: #1c1917;
+}
+
+/* Source editor is a code surface: dark background + warm foreground
+   in every theme, so we pin the two colors here instead of letting
+   them flip under [data-theme="dark"]. */
+.source-editor-surface {
+  background-color: #1c1917;
+  color: #fef3c7; /* amber-100 */
+}
+.source-editor-surface::selection {
+  background-color: rgb(251 191 36 / 0.35);
+}
+
+/* "Ink" button / chip surface — the strong dark-on-warm contrast we
+   use for active tabs, primary buttons, and filled chips. Pinned so
+   dark theme doesn't flip it into a washed-out white rectangle. */
+.surface-ink,
+.hover\:surface-ink:hover {
+  background-color: #1c1917;
+  color: #fafaf9;
+}
+.surface-ink-amber {
+  background-color: #1c1917;
+  color: #fef3c7;
+}
+
+/* Perform view is already a dark-surface design in light mode
+   (bg-stone-900 stage, amber-on-ink). Under dark mode we DON'T want
+   stone-900 to flip to near-white, so we pin the palette back to the
+   canonical light values inside [data-perform-scope]. */
+[data-perform-scope] {
+  color-scheme: dark;
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+  --color-stone-950: #0c0a09;
+  --color-white: #ffffff;
+  --color-black: #0c0a09;
 }
 
 /* Subtle "floating" response on hover for the primary panels

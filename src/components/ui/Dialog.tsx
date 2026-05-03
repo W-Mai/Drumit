@@ -104,7 +104,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                   key={req.id}
                   role="dialog"
                   aria-modal="true"
-                  className="fixed inset-0 z-[10000] flex items-end justify-center bg-stone-900/50 p-4 sm:items-center"
+                  className="bg-overlay-backdrop fixed inset-0 z-[10000] flex items-end justify-center p-4 sm:items-center"
                   onClick={handleCancel}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

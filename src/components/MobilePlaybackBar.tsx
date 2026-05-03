@@ -87,7 +87,7 @@ export function MobilePlaybackBar({
                     type="button"
                     aria-label={t("playback.close")}
                     onClick={() => setSheetOpen(false)}
-                    className="absolute inset-0 bg-stone-900/50"
+                    className="bg-overlay-backdrop absolute inset-0"
                   />
                   <motion.div
                     className="

@@ -39,7 +39,7 @@ export function AboutModal({ open, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="about-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 sm:items-center sm:p-4"
+      className="bg-overlay-backdrop fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
       onClick={onClose}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
