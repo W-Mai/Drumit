@@ -31,35 +31,15 @@ export function SelectMenu({
   disabled,
   title,
 }: Props) {
+  // Narrow viewports get a bottom-sheet rendition of the same menu
+  // (driven by FloatingMenu's mobileSheet) so the look stays consistent
+  // with the rest of the app instead of popping the OS picker wheel.
   const isTouch = useMediaQuery("(pointer: coarse)");
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
 
-  if (isTouch) {
-    return (
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className={cn(
-          "motion-press rounded border border-stone-200 bg-white font-bold text-stone-700 transition-colors",
-          size === "xs"
-            ? "px-2 py-0.5 text-[11px]"
-            : "px-2 py-0.5 text-xs",
-          className,
-        )}
-        title={title}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    );
-  }
-
   const current = options.find((o) => o.value === value);
+
   return (
     <>
       <button
@@ -67,6 +47,8 @@ export function SelectMenu({
         type="button"
         disabled={disabled}
         title={title}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "motion-press inline-flex items-center gap-1 rounded border border-stone-200 bg-white font-bold text-stone-700 transition-colors hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40",
@@ -86,34 +68,61 @@ export function SelectMenu({
         anchor={anchor}
         open={open}
         onClose={() => setOpen(false)}
-        className="min-w-[140px]"
+        className="min-w-[160px]"
+        mobileSheet
       >
-        <div className="flex flex-col gap-0.5">
-          {options.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              disabled={o.disabled}
-              onClick={() => {
-                onChange(o.value);
-                setOpen(false);
-              }}
-              className={cn(
-                "motion-press flex items-start gap-2 rounded px-2 py-1 text-left text-xs transition-colors",
-                o.value === value
-                  ? "bg-stone-900 text-amber-100"
-                  : "text-stone-700 hover:bg-stone-100",
-                o.disabled && "cursor-not-allowed opacity-40",
-              )}
-            >
-              <span className="flex-1 truncate font-bold">{o.label}</span>
-              {o.description ? (
-                <span className="shrink-0 text-[10px] font-medium text-stone-400">
-                  {o.description}
-                </span>
-              ) : null}
-            </button>
-          ))}
+        <div
+          role="listbox"
+          className={cn("flex flex-col", isTouch ? "gap-1" : "gap-0.5")}
+        >
+          {options.map((o) => {
+            const selected = o.value === value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                disabled={o.disabled}
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "motion-press flex items-start gap-2 rounded text-left transition-colors",
+                  // Touch targets get a 44px-ish minimum height and a
+                  // larger font so they feel native on mobile.
+                  isTouch
+                    ? "min-h-11 px-3 py-2.5 text-sm"
+                    : "px-2 py-1 text-xs",
+                  selected
+                    ? "bg-stone-900 text-amber-100"
+                    : "text-stone-700 hover:bg-stone-100",
+                  o.disabled && "cursor-not-allowed opacity-40",
+                )}
+              >
+                <span className="flex-1 truncate font-bold">{o.label}</span>
+                {o.description ? (
+                  <span
+                    className={cn(
+                      "shrink-0 font-medium text-stone-400",
+                      isTouch ? "text-[11px]" : "text-[10px]",
+                    )}
+                  >
+                    {o.description}
+                  </span>
+                ) : null}
+                {selected && isTouch ? (
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 text-xs text-amber-300"
+                  >
+                    ✓
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
       </FloatingMenu>
     </>
