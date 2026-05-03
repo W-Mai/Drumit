@@ -241,6 +241,7 @@ function BarShell({
       onClick={onSelect ? (e) => onSelect(e.shiftKey) : undefined}
       style={onSelect ? { cursor: "pointer" } : undefined}
       data-bar-index={bar.index}
+      className="group/bar"
     >
       <rect
         x={bar.x}
@@ -254,7 +255,7 @@ function BarShell({
             ? playhead.bar
             : selected
               ? "fill-amber-300/45"
-              : "fill-transparent hover:fill-stone-200/40"
+              : "fill-transparent group-hover/bar:fill-stone-200/40"
         }
         strokeWidth={0}
       />

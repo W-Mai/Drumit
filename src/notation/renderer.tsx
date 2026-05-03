@@ -327,6 +327,7 @@ function BarView({
       onClick={onSelect ? (e) => onSelect(e.shiftKey) : undefined}
       style={onSelect ? { cursor: "pointer" } : undefined}
       data-bar-index={bar.index - 1}
+      className="group/bar"
     >
       <rect
         key={flash ? `flash-${flash}-${bar.index}` : `plain-${bar.index}`}
@@ -341,7 +342,7 @@ function BarView({
             ? playhead.bar
             : selected
               ? "fill-amber-300/45"
-              : "fill-transparent hover:fill-stone-200/40",
+              : "fill-transparent group-hover/bar:fill-stone-200/40",
           flash === "amber" && "motion-flash-amber",
           flash === "emerald" && "motion-flash-emerald",
         )}
