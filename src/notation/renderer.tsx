@@ -127,10 +127,12 @@ export function DrumChart({
         className="fill-stone-50"
       />
 
-      {/* Header band: title + metadata, divider underneath */}
+      {/* Header band: title + metadata, divider underneath. Aligned
+          with contentLeft / contentRight so the header flushes with
+          the first/last bar of every row. */}
       <g>
         <text
-          x={24}
+          x={layout.contentLeft}
           y={22}
           className="fill-stone-900 text-[16px] font-bold"
         >
@@ -138,7 +140,7 @@ export function DrumChart({
         </text>
         {layout.artist ? (
           <text
-            x={24}
+            x={layout.contentLeft}
             y={38}
             className="fill-stone-500 text-[11px] italic"
           >
@@ -146,7 +148,7 @@ export function DrumChart({
           </text>
         ) : null}
         <text
-          x={layout.width - 24}
+          x={layout.contentRight}
           y={22}
           textAnchor="end"
           className="fill-stone-500 text-[11px] font-semibold tabular-nums"
@@ -154,8 +156,8 @@ export function DrumChart({
           {[layout.meter, layout.tempo].filter(Boolean).join("   ")}
         </text>
         <line
-          x1={24}
-          x2={layout.width - 24}
+          x1={layout.contentLeft}
+          x2={layout.contentRight}
           y1={44}
           y2={44}
           className="stroke-stone-300"

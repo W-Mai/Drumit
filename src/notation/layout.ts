@@ -98,6 +98,11 @@ export interface LaidOutLayout {
   artist?: string;
   tempo?: string;
   meter: string;
+  /** Left / right x-coordinates of the content area — titles, dividers
+   *  and the first/last bar all snap to these so the header sits flush
+   *  with the music grid. */
+  contentLeft: number;
+  contentRight: number;
   sectionHeaders: Array<{ label: string; x: number; y: number }>;
   /** Click targets for sections whose bars array is empty — the UI
    *  uses these to offer an "+ add bar" surface the user can tap. */
@@ -235,6 +240,8 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     artist: score.artist,
     tempo: score.tempo ? `♩ = ${score.tempo.bpm}` : undefined,
     meter: `${score.meter.beats}/${score.meter.beatUnit}`,
+    contentLeft: leftMargin,
+    contentRight: leftMargin + availableWidth,
     sectionHeaders,
     sectionPlaceholders,
   };
