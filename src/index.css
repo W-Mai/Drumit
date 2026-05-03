@@ -139,26 +139,7 @@ body {
    A .class on the <svg> (not on the scope container) keeps
    lightningcss from merging the selector down to the container and
    clobbering the Preview panel's own theming. */
-/* Higher-specificity selector (.notation-surface.notation-surface
-   doubles the class weight) so this pin beats any html[data-theme]
-   override we might land above. Keeps the chart ink-on-paper in
-   every theme. */
-.notation-surface.notation-surface {
-  color-scheme: light;
-  --color-stone-50: #fafaf9;
-  --color-stone-100: #f5f5f4;
-  --color-stone-200: #e7e5e4;
-  --color-stone-300: #d6d3d1;
-  --color-stone-400: #a8a29e;
-  --color-stone-500: #78716c;
-  --color-stone-600: #57534e;
-  --color-stone-700: #44403c;
-  --color-stone-800: #292524;
-  --color-stone-900: #1c1917;
-  --color-stone-950: #0c0a09;
-  --color-white: #ffffff;
-  --color-black: #0c0a09;
-}
+
 
 /* Modal / sheet backdrop. Needs to stay dim-on-light in every theme
    (using bg-stone-900/50 inverted under dark, turning the overlay into

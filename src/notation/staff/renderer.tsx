@@ -99,7 +99,7 @@ export function StaffView({
   return (
     <svg
       viewBox={`0 0 ${actualWidth} ${height}`}
-      className="notation-surface h-auto w-full"
+      className="h-auto w-full"
       role="img"
       aria-label={ariaLabel}
     >
