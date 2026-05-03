@@ -124,7 +124,8 @@ function stripInteractionLayers(svg: string): string {
       /<rect\b[^>]*\bdata-(?:beat-rect|bar-highlight)=[^>]*(?:\/>|><\/rect>)/g,
       "",
     )
-    .replace(/<g\b[^>]*\bdata-transient-badge=[^>]*>[\s\S]*?<\/g>/g, "");
+    .replace(/<g\b[^>]*\bdata-transient-badge=[^>]*>[\s\S]*?<\/g>/g, "")
+    .replace(/<g\b[^>]*\bdata-section-placeholder=[^>]*>[\s\S]*?<\/g>/g, "");
 }
 
 export interface PostProcessOptions {

@@ -197,11 +197,11 @@ export function DrumChart({
         );
       })}
 
-      {layout.sectionPlaceholders.map((p) => (
+      {onInsertIntoSection ? layout.sectionPlaceholders.map((p) => (
         <g
           key={`placeholder-${p.sectionIndex}`}
-          onClick={() => onInsertIntoSection?.(p.sectionIndex)}
-          style={onInsertIntoSection ? { cursor: "pointer" } : undefined}
+          onClick={() => onInsertIntoSection(p.sectionIndex)}
+          style={{ cursor: "pointer" }}
           data-section-placeholder={p.sectionIndex}
         >
           <rect
@@ -223,7 +223,7 @@ export function DrumChart({
             {emptySectionLabel}
           </text>
         </g>
-      ))}
+      )) : null}
 
       {(() => {
         if (!playCursor) return null;
