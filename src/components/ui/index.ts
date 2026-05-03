@@ -12,4 +12,4 @@ export { Chip, ChipGroup } from "./Chip";
 export { Panel, PanelHeader } from "./Panel";
 export { Badge } from "./Badge";
 export type { BadgeTone } from "./Badge";
-export { Field, Select, TextInput } from "./Field";
+export { Field } from "./Field";
