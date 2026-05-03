@@ -290,6 +290,7 @@ export function PadEditor({
   onNextBar,
   onPrevBar,
 }: Props) {
+  const { t } = useI18n();
   const [barResolution, setBarResolution] = useState<Resolution>(
     () => inferBarResolution(bar) ?? DEFAULT_RESOLUTION,
   );
@@ -684,8 +685,9 @@ export function PadEditor({
 
       {bar.repeatPrevious ? (
         <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-sm text-stone-500">
-          This bar repeats the previous one. Click <b>Pattern</b> to add
-          content.
+          {t("editor.bar_repeats_prev_pre")}
+          <b>{t("editor.pattern")}</b>
+          {t("editor.bar_repeats_prev_post")}
         </div>
       ) : (
         <>
@@ -723,7 +725,7 @@ export function PadEditor({
 
       <details className="text-xs text-stone-500">
         <summary className="cursor-pointer font-extrabold text-stone-700">
-          Drumtab source
+          {t("editor.drumtab_source")}
         </summary>
         <pre className="mt-2 overflow-auto rounded bg-stone-900 p-2 font-mono text-amber-100">
           {serialized}
@@ -787,34 +789,34 @@ function SectionStrip({
           )}
           title={
             isFirstBarOfSection
-              ? "First bar of this section"
-              : "Section this bar belongs to (first bar elsewhere)"
+              ? t("editor.section_first_bar")
+              : t("editor.section_other_bar")
           }
         >
           [{label || "—"}]
         </span>
         <span className="text-[10px] font-semibold tracking-wide text-stone-500 uppercase">
-          Section
+          {t("editor.section")}
         </span>
       </div>
       <div className="flex gap-1">
         <Button size="xs" onClick={promptRename} title={t("editor.rename_section_tip")}>
-          ✎ Rename
+          {t("editor.rename")}
         </Button>
         <Button
           size="xs"
           onClick={promptSplit}
           title={t("editor.new_section_tip")}
         >
-          + Split
+          {t("editor.split")}
         </Button>
         <Button
           size="xs"
           variant="danger"
           onClick={onDelete}
-          title="Merge this section's bars into the previous one"
+          title={t("editor.delete_section_tip")}
         >
-          × Section
+          {t("editor.section_delete")}
         </Button>
       </div>
     </div>
@@ -848,6 +850,7 @@ function BarHeader({
   onInsertAfter: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -857,8 +860,8 @@ function BarHeader({
           </div>
           <div className="mt-0.5 font-mono text-xs text-stone-600">
             {bar.repeatPrevious
-              ? `repeat${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
-              : `${bar.beats.length} beats`}
+              ? `${t("editor.bar_repeat_label")}${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
+              : t("editor.bar_count_beats", { count: bar.beats.length })}
           </div>
         </div>
 
@@ -867,7 +870,7 @@ function BarHeader({
             active={!bar.repeatPrevious}
             onClick={() => onSetRepeat(null)}
           >
-            Pattern
+            {t("editor.pattern")}
           </Chip>
           <Chip
             active={bar.repeatPrevious}
@@ -881,23 +884,23 @@ function BarHeader({
           <Chip
             active={!!bar.repeatStart}
             onClick={onToggleRepeatStart}
-            title="Mark this bar as the start of a repeat section (|:)"
+            title={t("editor.repeat_start_tip")}
           >
             |:
           </Chip>
           <Chip
             active={!!bar.repeatEnd}
             onClick={onToggleRepeatEnd}
-            title="Mark this bar as the end of a repeat section (:|)"
+            title={t("editor.repeat_end_tip")}
           >
             :|
           </Chip>
           <Chip
             active={!!bar.ending}
             onClick={onCycleEnding}
-            title="Cycle: no ending → [1.] → [2.] → none"
+            title={t("editor.ending_cycle_tip")}
           >
-            {bar.ending ? `[${bar.ending}.]` : "[1./2.]"}
+            {bar.ending ? `[${bar.ending}.]` : t("editor.ending_none")}
           </Chip>
         </ChipGroup>
       </div>
@@ -919,15 +922,12 @@ function BarHeader({
         </ChipGroup>
 
         <div className="flex gap-1">
-          <Button onClick={onInsertAfter}>+ Insert</Button>
-          <Button
-            onClick={onClearBar}
-            title="Clear all notes in this bar (leaves the bar itself in place)"
-          >
-            ⌫ Clear
+          <Button onClick={onInsertAfter}>{t("editor.insert_after")}</Button>
+          <Button onClick={onClearBar} title={t("editor.clear_bar_tip")}>
+            {t("editor.clear_bar")}
           </Button>
           <Button variant="danger" onClick={onDelete}>
-            Delete
+            {t("editor.delete_bar")}
           </Button>
         </div>
       </div>
@@ -970,6 +970,7 @@ function StepGrid({
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
 }) {
+  const { t } = useI18n();
   return (
     <div className="mobile-safe-scroll-x overflow-x-auto rounded-xl border border-stone-200 bg-white">
       <div
@@ -980,7 +981,7 @@ function StepGrid({
       >
         {/* Top-left corner */}
         <div className="flex h-8 items-center border-r border-b border-stone-200 bg-stone-50 px-2 text-[10px] font-bold tracking-wide text-stone-500 uppercase">
-          Instrument
+          {t("editor.instrument")}
         </div>
         {/* Beat header labels */}
         {Array.from({ length: beatsPerBar }, (_, i) => (
@@ -1406,6 +1407,7 @@ function StepContextMenuContent({
   canDot: boolean;
   currentDots: number;
 }) {
+  const { t } = useI18n();
   return (
     <div className="min-w-[200px] text-left">
       <button
@@ -1413,10 +1415,10 @@ function StepContextMenuContent({
         onClick={onToggle}
         className="mb-2 block w-full rounded-md border border-stone-200 px-2 py-1 text-[11px] font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
       >
-        {hit ? "Remove hit" : "Add hit"}
+        {hit ? t("editor.remove_hit") : t("editor.add_hit")}
       </button>
       <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-        Articulations
+        {t("editor.articulations")}
       </div>
       <div className="mb-3 flex gap-1">
         {(
@@ -1445,7 +1447,7 @@ function StepContextMenuContent({
       {canDot ? (
         <>
           <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-            Dots
+            {t("editor.dots")}
           </div>
           <button
             type="button"
@@ -1458,15 +1460,15 @@ function StepContextMenuContent({
             )}
           >
             {currentDots === 1
-              ? "· (dotted) — click for double"
+              ? t("editor.dot_dotted")
               : currentDots === 2
-                ? ":: (double-dotted) — click to clear"
-                : "— no dot — click to add"}
+                ? t("editor.dot_double")
+                : t("editor.dot_add")}
           </button>
         </>
       ) : null}
       <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-        Sticking
+        {t("editor.sticking")}
       </div>
       <div className="flex gap-1">
         {(["R", "L", null] as const).map((s) => (
@@ -1508,6 +1510,7 @@ function LaneSettingsButton({
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
 
@@ -1534,7 +1537,7 @@ function LaneSettingsButton({
             ? "border-amber-500 bg-amber-500 text-white"
             : "border-stone-200 bg-white text-stone-400 opacity-60 hover:bg-stone-900 hover:text-white hover:opacity-100 group-hover/lane:opacity-100",
         )}
-        title="Customize this beat's subdivision / split"
+        title={t("editor.customize_beat_tip")}
       >
         <span className="text-[10px]">⚙</span>
         {indicator ? <span>{indicator}</span> : null}
@@ -1575,6 +1578,7 @@ function LaneSettingsPopover({
   onSplitBeat: Props["onSplitBeat"];
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const groupCount = countGroups(plan);
 
   return (
@@ -1582,13 +1586,10 @@ function LaneSettingsPopover({
       <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
         {instrumentLabels[instrument]} · Beat {plan.beatIndex + 1}
       </div>
-      <div className="mb-3 text-[10px] text-stone-500">
-        Tip: Leave untouched to follow the bar-level grid. Customize only this
-        lane / beat if you need a different subdivision.
-      </div>
+      <div className="mb-3 text-[10px] text-stone-500">{t("editor.lane_tip")}</div>
 
       <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-        Split
+        {t("editor.split_label")}
       </div>
       <div className="mb-3 flex gap-1">
         {[1, 2, 3, 4].map((n) => (
@@ -1606,7 +1607,7 @@ function LaneSettingsPopover({
                 : "border-stone-200 bg-white text-stone-700 hover:border-stone-500",
             )}
           >
-            {n === 1 ? "Merge" : `Split ${n}`}
+            {n === 1 ? t("editor.merge") : t("editor.split_n", { n })}
           </button>
         ))}
       </div>
@@ -1614,7 +1615,7 @@ function LaneSettingsPopover({
       {plan.split ? (
         <>
           <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-            Division per group
+            {t("editor.division_per_group")}
           </div>
           <div className="flex flex-col gap-1">
             {Array.from({ length: groupCount }, (_, gi) => {
@@ -1625,7 +1626,7 @@ function LaneSettingsPopover({
                   className="flex items-center gap-2 rounded-md bg-stone-50 px-2 py-1"
                 >
                   <span className="min-w-[48px] text-[10px] font-bold text-stone-500">
-                    Grp {gi + 1}
+                    {t("editor.group_n", { n: gi + 1 })}
                   </span>
                   <div className="flex flex-1 gap-1">
                     {[1, 2, 3, 4].map((d) => (
@@ -1716,12 +1717,15 @@ function AddInstrumentMenu({
   options: Instrument[];
   onPick: (i: Instrument) => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
 
   if (!options.length)
     return (
-      <div className="text-[10px] text-stone-300">All instruments added</div>
+      <div className="text-[10px] text-stone-300">
+        {t("editor.all_instruments_added")}
+      </div>
     );
 
   return (
@@ -1732,7 +1736,7 @@ function AddInstrumentMenu({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between rounded-md border border-dashed border-stone-300 bg-white px-2 py-1.5 text-[11px] font-bold text-stone-600 hover:border-stone-500 hover:bg-stone-50"
       >
-        + Add
+        {t("editor.add")}
         <svg
           viewBox="0 0 12 12"
           className="size-3 opacity-60"
@@ -1745,7 +1749,7 @@ function AddInstrumentMenu({
       <FloatingMenu anchor={anchor} open={open} onClose={() => setOpen(false)}>
         <div className="w-[260px]">
           <div className="mb-2 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
-            Add instrument
+            {t("editor.add_instrument")}
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {options.map((i) => {
@@ -1981,7 +1985,12 @@ function CursorStatusBar({
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-stone-200 bg-stone-50 px-2.5 py-1 text-[10px] text-stone-600">
       <span className="font-bold text-stone-700">
-        Beat {cursor.beatIndex + 1}/{beatsPerBar} · Slot {cursor.slotIndex + 1} · {instLabel}
+        {t("editor.cursor_status", {
+          beat: cursor.beatIndex + 1,
+          total: beatsPerBar,
+          slot: cursor.slotIndex + 1,
+          inst: instLabel,
+        })}
       </span>
       <button
         type="button"
@@ -1994,10 +2003,10 @@ function CursorStatusBar({
         )}
         title={t("editor.tab_autoadvance_hint")}
       >
-        Tab: Auto-advance {autoAdvance ? "ON" : "OFF"}
+        {autoAdvance ? t("editor.autoadvance_on") : t("editor.autoadvance_off")}
       </button>
       <span className="text-stone-400">
-        Shortcuts in the Shortcuts panel →
+        {t("editor.shortcuts_panel_hint")}
       </span>
     </div>
   );

@@ -205,7 +205,7 @@ export function PerformView({
           onClick={onExit}
           className="motion-press grid h-10 w-10 place-items-center rounded-full bg-stone-800 text-lg font-bold hover:bg-stone-700"
           aria-label={t("perform.exit")}
-          title="Exit (Esc)"
+          title={`${t("perform.exit")} (Esc)`}
         >
           ✕
         </button>
@@ -265,6 +265,7 @@ export function PerformView({
                   : null
               }
               playheadEngine={engineKind}
+              ariaLabel={t("chart.aria_drum")}
             />
           </div>
         ) : null}

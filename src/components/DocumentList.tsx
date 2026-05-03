@@ -81,20 +81,20 @@ export function DocumentList({
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <Button size="xs" onClick={onCreate} title={t("doclist.new_document")}>
-            + New
+            {t("doclist.btn_new")}
           </Button>
           <Button
             size="xs"
             onClick={() => fileInput.current?.click()}
             title={t("doclist.import_file")}
           >
-            ↑ Import
+            {t("doclist.btn_import")}
           </Button>
           {samples && onLoadSample ? (
             <SelectMenu
               size="xs"
               value=""
-              placeholder="♪ Example…"
+              placeholder={t("doclist.sample_placeholder")}
               title={t("doclist.load_example")}
               options={samples.map((s) => ({
                 value: s.id,
@@ -171,7 +171,7 @@ function DocumentItem({
   const { t } = useI18n();
   const titleFromSource =
     doc.source.match(/^\s*title:\s*(.+)$/m)?.[1].trim() ?? "";
-  const displayName = doc.name || titleFromSource || "Untitled";
+  const displayName = doc.name || titleFromSource || t("editor.untitled");
 
   async function promptRename() {
     const next = await dialog.prompt({

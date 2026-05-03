@@ -44,6 +44,9 @@ interface Props {
   playheadEngine?: PlayheadEngine;
   /** Pass counter shown on the playhead bar; see DrumChart's prop. */
   repeatPass?: { pass: number; total: number } | null;
+  /** Accessible name; defaults to the English string so static exports
+   *  render stably outside the i18n context. */
+  ariaLabel?: string;
 }
 
 const PLAYHEAD_PALETTE: Record<PlayheadEngine, { bar: string; beat: string }> =
@@ -74,6 +77,7 @@ export function StaffView({
   playCursor,
   playheadEngine = "synth",
   repeatPass = null,
+  ariaLabel = "Standard notation drum chart",
 }: Props) {
   const selectionLo =
     selectedBarIndex === null
@@ -97,7 +101,7 @@ export function StaffView({
       viewBox={`0 0 ${actualWidth} ${height}`}
       className="h-auto w-full"
       role="img"
-      aria-label="Standard notation drum chart"
+      aria-label={ariaLabel}
     >
       <rect
         x={0}

@@ -16,6 +16,7 @@ import { buildInfo } from "../lib/buildInfo";
 import { HoverClickPopover } from "./HoverClickPopover";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "../lib/utils";
+import { useI18n } from "../i18n/useI18n";
 
 const EXPORT_QR_URL = "https://w-mai.github.io/Drumit/";
 
@@ -47,6 +48,7 @@ function exportError(
  * no server runtime is pulled into the client bundle.
  */
 export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<Status>("idle");
 
   function filenameFor(ext: string, includeView = true): string {
@@ -93,7 +95,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
   }> = [
     {
       label: "SVG",
-      hint: "Vector, crisp at any zoom",
+      hint: t("export.svg_hint"),
       onClick: async () => {
         const svg = await getFramedSvg();
         triggerDownload(
@@ -104,7 +106,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     },
     {
       label: "PNG",
-      hint: "Bitmap, prints cleanly",
+      hint: t("export.png_hint"),
       onClick: async () => {
         const svg = await getFramedSvg();
         const blob = await svgStringToPng(svg, { background: "#fafaf9" });
@@ -113,15 +115,15 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     },
     {
       label: "PDF",
-      hint: "Opens a print dialog (save as PDF)",
+      hint: t("export.pdf_hint"),
       onClick: async () => {
         const svg = await getFramedSvg();
         printSvgAsPdf(svg, score);
       },
     },
     {
-      label: "HTML (static)",
-      hint: "Single file, no interactivity",
+      label: t("export.html_static"),
+      hint: t("export.html_static_hint"),
       onClick: async () => {
         const svg = await getFramedSvg();
         const html = wrapSvgInStaticHtml(svg, score);
@@ -132,8 +134,8 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
       },
     },
     {
-      label: "HTML (playable)",
-      hint: "Single file with inline Play button",
+      label: t("export.html_playable"),
+      hint: t("export.html_playable_hint"),
       onClick: () => {
         const svg = getSvg({ keepInteraction: true });
         const source = serializeScore(score);
@@ -146,7 +148,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     },
     {
       label: ".drumtab",
-      hint: "Round-trippable plain text",
+      hint: t("export.drumtab_hint"),
       onClick: () => {
         const source = serializeScore(score);
         triggerDownload(
@@ -157,7 +159,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
     },
     {
       label: ".mid",
-      hint: "Standard MIDI File (channel 10)",
+      hint: t("export.mid_hint"),
       onClick: () => {
         const bytes = exportScoreToMidi(score);
         const buffer = new ArrayBuffer(bytes.byteLength);
@@ -177,7 +179,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
       mobileSheet
       trigger={({ open }) => (
         <span
-          title="Export…"
+          title={t("export.trigger_title")}
           className={cn(
             "flex h-7 cursor-pointer items-center gap-1 rounded-full border px-3 text-xs font-semibold select-none transition-colors",
             status === "error"
@@ -198,10 +200,10 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
               transition={{ duration: 0.12 }}
             >
               {status === "pending"
-                ? "Exporting…"
+                ? t("export.label_pending")
                 : status === "error"
-                  ? "Failed"
-                  : "↓ Export"}
+                  ? t("export.label_error")
+                  : t("export.label")}
             </motion.span>
           </AnimatePresence>
         </span>

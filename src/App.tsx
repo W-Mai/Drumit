@@ -732,7 +732,7 @@ function AppInner() {
     const newDoc: DocumentRecord = {
       id,
       name: "",
-      source: "title: New Chart\ntempo: 100\nmeter: 4/4\n\n[A]\n| bd: o / o / o / o |",
+      source: `title: ${t("editor.new_chart_title")}\ntempo: 100\nmeter: 4/4\n\n[A]\n| bd: o / o / o / o |`,
       savedAt: Date.now(),
     };
     setDocuments((docs) => [...docs, newDoc]);
@@ -746,7 +746,7 @@ function AppInner() {
     if (!src) return;
     const newDoc: DocumentRecord = {
       id: newId(),
-      name: src.name ? `${src.name} copy` : "",
+      name: src.name ? `${src.name} ${t("editor.copy_suffix")}` : "",
       source: src.source,
       savedAt: Date.now(),
     };
@@ -889,7 +889,7 @@ function AppInner() {
             Drumit
           </p>
           <h1 className="text-ink hidden font-serif text-base leading-none font-semibold tracking-tight sm:block">
-            Drumtab visualizer
+            {t("header.tagline")}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -1129,7 +1129,7 @@ function AppInner() {
           <PanelHeader
             title={
               <span className="flex items-center gap-2">
-                <span>Preview</span>
+                <span>{t("editor.preview")}</span>
                 <ViewModeToggle value={viewMode} onChange={setViewMode} />
               </span>
             }
@@ -1137,10 +1137,10 @@ function AppInner() {
             <Button
               variant="secondary"
               onClick={() => setPerformMode(true)}
-              title="Open perform view (fullscreen single-row rehearsal mode)"
+              title={t("editor.perform_tip")}
             >
               <span className="sm:hidden">🎭</span>
-              <span className="hidden sm:inline">Perform</span>
+              <span className="hidden sm:inline">{t("editor.perform")}</span>
             </Button>
             <Button
               variant={expandedPreview ? "primary" : "secondary"}
@@ -1162,14 +1162,12 @@ function AppInner() {
                 });
               }}
               title={
-                expandedPreview
-                  ? "Show compact view (repeat marks, endings, D.C./D.S.)"
-                  : "Show expanded linear view (repeats unrolled)"
+                expandedPreview ? t("editor.compact_tip") : t("editor.expand_tip")
               }
             >
               <span className="sm:hidden">{expandedPreview ? "⇉" : "⇆"}</span>
               <span className="hidden sm:inline">
-                {expandedPreview ? "Compact" : "Expand"}
+                {expandedPreview ? t("editor.compact") : t("editor.expand")}
               </span>
             </Button>
             <Button
@@ -1181,7 +1179,9 @@ function AppInner() {
             >
               <span className="sm:hidden">{showLabels ? "🏷" : "🏷︎"}</span>
               <span className="hidden sm:inline">
-                {showLabels ? "Hide labels" : "Show labels"}
+                {showLabels
+                  ? t("editor.hide_labels_short")
+                  : t("editor.show_labels_short")}
               </span>
             </Button>
             <ExportMenu
@@ -1200,7 +1200,7 @@ function AppInner() {
           >
             {hasErrors ? (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
-                Fix parse errors to update the preview.
+                {t("editor.fix_errors")}
               </div>
             ) : (
               <ViewFader
@@ -1221,6 +1221,7 @@ function AppInner() {
                     playCursor={viewPlayCursor}
                     playheadEngine={engineKind}
                     repeatPass={viewRepeatPass}
+                    ariaLabel={t("chart.aria_staff")}
                   />
                 ) : (
                   <DrumChart
@@ -1239,6 +1240,7 @@ function AppInner() {
                     playheadEngine={engineKind}
                     repeatPass={viewRepeatPass}
                     flashes={expandedPreview ? undefined : flashes}
+                    ariaLabel={t("chart.aria_drum")}
                   />
                 )}
               </ViewFader>
@@ -1253,8 +1255,12 @@ function AppInner() {
         <button
           type="button"
           onClick={() => setEditorCollapsed((v) => !v)}
-          title={editorCollapsed ? "Show editor" : "Hide editor"}
-          aria-label={editorCollapsed ? "Show editor" : "Hide editor"}
+          title={
+            editorCollapsed ? t("editor.show_editor") : t("editor.hide_editor")
+          }
+          aria-label={
+            editorCollapsed ? t("editor.show_editor") : t("editor.hide_editor")
+          }
           className="group -my-0.5 hidden h-2.5 flex-none items-center justify-center hover:bg-stone-200/70 lg:flex"
         >
           <span className="h-[2px] w-16 rounded-full bg-stone-200 group-hover:bg-stone-400" />
@@ -1272,8 +1278,16 @@ function AppInner() {
                 <button
                   type="button"
                   onClick={() => setEditorCollapsed((v) => !v)}
-                  title={editorCollapsed ? "Show editor" : "Hide editor"}
-                  aria-label={editorCollapsed ? "Show editor" : "Hide editor"}
+                  title={
+                    editorCollapsed
+                      ? t("editor.show_editor")
+                      : t("editor.hide_editor")
+                  }
+                  aria-label={
+                    editorCollapsed
+                      ? t("editor.show_editor")
+                      : t("editor.hide_editor")
+                  }
                   className="flex size-5 items-center justify-center rounded text-stone-500 hover:bg-stone-100 hover:text-stone-900"
                 >
                   <span className="text-[10px] leading-none">
@@ -1281,11 +1295,13 @@ function AppInner() {
                   </span>
                 </button>
                 <span>
-                  {mode === "visual" ? "Bar editor" : "Source"}
+                  {mode === "visual"
+                    ? t("editor.bar_editor")
+                    : t("editor.source")}
                 </span>
                 {editorCollapsed ? (
                   <span className="text-[10px] font-medium text-stone-500">
-                    · read-only
+                    {t("editor.readonly_tag")}
                   </span>
                 ) : null}
               </span>
@@ -1299,7 +1315,7 @@ function AppInner() {
                   if (editorCollapsed) setEditorCollapsed(false);
                 }}
               >
-                Visual
+                {t("editor.visual_mode")}
               </ModeTab>
               <ModeTab
                 active={mode === "source"}
@@ -1308,7 +1324,7 @@ function AppInner() {
                   if (editorCollapsed) setEditorCollapsed(false);
                 }}
               >
-                Source
+                {t("editor.source_mode")}
               </ModeTab>
             </div>
             <Diagnostics diagnostics={diagnostics} />
@@ -1356,7 +1372,7 @@ function AppInner() {
                 <div>
                   <p>{t("panel.preview_readonly")}</p>
                   <p className="mt-1 text-xs text-stone-400">
-                    Switch back to the compact view to edit bars.
+                    {t("editor.switch_to_compact")}
                   </p>
                 </div>
               </div>
@@ -1501,7 +1517,7 @@ function AppInner() {
               />
             ) : (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">
-                Click a bar in the preview above to edit it.
+                {t("editor.click_bar_to_edit")}
               </div>
             )}
           </motion.div>

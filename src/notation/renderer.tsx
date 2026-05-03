@@ -76,6 +76,10 @@ interface Props {
    */
   repeatPass?: { pass: number; total: number } | null;
   flashes?: Map<number, "amber" | "emerald">;
+  /** Accessible name for the root SVG. Defaults to "Drum chart" so
+   *  static exporters (which render the component outside the React
+   *  app tree and therefore can't reach i18n context) stay stable. */
+  ariaLabel?: string;
 }
 
 export function DrumChart({
@@ -88,6 +92,7 @@ export function DrumChart({
   playheadEngine = "synth",
   repeatPass,
   flashes,
+  ariaLabel = "Drum chart",
 }: Props) {
   const selectionLo =
     selectedBarIndex === null || selectedBarIndex === undefined
@@ -102,7 +107,7 @@ export function DrumChart({
       viewBox={`0 0 ${layout.width} ${layout.height}`}
       className="h-auto w-full"
       role="img"
-      aria-label="Drum chart"
+      aria-label={ariaLabel}
     >
       <rect
         x={0}
