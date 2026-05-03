@@ -99,6 +99,15 @@ export interface LaidOutLayout {
   tempo?: string;
   meter: string;
   sectionHeaders: Array<{ label: string; y: number }>;
+  /** Click targets for sections whose bars array is empty — the UI
+   *  uses these to offer an "+ add bar" surface the user can tap. */
+  sectionPlaceholders: Array<{
+    sectionIndex: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>;
 }
 
 export interface LayoutOptions {
@@ -179,18 +188,30 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
 
   const rows: LaidOutBar[][] = [];
   const sectionHeaders: Array<{ label: string; y: number }> = [];
+  const sectionPlaceholders: LaidOutLayout["sectionPlaceholders"] = [];
   let y = HEADER_BAND_HEIGHT;
   let barIndex = 1;
+  const PLACEHOLDER_HEIGHT = 40;
 
   score.sections.forEach((section, sectionIdx) => {
-    if (sectionIdx > 0) y += SECTION_GAP_BEFORE;
+    // Every section gets breathing room above — including the first,
+    // so the bookmark tab clears the title-band divider line.
+    y += sectionIdx === 0 ? 10 : SECTION_GAP_BEFORE;
     sectionHeaders.push({ label: section.label, y: y + 18 });
     y += SECTION_HEADER_HEIGHT;
 
-    // Slice this section's bars into rows ahead of time so we can
-    // compute one rowGroup assignment per row (making every bar in the
-    // row share the same row-to-Y mapping — lanes stay horizontally
-    // aligned even when individual bars use different row groups).
+    if (section.bars.length === 0) {
+      sectionPlaceholders.push({
+        sectionIndex: sectionIdx,
+        x: leftMargin,
+        y,
+        width: availableWidth,
+        height: PLACEHOLDER_HEIGHT,
+      });
+      y += PLACEHOLDER_HEIGHT + ROW_GAP;
+      return;
+    }
+
     for (let rowStart = 0; rowStart < section.bars.length; rowStart += barsPerRow) {
       const rowSourceBars = section.bars.slice(rowStart, rowStart + barsPerRow);
       const rowAssignment = assignRows(rowSourceBars);
@@ -216,6 +237,7 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     tempo: score.tempo ? `♩ = ${score.tempo.bpm}` : undefined,
     meter: `${score.meter.beats}/${score.meter.beatUnit}`,
     sectionHeaders,
+    sectionPlaceholders,
   };
 }
 

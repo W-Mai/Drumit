@@ -34,15 +34,15 @@ const PLAYHEAD_PALETTE: Record<
   { bar: string; beat: string }
 > = {
   synth: {
-    bar: "fill-emerald-100/70 stroke-emerald-500",
+    bar: "fill-emerald-200/50",
     beat: "fill-emerald-300/40",
   },
   sample: {
-    bar: "fill-sky-100/70 stroke-sky-500",
+    bar: "fill-sky-200/50",
     beat: "fill-sky-300/40",
   },
   midi: {
-    bar: "fill-rose-100/70 stroke-rose-500",
+    bar: "fill-rose-200/50",
     beat: "fill-rose-300/40",
   },
 };
@@ -66,6 +66,12 @@ interface Props {
   selectedBarIndex?: number | null;
   selectionEnd?: number | null;
   onSelectBar?: (index: number, shiftKey?: boolean) => void;
+  /** Called when the user clicks the "+ add bar" surface rendered for
+   *  an empty section. */
+  onInsertIntoSection?: (sectionIndex: number) => void;
+  /** Label shown inside the empty-section placeholder. Defaults to
+   *  English so static exporters stay stable without an i18n context. */
+  emptySectionLabel?: string;
   playCursor?: { barIndex: number; beatIndex: number } | null;
   playheadEngine?: "synth" | "sample" | "midi";
   /**
@@ -88,6 +94,8 @@ export function DrumChart({
   selectedBarIndex,
   selectionEnd,
   onSelectBar,
+  onInsertIntoSection,
+  emptySectionLabel = "+ Add bar",
   playCursor,
   playheadEngine = "synth",
   repeatPass,
@@ -154,23 +162,65 @@ export function DrumChart({
         />
       </g>
 
-      {/* Section headers: pill-style label + thin underline */}
-      {layout.sectionHeaders.map((header, i) => (
-        <g key={`section-${i}`}>
+      {/* Section headers: bookmark tab anchored to the row below. */}
+      {layout.sectionHeaders.map((header, i) => {
+        const tabX = 20;
+        const tabW = Math.max(44, header.label.length * 9 + 20);
+        const tabH = 20;
+        const tabY = header.y - 14;
+        // Bookmark path: top corners rounded, bottom corners square so
+        // the label sits flush against the bar row beneath it.
+        const r = 4;
+        const path = `
+          M ${tabX} ${tabY + r}
+          Q ${tabX} ${tabY} ${tabX + r} ${tabY}
+          L ${tabX + tabW - r} ${tabY}
+          Q ${tabX + tabW} ${tabY} ${tabX + tabW} ${tabY + r}
+          L ${tabX + tabW} ${tabY + tabH}
+          L ${tabX} ${tabY + tabH}
+          Z
+        `;
+        return (
+          <g key={`section-${i}`}>
+            <path
+              d={path}
+              className="fill-stone-900 cyber:fill-stone-50"
+            />
+            <text
+              x={tabX + 10}
+              y={tabY + 14}
+              className="fill-amber-100 text-[12px] font-extrabold tracking-wider dark:fill-amber-800 cyber:fill-amber-500"
+            >
+              {header.label.toUpperCase()}
+            </text>
+          </g>
+        );
+      })}
+
+      {layout.sectionPlaceholders.map((p) => (
+        <g
+          key={`placeholder-${p.sectionIndex}`}
+          onClick={() => onInsertIntoSection?.(p.sectionIndex)}
+          style={onInsertIntoSection ? { cursor: "pointer" } : undefined}
+          data-section-placeholder={p.sectionIndex}
+        >
           <rect
-            x={20}
-            y={header.y - 14}
-            width={Math.max(44, header.label.length * 9 + 20)}
-            height={20}
-            rx={6}
-            className="fill-stone-900 cyber:fill-stone-50"
+            x={p.x}
+            y={p.y}
+            width={p.width}
+            height={p.height}
+            rx={4}
+            className="fill-stone-100/40 stroke-stone-400 hover:fill-stone-200/60"
+            strokeWidth={1}
+            strokeDasharray="4 3"
           />
           <text
-            x={30}
-            y={header.y}
-            className="fill-amber-100 text-[12px] font-extrabold tracking-wider dark:fill-amber-800 cyber:fill-amber-500"
+            x={p.x + p.width / 2}
+            y={p.y + p.height / 2 + 4}
+            textAnchor="middle"
+            className="pointer-events-none fill-stone-500 text-[12px] font-semibold"
           >
-            {header.label.toUpperCase()}
+            {emptySectionLabel}
           </text>
         </g>
       ))}
@@ -287,12 +337,12 @@ function BarView({
           isPlayhead
             ? playhead.bar
             : selected
-              ? "fill-amber-200/60 stroke-amber-500"
-              : "fill-transparent stroke-transparent hover:fill-stone-200/40",
+              ? "fill-amber-300/45"
+              : "fill-transparent hover:fill-stone-200/40",
           flash === "amber" && "motion-flash-amber",
           flash === "emerald" && "motion-flash-emerald",
         )}
-        strokeWidth={isPlayhead || selected ? 1.5 : 0}
+        strokeWidth={0}
         data-bar-highlight="true"
       />
 

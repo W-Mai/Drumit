@@ -232,8 +232,7 @@ describe("StaffView (I1: selection + playhead)", () => {
     const svg = renderToStaticMarkup(
       createElement(StaffView, { score, selectedBarIndex: 1 }),
     );
-    expect(svg).toContain("fill-amber-200/60");
-    expect(svg).toContain("stroke-amber-500");
+    expect(svg).toContain("fill-amber-300/45");
   });
 
   it("marks the playhead bar with emerald highlights + the current beat", () => {
@@ -244,7 +243,7 @@ describe("StaffView (I1: selection + playhead)", () => {
         playCursor: { barIndex: 0, beatIndex: 2 },
       }),
     );
-    expect(svg).toContain("fill-emerald-100/70");
+    expect(svg).toContain("fill-emerald-200/50");
     expect(svg).toContain("fill-emerald-300/40");
   });
 

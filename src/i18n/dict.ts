@@ -295,6 +295,7 @@ const zh: Dict = {
   // Chart ARIA
   "chart.aria_drum": "鼓谱",
   "chart.aria_staff": "五线谱鼓谱",
+  "chart.add_bar": "+ 添加小节",
 
   // Hotkeys panel
   "hotkeys.title": "快捷键",
@@ -589,6 +590,7 @@ const en: Dict = {
 
   "chart.aria_drum": "Drum chart",
   "chart.aria_staff": "Standard notation drum chart",
+  "chart.add_bar": "+ Add bar",
 
   "hotkeys.title": "Keyboard shortcuts",
 

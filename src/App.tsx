@@ -17,6 +17,7 @@ import {
   cycleDots,
   deleteBar,
   deleteBars,
+  insertBarIntoSection,
   extractBars,
   insertBarAfter,
   pasteBarsBefore,
@@ -363,6 +364,16 @@ function AppInner() {
     applyScoreUpdate((s) => deleteBars(s, lo, hi));
     setSelectionEnd(null);
     setSelectedBar(Math.max(0, lo - 1));
+  }
+
+  function handleInsertIntoSection(sectionIndex: number) {
+    applyScoreUpdate((s) => insertBarIntoSection(s, sectionIndex));
+    const priorBarCount = score.sections
+      .slice(0, sectionIndex)
+      .reduce((acc, s) => acc + s.bars.length, 0);
+    setSelectedBar(priorBarCount);
+    setSelectionEnd(null);
+    playbackRef.current?.seekToBar(priorBarCount);
   }
 
   function handleBarClick(index: number, shiftKey?: boolean) {
@@ -1298,6 +1309,10 @@ function AppInner() {
                     onSelectBar={
                       expandedPreview ? handleExpandedBarClick : handleBarClick
                     }
+                    onInsertIntoSection={
+                      expandedPreview ? undefined : handleInsertIntoSection
+                    }
+                    emptySectionLabel={t("chart.add_bar")}
                     playCursor={viewPlayCursor}
                     playheadEngine={engineKind}
                     repeatPass={viewRepeatPass}

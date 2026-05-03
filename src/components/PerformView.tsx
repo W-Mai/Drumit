@@ -672,9 +672,9 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
   useEffect(() => () => clearTimer(), []);
 
   return (
-    <div className="relative shrink-0">
+    <div className="relative shrink-0 pt-2">
       {chip.sectionLabel ? (
-        <div className="absolute -top-1 left-0.5 rounded bg-amber-500 px-1 py-px text-[8px] font-bold leading-none text-stone-950">
+        <div className="pointer-events-none absolute top-0 left-0.5 z-10 rounded bg-amber-500 px-1 py-px text-[8px] font-bold leading-none text-stone-950 shadow">
           {chip.sectionLabel}
         </div>
       ) : null}
@@ -713,7 +713,13 @@ const BarChip = forwardRef<HTMLButtonElement, BarChipProps>(function BarChip(
       >
         <span>{chip.sourceIndex + 1}</span>
         {hasMultiplePasses ? (
-          <span className="text-[8px] leading-none opacity-80">
+          <span
+            className={
+              active
+                ? "text-[8px] leading-none font-bold"
+                : "text-[8px] leading-none opacity-80"
+            }
+          >
             ×{chip.pass}/{chip.total}
           </span>
         ) : null}

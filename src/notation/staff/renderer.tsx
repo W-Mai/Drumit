@@ -52,15 +52,15 @@ interface Props {
 const PLAYHEAD_PALETTE: Record<PlayheadEngine, { bar: string; beat: string }> =
   {
     synth: {
-      bar: "fill-emerald-100/70 stroke-emerald-500",
+      bar: "fill-emerald-200/50",
       beat: "fill-emerald-300/40",
     },
     sample: {
-      bar: "fill-sky-100/70 stroke-sky-500",
+      bar: "fill-sky-200/50",
       beat: "fill-sky-300/40",
     },
     midi: {
-      bar: "fill-rose-100/70 stroke-rose-500",
+      bar: "fill-rose-200/50",
       beat: "fill-rose-300/40",
     },
   };
@@ -253,10 +253,10 @@ function BarShell({
           isPlayhead
             ? playhead.bar
             : selected
-              ? "fill-amber-200/60 stroke-amber-500"
-              : "fill-transparent stroke-transparent hover:fill-stone-200/40"
+              ? "fill-amber-300/45"
+              : "fill-transparent hover:fill-stone-200/40"
         }
-        strokeWidth={isPlayhead || selected ? 1.2 : 0}
+        strokeWidth={0}
       />
       {isPlayhead && typeof playBeatIndex === "number" ? (
         <rect

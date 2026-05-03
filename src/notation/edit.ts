@@ -239,6 +239,18 @@ export function pasteBarsAtSectionEnd(
   return next;
 }
 
+/** Append a fresh empty bar to the given section. */
+export function insertBarIntoSection(
+  score: Score,
+  sectionIndex: number,
+): Score {
+  const next = cloneScore(score);
+  const section = next.sections[sectionIndex];
+  if (!section) return next;
+  section.bars.push(freshEmptyBar(Math.max(1, score.meter.beats)));
+  return next;
+}
+
 export function deleteBar(score: Score, globalIndex: number): Score {
   const next = cloneScore(score);
   const loc = locateBar(next, globalIndex);
