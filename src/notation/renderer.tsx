@@ -164,7 +164,7 @@ export function DrumChart({
 
       {/* Section headers: bookmark tab anchored to the row below. */}
       {layout.sectionHeaders.map((header, i) => {
-        const tabX = 20;
+        const tabX = header.x;
         const tabW = Math.max(44, header.label.length * 9 + 20);
         const tabH = 20;
         const tabY = header.y - 14;

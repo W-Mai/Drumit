@@ -98,7 +98,7 @@ export interface LaidOutLayout {
   artist?: string;
   tempo?: string;
   meter: string;
-  sectionHeaders: Array<{ label: string; y: number }>;
+  sectionHeaders: Array<{ label: string; x: number; y: number }>;
   /** Click targets for sections whose bars array is empty — the UI
    *  uses these to offer an "+ add bar" surface the user can tap. */
   sectionPlaceholders: Array<{
@@ -187,7 +187,7 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
   const leftMargin = options.showLabels ? 80 : 16;
 
   const rows: LaidOutBar[][] = [];
-  const sectionHeaders: Array<{ label: string; y: number }> = [];
+  const sectionHeaders: Array<{ label: string; x: number; y: number }> = [];
   const sectionPlaceholders: LaidOutLayout["sectionPlaceholders"] = [];
   let y = HEADER_BAND_HEIGHT;
   let barIndex = 1;
@@ -197,7 +197,7 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     // Every section gets breathing room above — including the first,
     // so the bookmark tab clears the title-band divider line.
     y += sectionIdx === 0 ? 10 : SECTION_GAP_BEFORE;
-    sectionHeaders.push({ label: section.label, y: y + 18 });
+    sectionHeaders.push({ label: section.label, x: leftMargin, y: y + 18 });
     y += SECTION_HEADER_HEIGHT;
 
     if (section.bars.length === 0) {
