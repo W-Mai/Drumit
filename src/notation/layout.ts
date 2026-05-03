@@ -128,8 +128,9 @@ export const ROW_GAP = 14;
 export const SECTION_GAP_BEFORE = 18;
 export const SECTION_HEADER_HEIGHT = 22;
 // Space reserved at the top of the score for the title, tempo, and
-// meter signature tokens.
-export const HEADER_BAND_HEIGHT = 38;
+// meter signature tokens. Includes breathing room below the divider
+// before the first section tab.
+export const HEADER_BAND_HEIGHT = 54;
 // Extra room below the last row for beam lines + articulations.
 export const BAR_CONTENT_BOTTOM = 14;
 
@@ -194,9 +195,7 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
   const PLACEHOLDER_HEIGHT = 40;
 
   score.sections.forEach((section, sectionIdx) => {
-    // Every section gets breathing room above — including the first,
-    // so the bookmark tab clears the title-band divider line.
-    y += sectionIdx === 0 ? 10 : SECTION_GAP_BEFORE;
+    y += SECTION_GAP_BEFORE;
     sectionHeaders.push({ label: section.label, x: leftMargin, y });
     y += SECTION_HEADER_HEIGHT;
 
