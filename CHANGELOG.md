@@ -11,6 +11,79 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.03.4]
+
+### Added
+
+- **PWA** — `manifest.webmanifest`, amber-tile SVG icons (regular +
+  maskable), and a small versioned service worker that caches the app
+  shell under stale-while-revalidate for same-origin GETs. Registered
+  in production only so Vite dev HMR stays fast. iOS-specific Apple
+  tags in `index.html` so "Add to Home Screen" on iPhone gets a
+  Drumit-branded standalone app with black-translucent status bar.
+- **Toast system** — `ToastProvider` + `useToast` (portal-mounted
+  stack, spring enter/exit, honours the mobile playback bar's safe
+  area). Success toasts after export / import / duplicate, warning
+  toast on Reset, and a 6-second sticky toast with an **Undo** action
+  on Delete that re-inserts the document at its original index.
+- **Saved-at indicator** in the header: "Saved just now" for the
+  first minute after a persist, then settles to "Saved at HH:mm".
+  Parent re-keys the component so we avoid React 19's
+  set-state-in-effect rule.
+- **Panel scope tokens**:
+  - `[data-notation-scope]` pins the stone palette back to its light
+    values inside the Preview area so drum chart / staff glyphs stay
+    readable under dark.
+  - `[data-perform-scope]` keeps the Perform view black-on-amber in
+    every theme.
+
+### Changed
+
+- **Dark-theme visual pass** — several surfaces that depended on
+  `bg-stone-900` / `text-white` were inverting into washed-out white
+  rectangles under dark. New `.surface-ink` and `.surface-ink-amber`
+  utilities pin the filled-ink look; applied to `Button.primary`,
+  `Chip` active, `ModeTab` active, `SelectMenu` selected option,
+  `PadEditor` section badge, lane-split active button, kick-lane hit
+  cells. Modal / sheet backdrops use a new `.bg-overlay-backdrop`
+  utility with a literal `rgba(stone-950, 0.55)` so overlays stay
+  dim-on-everything. Source editor / `<pre>` code surface gets a
+  theme-pinned `.source-editor-surface` utility.
+- **iOS Safari focus-zoom fix** — tempo stepper, Dialog prompt input,
+  and the Source textarea now use `text-base` (≥16 px) on mobile and
+  `sm:text-sm` back on desktop, so the viewport no longer auto-zooms
+  when a field gets focus. Added `autoCapitalize=off` / `autoCorrect=off`
+  on free-form fields.
+- **Panel hover-lift performance** — dropped the permanent
+  `will-change: transform` (was pinning compositor layers forever),
+  added `isolation: isolate` + `contain: layout paint style` so hover
+  repaints stay local. `will-change` is promoted only under the :hover
+  state.
+- **SelectMenu on touch** — the native `<select>` fallback is gone;
+  touch users now see the app's own bottom-sheet popover with 44 px
+  rows and a ✓ on the active option, matching the rest of the app.
+- **Mobile PlaybackBar density** — compacted padding, `text-[11px]`
+  row, `flex-nowrap`, and an inner `overflow-x-auto` strip for the
+  secondary Switch cluster so transport labels never wrap mid-word on
+  an iPhone 16 Pro. Shortened Chinese labels (`节拍器 → 节拍`,
+  `循环小节 → 循环`) in parallel.
+- **PanelHeader** allows `flex-wrap` so tightly packed Preview actions
+  flow onto a second row on narrow screens instead of crushing labels.
+- **ExportMenu** trigger is icon-only (`↗`) on `<sm` and shows the
+  label at `≥sm`; `Switch` label gets `whitespace-nowrap`.
+- **Preview "Show/Hide labels" on zh** — restored the object after
+  compression ate it (`显示 → 显示乐器名`, `隐藏 → 隐藏乐器名`).
+
+### Removed
+
+- `components/BarEditor.tsx` — legacy code replaced by PadEditor,
+  unreferenced.
+- `Field`'s unused `TextInput` / `Select` primitives; the custom
+  `SelectMenu` / `NumberStepper` cover those cases now.
+- The stale "Shortcuts in the Shortcuts panel →" cursor-bar hint that
+  pointed at nothing after the `?` button moved into the editor panel
+  header.
+
 ## [2026.05.03.3]
 
 ### Added
