@@ -11,6 +11,25 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.03.3]
+
+### Added
+
+- **Panel hover lift** — the Documents, Preview, and Editor panels now
+  float subtly upward on hover (2 px translate + softer shadow + slightly
+  darker border). Only active on devices with a fine pointer, so touch
+  taps don't leave the hover state stuck.
+
+### Changed
+
+- **i18n coverage extended** — PlaybackBar (all labels, engine/port/tempo
+  fields, play states, status strings, MIDI unavailable message),
+  PadEditor section buttons and auto-advance hint, PerformView a11y
+  labels, DocumentList header and per-item actions, MobilePlaybackBar
+  "more" sheet, NumberStepper ± buttons, Spinner status, and the
+  sidebar show/hide title now all go through `t()`. Switching
+  language takes effect everywhere without a reload.
+
 ## [2026.05.03.2]
 
 ### Added
