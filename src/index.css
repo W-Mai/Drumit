@@ -4,8 +4,15 @@
    [data-theme] attribute. Without this, `dark:` would only fire on
    the OS-level prefers-color-scheme, which misses users who picked
    "dark" through the header toggle while their OS was in light mode
-   (or vice-versa). */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+   (or vice-versa). Cyberpunk is a dark-family theme so it opts in too. */
+@custom-variant dark (&:where(
+  [data-theme="dark"],
+  [data-theme="dark"] *,
+  [data-theme="cyberpunk"],
+  [data-theme="cyberpunk"] *
+));
+
+@custom-variant cyber (&:where([data-theme="cyberpunk"], [data-theme="cyberpunk"] *));
 
 /* Theme system — see .kiro/specs/i18n-theme-mobile-polish/design.md.
    We override the stone palette (our neutral scale) under [data-theme="dark"]
@@ -66,7 +73,145 @@ html[data-theme="sepia"] {
   --color-ink: #3a2714;
 }
 
+/* Cyberpunk — cyan primary + magenta/lime accents on deep blue-black.
+   Inspired by the "cyber" theme in ~/Projects/uinspy/src/app.css. */
+html[data-theme="cyberpunk"] {
+  color-scheme: dark;
 
+  --color-stone-50: #05080a;
+  --color-stone-100: #0a0e14;
+  --color-stone-200: #1a1f2e;
+  --color-stone-300: #3a4558;
+  --color-stone-400: #718096;
+  --color-stone-500: #a0c4e8;
+  --color-stone-600: #b8d4f0;
+  --color-stone-700: #d0e3f5;
+  --color-stone-800: #dce7f2;
+  --color-stone-900: #e0f0ff;
+  --color-stone-950: #ffffff;
+
+  --color-white: #05080a;
+  --color-black: #e0f0ff;
+  --color-ink: #e0f0ff;
+
+  --color-amber-50: #112a33;
+  --color-amber-100: #003a47;
+  --color-amber-200: #005d73;
+  --color-amber-300: #00bcd4;
+  --color-amber-400: #00d9f2;
+  --color-amber-500: #00e5ff;
+  --color-amber-600: #4df0ff;
+  --color-amber-700: #99f5ff;
+  --color-amber-800: #c7faff;
+  --color-amber-900: #e0fcff;
+
+  --color-emerald-50: #002618;
+  --color-emerald-100: #003b29;
+  --color-emerald-200: #005a40;
+  --color-emerald-300: #00cc7f;
+  --color-emerald-400: #00ff9f;
+  --color-emerald-500: #00ff9f;
+  --color-emerald-600: #4dffb8;
+  --color-emerald-700: #99ffd1;
+  --color-emerald-800: #d1ffe8;
+  --color-emerald-900: #eafff5;
+
+  --color-red-50: #2a0012;
+  --color-red-100: #3d001a;
+  --color-red-200: #5c0026;
+  --color-red-300: #b80048;
+  --color-red-400: #ff1744;
+  --color-red-500: #ff1744;
+  --color-red-600: #ff4d73;
+  --color-red-700: #ff99b5;
+  --color-red-800: #ffcfda;
+  --color-red-900: #ffe5ec;
+
+  --color-sky-50: #001a33;
+  --color-sky-100: #002a57;
+  --color-sky-300: #00aaff;
+  --color-sky-500: #00e5ff;
+  --color-sky-700: #8ff5ff;
+  --color-sky-900: #d6faff;
+  --color-sky-950: #000a14;
+
+  --color-rose-500: #ff4081;
+  --color-rose-700: #d1004a;
+
+  --color-yellow-700: #b89500;
+  --color-orange-800: #cc4a1a;
+}
+
+html[data-theme="cyberpunk"] body {
+  background: #05080a;
+  position: relative;
+}
+/* Faint scanlines across the whole viewport for CRT feel. */
+html[data-theme="cyberpunk"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 229, 255, 0.035) 2px,
+    rgba(0, 229, 255, 0.035) 3px
+  );
+}
+/* Raise the app shell above the scanline overlay. */
+html[data-theme="cyberpunk"] body > #root {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-theme="cyberpunk"] .panel-hover-lift {
+  border-color: rgba(0, 229, 255, 0.15);
+  box-shadow:
+    inset 0 0 30px rgba(0, 229, 255, 0.04),
+    0 1px 12px rgba(0, 229, 255, 0.08);
+}
+@media (hover: hover) and (pointer: fine) {
+  html[data-theme="cyberpunk"] .panel-hover-lift:hover {
+    border-color: rgba(0, 229, 255, 0.45);
+    box-shadow:
+      inset 0 0 30px rgba(0, 229, 255, 0.08),
+      0 0 20px rgba(0, 229, 255, 0.25),
+      0 0 40px rgba(224, 64, 251, 0.12);
+  }
+}
+
+/* Neon text-shadow on headings, letter-tracking like a Blade Runner
+   chyron. Constrained to headings inside panels so transport digits
+   (tempo, bar count) stay tabular and readable. */
+html[data-theme="cyberpunk"] h1,
+html[data-theme="cyberpunk"] h2,
+html[data-theme="cyberpunk"] h3 {
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.3);
+  letter-spacing: 1px;
+}
+
+/* Sharp corners across the app — Tailwind radii collapse to ≤4px so
+   buttons / panels / chips / cards feel like terminal chrome.
+   `rounded-full` (9999px) is unaffected. */
+html[data-theme="cyberpunk"] {
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+}
+
+html[data-theme="cyberpunk"] .motion-press:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #05080a,
+    0 0 0 4px #00e5ff,
+    0 0 10px #00e5ff;
+}
 
 @theme {
   /* Typography */

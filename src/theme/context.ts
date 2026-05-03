@@ -1,10 +1,8 @@
 import { createContext } from "react";
 
-/** User-selectable theme mode; "auto" follows the OS. */
-export type ThemePref = "light" | "dark" | "sepia" | "auto";
+export type ThemePref = "light" | "dark" | "sepia" | "cyberpunk" | "auto";
 
-/** Resolved effective theme (what actually lands on `data-theme`). */
-export type ThemeResolved = "light" | "dark" | "sepia";
+export type ThemeResolved = "light" | "dark" | "sepia" | "cyberpunk";
 
 export type ThemeContextValue = {
   pref: ThemePref;
@@ -18,5 +16,6 @@ export const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
   { value: "sepia", label: "Sepia" },
+  { value: "cyberpunk", label: "Cyberpunk" },
   { value: "auto", label: "Auto" },
 ];

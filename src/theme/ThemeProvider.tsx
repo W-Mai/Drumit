@@ -17,7 +17,15 @@ const STORAGE_KEY = "drumit.theme";
 function readSavedPref(): ThemePref {
   if (typeof window === "undefined") return "auto";
   const v = window.localStorage.getItem(STORAGE_KEY);
-  if (v === "light" || v === "dark" || v === "sepia" || v === "auto") return v;
+  if (
+    v === "light" ||
+    v === "dark" ||
+    v === "sepia" ||
+    v === "cyberpunk" ||
+    v === "auto"
+  ) {
+    return v;
+  }
   return "auto";
 }
 

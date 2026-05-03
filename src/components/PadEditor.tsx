@@ -784,7 +784,7 @@ function SectionStrip({
       <div className="flex items-center gap-2">
         <span
           className={cn(
-            "rounded bg-[#1c1917] px-2 py-0.5 font-mono text-[11px] font-bold text-amber-100",
+            "rounded bg-stone-900 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-100 dark:text-amber-800 cyber:bg-stone-50 cyber:text-amber-500",
             !isFirstBarOfSection && "opacity-60",
           )}
           title={
@@ -1932,7 +1932,7 @@ function hitBgClass(hit: Hit): string {
     case "snare":
       return "bg-rose-700 text-rose-50 shadow-sm";
     case "kick":
-      return "bg-[#1c1917] text-amber-100 shadow-sm";
+      return "bg-[#1c1917] text-amber-100 shadow-sm cyber:text-amber-500";
   }
 }
 

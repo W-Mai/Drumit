@@ -9,6 +9,7 @@ const THEME_GLYPH: Record<ThemePref, string> = {
   light: "☀",
   dark: "☾",
   sepia: "⛬",
+  cyberpunk: "⚡",
   auto: "◐",
 };
 
