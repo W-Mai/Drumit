@@ -4,10 +4,10 @@ export type BadgeTone = "neutral" | "success" | "warning" | "danger" | "accent";
 
 const toneClass: Record<BadgeTone, string> = {
   neutral: "bg-stone-100 text-stone-600",
-  success: "bg-emerald-50 text-emerald-700",
-  warning: "bg-amber-50 text-amber-800",
-  danger: "bg-red-50 text-red-700",
-  accent: "bg-amber-100 text-stone-900",
+  success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
+  warning: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
+  danger: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-200",
+  accent: "bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50",
 };
 
 export function Badge({

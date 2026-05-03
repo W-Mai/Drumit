@@ -16,7 +16,7 @@ function iconClass(active?: boolean) {
   return (
     "motion-press flex size-7 items-center justify-center rounded-full border text-sm font-semibold transition-colors " +
     (active
-      ? "border-amber-400 bg-amber-50 text-amber-900"
+      ? "border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200"
       : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900")
   );
 }
@@ -60,7 +60,7 @@ export function ThemeToggle() {
                 className={
                   "motion-press flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[12px] " +
                   (selected
-                    ? "bg-amber-100 text-stone-900"
+                    ? "bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                     : "text-stone-700 hover:bg-stone-100")
                 }
               >
@@ -120,7 +120,7 @@ export function LocaleToggle() {
                 className={
                   "motion-press rounded-md px-2 py-1.5 text-left text-[12px] " +
                   (selected
-                    ? "bg-amber-100 text-stone-900"
+                    ? "bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                     : "text-stone-700 hover:bg-stone-100")
                 }
               >

@@ -200,7 +200,7 @@ function DocumentItem({
         // Taller touch target on mobile (44px class) while staying compact on desktop.
         "py-2.5 sm:py-1.5",
         active
-          ? "bg-amber-100 text-stone-900"
+          ? "bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
           : "text-stone-700 hover:bg-stone-100",
       )}
     >

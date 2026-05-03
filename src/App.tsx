@@ -1406,7 +1406,7 @@ function AppInner() {
                   className={cn(
                     "flex size-7 items-center justify-center rounded-full border text-sm font-bold select-none",
                     open
-                      ? "border-amber-400 bg-amber-100 text-stone-900"
+                      ? "border-amber-400 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                       : "border-stone-200 bg-white text-stone-600 hover:bg-stone-100",
                   )}
                 >

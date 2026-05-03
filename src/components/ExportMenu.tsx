@@ -185,11 +185,11 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
           className={cn(
             "flex h-7 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border px-3 text-xs font-semibold select-none transition-colors",
             status === "error"
-              ? "border-red-300 bg-red-50 text-red-700"
+              ? "border-red-300 bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-200"
               : status === "pending"
-                ? "border-amber-300 bg-amber-50 text-amber-800"
+                ? "border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200"
                 : open
-                  ? "border-amber-400 bg-amber-100 text-stone-900"
+                  ? "border-amber-400 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                   : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
           )}
         >

@@ -1436,7 +1436,7 @@ function StepContextMenuContent({
             className={cn(
               "flex-1 rounded border px-2 py-1 text-[11px] font-bold transition",
               hit?.articulations.includes(value)
-                ? "border-amber-500 bg-amber-100 text-stone-900"
+                ? "border-amber-500 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                 : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
             )}
           >
@@ -1455,7 +1455,7 @@ function StepContextMenuContent({
             className={cn(
               "mb-3 block w-full rounded border px-2 py-1 text-[11px] font-bold transition",
               currentDots > 0
-                ? "border-amber-500 bg-amber-100 text-stone-900"
+                ? "border-amber-500 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                 : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
             )}
           >
@@ -1479,7 +1479,7 @@ function StepContextMenuContent({
             className={cn(
               "flex-1 rounded border px-2 py-1 text-[11px] font-bold transition",
               hit?.sticking === s || (s === null && !hit?.sticking)
-                ? "border-amber-500 bg-amber-100 text-stone-900"
+                ? "border-amber-500 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                 : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
             )}
           >
@@ -1644,7 +1644,7 @@ function LaneSettingsPopover({
                         className={cn(
                           "flex-1 rounded border px-1.5 py-0.5 text-[11px] font-bold transition",
                           current === d
-                            ? "border-amber-500 bg-amber-100 text-stone-900"
+                            ? "border-amber-500 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                             : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
                         )}
                       >
@@ -1671,7 +1671,7 @@ function LaneSettingsPopover({
                 className={cn(
                   "flex-1 rounded border px-1.5 py-0.5 text-[11px] font-bold transition",
                   plan.columns.length === d && !plan.usesBarResolution
-                    ? "border-amber-500 bg-amber-100 text-stone-900"
+                    ? "border-amber-500 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
                     : "border-stone-200 bg-white text-stone-600 hover:border-stone-500",
                 )}
               >

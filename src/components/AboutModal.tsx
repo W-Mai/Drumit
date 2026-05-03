@@ -169,12 +169,12 @@ export function AboutModal({ open, onClose, onResetWorkspace }: Props) {
           {onResetWorkspace ? (
             <section>
               <SectionTitle>{t("about.section.danger")}</SectionTitle>
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-900">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-900 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200">
                 <div>
                   <div className="font-semibold">
                     {t("about.reset.title")}
                   </div>
-                  <div className="text-[11px] text-red-700/80">
+                  <div className="text-[11px] text-red-700/80 dark:text-red-200/80">
                     {t("about.reset.hint")}
                   </div>
                 </div>

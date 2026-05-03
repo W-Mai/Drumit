@@ -106,7 +106,7 @@ export function HotkeyPanel() {
                   }}
                   className={
                     "flex items-center gap-1.5 rounded px-1 py-0.5 " +
-                    (isCurrent ? "bg-amber-100 text-stone-900" : "")
+                    (isCurrent ? "bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50" : "")
                   }
                 >
                   <Kbd>{digit}</Kbd>
