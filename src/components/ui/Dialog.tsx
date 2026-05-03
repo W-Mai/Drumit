@@ -141,11 +141,14 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                           type="text"
                           value={value}
                           placeholder={req.placeholder}
+                          autoCapitalize="off"
+                          autoCorrect="off"
+                          autoComplete="off"
                           onChange={(e) => {
                             setValue(e.target.value);
                             if (error) setError(null);
                           }}
-                          className="w-full rounded-md border border-stone-300 px-3 py-1.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30"
+                          className="w-full rounded-md border border-stone-300 px-3 py-1.5 text-base outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30 sm:text-sm"
                         />
                         {error ? (
                           <span className="text-xs text-red-600">{error}</span>

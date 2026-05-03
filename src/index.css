@@ -115,13 +115,17 @@ body {
 
 /* Subtle "floating" response on hover for the primary panels
    (documents / preview / editor). Only enabled on devices with a fine
-   pointer so touch UIs don't get the :hover stick-state after a tap. */
+   pointer so touch UIs don't get the :hover stick-state after a tap.
+   `isolation` + `contain` stop the lift's repaint from invalidating
+   sibling panels. `will-change` is promoted only while a pointer is
+   hovering so idle panels don't keep compositor layers pinned. */
 .panel-hover-lift {
   transition:
     transform var(--motion-duration-normal) var(--motion-ease-out),
     box-shadow var(--motion-duration-normal) var(--motion-ease-out),
     border-color var(--motion-duration-normal) var(--motion-ease-out);
-  will-change: transform;
+  isolation: isolate;
+  contain: layout paint style;
 }
 @media (hover: hover) and (pointer: fine) {
   .panel-hover-lift:hover {
@@ -130,6 +134,7 @@ body {
       0 18px 40px -20px rgb(0 0 0 / 0.18),
       0 6px 14px -8px rgb(0 0 0 / 0.12);
     border-color: var(--color-stone-300);
+    will-change: transform;
   }
 }
 

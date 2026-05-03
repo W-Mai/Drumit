@@ -59,7 +59,10 @@ export function NumberStepper({
         step={step}
         disabled={disabled}
         onChange={(e) => commit(Number.parseInt(e.target.value, 10))}
-        className="w-12 appearance-none bg-transparent px-1 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        /* Base font-size ≥ 16px prevents iOS Safari's focus-zoom; override
+           back to the compact xs size on pointer:fine where zoom isn't an
+           issue. */
+        className="w-12 appearance-none bg-transparent px-1 text-center text-base outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:text-xs"
       />
       <button
         type="button"
