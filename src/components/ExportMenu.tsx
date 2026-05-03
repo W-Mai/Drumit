@@ -181,7 +181,7 @@ export function ExportMenu({ score, getSvgElement, viewLabel }: Props) {
         <span
           title={t("export.trigger_title")}
           className={cn(
-            "flex h-7 cursor-pointer items-center gap-1 rounded-full border px-3 text-xs font-semibold select-none transition-colors",
+            "flex h-7 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border px-3 text-xs font-semibold select-none transition-colors",
             status === "error"
               ? "border-red-300 bg-red-50 text-red-700"
               : status === "pending"

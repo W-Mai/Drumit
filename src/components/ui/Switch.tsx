@@ -53,7 +53,7 @@ export function Switch({
           }}
         />
       </button>
-      {label ? <span>{label}</span> : null}
+      {label ? <span className="whitespace-nowrap">{label}</span> : null}
     </label>
   );
 }

@@ -35,17 +35,27 @@ export function MobilePlaybackBar({
           fixed bottom-0 z-30
           left-[max(0.5rem,env(safe-area-inset-left))]
           right-[max(0.5rem,env(safe-area-inset-right))]
-          flex items-center gap-2 px-3 py-2 text-xs
+          flex flex-nowrap items-center gap-2 px-2 py-2 text-[11px]
           rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-lg
           pb-[max(0.5rem,env(safe-area-inset-bottom))]
           lg:hidden
         "
       >
+        {/* Primary transport: keeps its intrinsic width, never shrinks. */}
         <div className="flex flex-none items-center gap-1">
           {playButton}
           {stopButton}
         </div>
-        <div className="mx-auto flex items-center gap-3">
+        {/* Secondary toggles: may shrink / scroll as a group before the
+            primary buttons do, and use a horizontal clip so switch labels
+            never get pushed into a second line. */}
+        <div
+          className="
+            mobile-safe-scroll-x
+            mx-auto flex min-w-0 flex-1 items-center justify-center gap-3
+            overflow-x-auto
+          "
+        >
           {clickSwitch}
           {loopSwitch}
         </div>

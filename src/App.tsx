@@ -1140,7 +1140,9 @@ function AppInner() {
               title={t("editor.perform_tip")}
             >
               <span className="sm:hidden">🎭</span>
-              <span className="hidden sm:inline">{t("editor.perform")}</span>
+              <span className="hidden whitespace-nowrap sm:inline">
+                {t("editor.perform")}
+              </span>
             </Button>
             <Button
               variant={expandedPreview ? "primary" : "secondary"}
@@ -1166,7 +1168,7 @@ function AppInner() {
               }
             >
               <span className="sm:hidden">{expandedPreview ? "⇉" : "⇆"}</span>
-              <span className="hidden sm:inline">
+              <span className="hidden whitespace-nowrap sm:inline">
                 {expandedPreview ? t("editor.compact") : t("editor.expand")}
               </span>
             </Button>
@@ -1178,7 +1180,7 @@ function AppInner() {
               }
             >
               <span className="sm:hidden">{showLabels ? "🏷" : "🏷︎"}</span>
-              <span className="hidden sm:inline">
+              <span className="hidden whitespace-nowrap sm:inline">
                 {showLabels
                   ? t("editor.hide_labels_short")
                   : t("editor.show_labels_short")}
