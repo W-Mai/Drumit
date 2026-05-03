@@ -1263,7 +1263,6 @@ function AppInner() {
           <div
             ref={setChartContainer}
             data-drumit-scope="preview"
-            data-notation-scope
             tabIndex={0}
             className="mobile-safe-scroll-x min-h-0 flex-1 overflow-auto bg-stone-100/40 p-2 outline-none focus:ring-2 focus:ring-amber-300/60 focus:ring-inset sm:p-4"
           >

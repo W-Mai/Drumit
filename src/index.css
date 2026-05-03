@@ -44,31 +44,7 @@
   /* ... */
 }
 
-/* Notation pinned-light palette: the drum chart / staff SVG is
-   designed around a warm light palette (ink-on-paper). Reverting it
-   per-theme makes staves unreadable, so we re-pin stone here. Applied
-   only to descendants of a [data-notation-scope] element whose own
-   themed background/text stays live — the pin is on the SVG, not the
-   scope wrapper. A single compound selector avoids lightningcss
-   merging it with the bare [data-notation-scope] and clobbering the
-   container. */
-[data-notation-scope] .notation-surface {
-  color-scheme: light;
-  --color-stone-50: #fafaf9;
-  --color-stone-100: #f5f5f4;
-  --color-stone-200: #e7e5e4;
-  --color-stone-300: #d6d3d1;
-  --color-stone-400: #a8a29e;
-  --color-stone-500: #78716c;
-  --color-stone-600: #57534e;
-  --color-stone-700: #44403c;
-  --color-stone-800: #292524;
-  --color-stone-900: #1c1917;
-  --color-stone-950: #0c0a09;
-  --color-white: #ffffff;
-  --color-black: #0c0a09;
-  --color-ink: #1c1917;
-}
+
 
 @theme {
   /* Typography */
@@ -126,6 +102,36 @@ body {
   overscroll-behavior-x: contain;
   touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Notation surface: the SVG chart is ink-on-paper by design — cymbal
+   heads, note stems, ledger lines, bar numbers are all drawn in a
+   stone-700 / stone-900 "ink" over a stone-50 "paper" fill. Flipping
+   those under a dark theme makes mid-grey glyphs (stone-400 /
+   stone-500 lane labels and ledger accents) vanish against the now-
+   dark page. Pin the stone palette to its canonical light values at
+   the SVG root so the chart always reads as paper — wrap it with
+   bg/ring/etc. that themes normally if you want dark *surround*, but
+   the page itself stays ink-on-paper.
+
+   A .class on the <svg> (not on the scope container) keeps
+   lightningcss from merging the selector down to the container and
+   clobbering the Preview panel's own theming. */
+.notation-surface {
+  color-scheme: light;
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+  --color-stone-950: #0c0a09;
+  --color-white: #ffffff;
+  --color-black: #0c0a09;
 }
 
 /* Modal / sheet backdrop. Needs to stay dim-on-light in every theme
