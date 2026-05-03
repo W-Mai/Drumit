@@ -1932,12 +1932,6 @@ function hitBgClass(hit: Hit): string {
     case "snare":
       return "bg-rose-700 text-rose-50 shadow-sm";
     case "kick":
-      // Sibling lanes (cymbals / toms / snare) use specific hue-number
-      // classes that don't flip under the theme override, so they stay
-      // "color block + light ink" in both modes. Mirror that for kick
-      // by forcing stone-950 (the stable near-black end of the ramp,
-      // unaffected by our dark override which swaps 50 ↔ 950 but not
-      // this specific tailwind class) and pin text-amber-100.
       return "bg-[#1c1917] text-amber-100 shadow-sm";
   }
 }

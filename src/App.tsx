@@ -200,9 +200,6 @@ function AppInner() {
   const serializedSource = useMemo(() => serializeScore(score), [score]);
   const currentSource = textDraft ?? serializedSource;
 
-  // Debounced workspace persistence. We track savedAt (timestamp of the
-  // most recent successful write) so the header can show a subtle
-  // "Saved · HH:mm" indicator without popping a toast for every keystroke.
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   useEffect(() => {
@@ -784,7 +781,6 @@ function AppInner() {
   }
 
   function handleDeleteDoc(id: string) {
-    // Snapshot for undo before mutating state.
     const snapshotIdx = documents.findIndex((d) => d.id === id);
     const snapshotDoc = documents[snapshotIdx];
     const snapshotActive = activeId;
@@ -824,7 +820,6 @@ function AppInner() {
       action: {
         label: t("toast.undo"),
         onClick: () => {
-          // Re-insert at original index and restore active selection.
           setDocuments((docs) => {
             if (docs.some((d) => d.id === snapshotDoc.id)) return docs;
             const clamped = Math.min(snapshotIdx, docs.length);
@@ -984,8 +979,7 @@ function AppInner() {
           >
             benign.host
           </a>
-          {/* Re-key on each save so the "just now" reset doesn't need
-              setState-in-effect; the component simply remounts. */}
+          {/* key forces a remount so "just now" state resets without setState-in-effect */}
           <SavedIndicator key={savedAt ?? 0} savedAt={savedAt} />
           <LocaleToggle />
           <ThemeToggle />

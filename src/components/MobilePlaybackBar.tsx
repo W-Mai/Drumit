@@ -11,13 +11,8 @@ interface Props {
   moreContent: ReactNode;
 }
 
-/**
- * Mobile variant of PlaybackBar. Renders a compact single-row transport
- * with the minimum set users reach for mid-play (Play/Stop/Click/Loop),
- * plus a "⋯" button that opens a bottom sheet with Engine, Tempo, MIDI
- * Port, status, and errors. The bar sits a few pixels off the screen
- * edge so iOS Safari doesn't intercept horizontal pans as a back-swipe.
- */
+// Bar sits off the screen edge so iOS Safari doesn't intercept
+// horizontal pans as a back-swipe gesture.
 export function MobilePlaybackBar({
   playButton,
   stopButton,

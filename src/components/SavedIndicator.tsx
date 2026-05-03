@@ -5,17 +5,6 @@ interface Props {
   savedAt: number | null;
 }
 
-/**
- * Small, unobtrusive "Saved just now / Saved at HH:mm" indicator.
- *
- * Parent re-keys this component on every savedAt change (see App.tsx)
- * so we can rely on useState's lazy initializer to reset, avoiding
- * React 19's `set-state-in-effect` lint on prop-driven state resets.
- *
- * A one-shot timer flips the label from the relative "just now" form
- * to an absolute HH:mm clock after 60 s; the component then stays
- * calm (no rolling tickers).
- */
 export function SavedIndicator({ savedAt }: Props) {
   const { t } = useI18n();
   const [showAbsolute, setShowAbsolute] = useState(false);

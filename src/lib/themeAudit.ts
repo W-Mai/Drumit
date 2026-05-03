@@ -1,20 +1,4 @@
-/**
- * Theme audit — a self-embedded diagnostic that walks the live DOM and
- * reports elements whose actual computed background vs text color has a
- * WCAG contrast ratio below a threshold under the current theme.
- *
- * Activation: append `?theme-audit` to the URL (or call
- * `runThemeAudit()` from the browser devtools). Produces a fixed
- * bottom-right panel listing offenders plus a button that copies the
- * full report to the clipboard.
- *
- * Why this exists: Tailwind class audits only tell us which classes
- * are *declared*, not how they resolve after all theme overrides,
- * parent inheritance, and cascade. Users hit real rendering bugs like
- * "bg-amber-100 text-stone-900" that read fine in light mode but hit
- * 2:1 contrast under dark. Catching those manually by eye scales
- * poorly; this tool makes it a single-step check.
- */
+// Live contrast checker. Append ?theme-audit or call window.__themeAudit().
 
 type Offender = {
   element: HTMLElement;
@@ -24,11 +8,10 @@ type Offender = {
   className: string;
 };
 
-const MIN_CONTRAST = 3; // WCAG AA for large text / UI chrome floor.
+const MIN_CONTRAST = 3;
 
-// fillStyle setter doesn't normalise oklch() across Chromium versions,
-// so we actually draw a pixel in the requested color and read it back
-// from the image buffer to get true sRGB.
+// Tailwind v4 exposes oklch() which fillStyle.setter won't normalise;
+// drawing a pixel and reading it back is the only portable way to sRGB.
 let colorCanvas: HTMLCanvasElement | null = null;
 function getColorCtx(): CanvasRenderingContext2D | null {
   if (typeof document === "undefined") return null;
@@ -67,7 +50,6 @@ function parseColor(c: string): [number, number, number, number] | null {
 }
 
 function luminance(r: number, g: number, b: number): number {
-  // sRGB to relative luminance, WCAG formula.
   const norm = [r, g, b].map((v) => {
     const s = v / 255;
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
@@ -87,8 +69,6 @@ function contrast(a: string, b: string): number | null {
 }
 
 function effectiveBg(el: HTMLElement): string {
-  // Walk up until we find a non-transparent background. "rgba(0, 0, 0, 0)"
-  // and "transparent" both count as pass-through.
   let cur: HTMLElement | null = el;
   while (cur) {
     const bg = getComputedStyle(cur).backgroundColor;
@@ -101,12 +81,10 @@ function effectiveBg(el: HTMLElement): string {
 
 export function runThemeAudit(): Offender[] {
   const offenders: Offender[] = [];
-  // Only scan elements that actually render text. Skip tiny icons.
   const candidates = document.querySelectorAll<HTMLElement>(
     "button, a, li, span, p, div, h1, h2, h3, h4, td, dt, dd, code, kbd",
   );
   for (const el of candidates) {
-    // Has non-empty direct text content?
     const directText = Array.from(el.childNodes)
       .filter((n) => n.nodeType === 3)
       .map((n) => (n.textContent ?? "").trim())
@@ -126,7 +104,6 @@ export function runThemeAudit(): Offender[] {
       offenders.push({ element: el, bg, fg, ratio, className: el.className });
     }
   }
-  // Sort worst first.
   offenders.sort((a, b) => a.ratio - b.ratio);
   return offenders;
 }
@@ -246,16 +223,9 @@ function renderPanel(offenders: Offender[]) {
   document.body.appendChild(panel);
 }
 
-/**
- * Auto-activate when the URL query contains `theme-audit`. Also
- * exposes `window.__themeAudit()` for manual runs (including re-runs
- * after toggling the theme).
- */
 export function maybeStartThemeAudit(): void {
   if (typeof window === "undefined") return;
   const run = () => renderPanel(runThemeAudit());
-  // Expose for devtools: window.__themeAudit() returns offenders
-  // & redraws panel.
   (window as unknown as { __themeAudit?: () => Offender[] }).__themeAudit =
     () => {
       const o = runThemeAudit();
@@ -263,7 +233,6 @@ export function maybeStartThemeAudit(): void {
       return o;
     };
   if (new URLSearchParams(location.search).has("theme-audit")) {
-    // Delay so React's first paint lands.
     setTimeout(run, 400);
   }
 }

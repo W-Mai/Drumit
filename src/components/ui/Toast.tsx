@@ -25,12 +25,6 @@ const TONE_DOT: Record<ToastTone, string> = {
   danger: "bg-red-500",
 };
 
-/**
- * Minimal toast surface. Renders a stack of transient notifications in
- * the bottom-right (bottom-center on <sm) with spring enter / exit.
- * Sits above the mobile PlaybackBar via a bottom offset so it doesn't
- * cover transport controls.
- */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastEntry[]>([]);
 

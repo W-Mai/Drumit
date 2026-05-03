@@ -7,9 +7,6 @@ import { useI18n } from "../i18n/useI18n";
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** Destructive — clear all saved documents and reseed with the
-   *  default sample. Supplied by App so the modal doesn't depend on
-   *  storage internals. If absent, the button hides. */
   onResetWorkspace?: () => void | Promise<void>;
 }
 
@@ -163,9 +160,6 @@ export function AboutModal({ open, onClose, onResetWorkspace }: Props) {
             </ul>
           </section>
 
-          {/* Danger zone: destructive actions live here so they stay
-              out of the main app chrome. Hidden when the host doesn't
-              wire a handler. */}
           {onResetWorkspace ? (
             <section>
               <SectionTitle>{t("about.section.danger")}</SectionTitle>
