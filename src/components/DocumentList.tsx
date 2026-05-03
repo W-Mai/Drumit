@@ -61,7 +61,7 @@ export function DocumentList({
   }
 
   return (
-    <aside className="flex h-full min-h-0 flex-1 flex-col rounded-2xl border border-stone-200 bg-white">
+    <aside className="panel-hover-lift flex h-full min-h-0 flex-1 flex-col rounded-2xl border border-stone-200 bg-white">
       <header className="flex flex-col gap-1.5 border-b border-stone-200 px-3 py-2">
         <div className="flex items-center justify-between">
           <h3 className="text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">

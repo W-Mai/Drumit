@@ -1031,7 +1031,7 @@ function AppInner() {
         {/* Sidebar is desktop-only. On <lg, it's replaced by a drawer
             opened from the header hamburger — see S3. */}
         <motion.div
-          className="relative hidden flex-none flex-col overflow-hidden lg:flex"
+          className="relative hidden flex-none flex-col overflow-x-hidden lg:flex"
           initial={false}
           animate={{ width: sidebarCollapsed ? 36 : 200 }}
           transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}

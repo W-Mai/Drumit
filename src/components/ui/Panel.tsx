@@ -10,7 +10,7 @@ export function Panel({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5",
+        "panel-hover-lift overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl shadow-stone-900/5",
         className,
       )}
     >
