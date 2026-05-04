@@ -125,6 +125,7 @@ const zh: Dict = {
   "playback.more": "更多",
   "playback.more_options": "更多播放选项",
   "playback.close": "关闭",
+  "playback.beat_strip_aria": "节拍指示",
 
   // PlaybackState
   "playstate.idle": "空闲",
@@ -434,6 +435,7 @@ const en: Dict = {
   "playback.more": "More",
   "playback.more_options": "More playback options",
   "playback.close": "Close",
+  "playback.beat_strip_aria": "Beat indicator",
 
   "playstate.idle": "idle",
   "playstate.playing": "playing",

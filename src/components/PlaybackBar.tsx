@@ -3,7 +3,6 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import type { Score } from "../notation/types";
@@ -16,7 +15,6 @@ import { SynthEngine } from "../playback/synthEngine";
 import { MidiEngine } from "../playback/midiEngine";
 import { SampleEngine } from "../playback/sampleEngine";
 import { useHotkeys } from "../lib/useHotkeys";
-import { cn } from "../lib/utils";
 import {
   Badge,
   Button,
@@ -27,6 +25,7 @@ import {
   Switch,
 } from "./ui";
 import { MobilePlaybackBar } from "./MobilePlaybackBar";
+import { BeatStrip } from "./BeatStrip";
 import { useI18n } from "../i18n/useI18n";
 
 export type EngineKind = "synth" | "sample" | "midi";
@@ -79,11 +78,10 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
   const [error, setError] = useState<string | null>(null);
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [playState, setPlayState] = useState<PlaybackState>("idle");
-  const [beatTick, setBeatTick] = useState<{ key: number; downbeat: boolean }>({
-    key: 0,
-    downbeat: false,
-  });
-  const lastBeatRef = useRef<number>(-1);
+  const [beatCursor, setBeatCursor] = useState<{
+    beatIndex: number;
+    beatProgress: number;
+  }>({ beatIndex: -1, beatProgress: 0 });
 
   const midiAvailable =
     typeof navigator !== "undefined" && !!navigator.requestMIDIAccess;
@@ -175,13 +173,11 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       onStateChange?.(s);
     });
     const offCursor = controller.onCursor((p) => {
-      if (lastBeatRef.current !== p.beatIndex) {
-        lastBeatRef.current = p.beatIndex;
-        setBeatTick((prev) => ({
-          key: prev.key + 1,
-          downbeat: p.beatIndex === 0,
-        }));
-      }
+      // Progress 0..1 within the current beat, for the beat strip.
+      const bpm = tempoOverride || score.tempo?.bpm || 100;
+      const beatSec = 60 / bpm;
+      const frac = (p.time / beatSec) % 1;
+      setBeatCursor({ beatIndex: p.beatIndex, beatProgress: frac });
       onCursor?.(p);
     });
     const offEnd = controller.onEnd(() => onStop?.());
@@ -190,7 +186,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       offCursor();
       offEnd();
     };
-  }, [controller, onCursor, onStop, onStateChange]);
+  }, [controller, onCursor, onStop, onStateChange, score, tempoOverride]);
 
   // Push external option changes into the controller (no restart).
   useEffect(() => {
@@ -309,22 +305,17 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
     <Switch
       checked={metronome}
       onChange={setMetronome}
-      label={
-        <span className="flex items-center gap-1.5">
-          {t("playback.click")}
-          <span
-            key={beatTick.key}
-            className={cn(
-              "inline-block size-1.5 rounded-full",
-              metronome && playState === "playing"
-                ? beatTick.downbeat
-                  ? "bg-emerald-500 motion-pulse-soft"
-                  : "bg-emerald-300/70 motion-pulse-soft"
-                : "bg-stone-300",
-            )}
-          />
-        </span>
-      }
+      label={t("playback.click")}
+    />
+  );
+  const beatStrip = (
+    <BeatStrip
+      beats={score.meter.beats}
+      beatIndex={beatCursor.beatIndex}
+      beatProgress={beatCursor.beatProgress}
+      active={metronome}
+      playing={playState === "playing"}
+      label={t("playback.beat_strip_aria")}
     />
   );
   const loopSwitch = (
@@ -436,8 +427,9 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
         {sampleStatus}
         {portField}
         {tempoField}
-        {clickSwitch}
         {loopSwitch}
+        {clickSwitch}
+        <div className="w-36 shrink-0">{beatStrip}</div>
         <span className="ml-auto text-[10px] text-stone-400 tabular-nums">
           {t(`playstate.${playState}`)}
         </span>
@@ -456,6 +448,7 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
         stopButton={stopButton}
         clickSwitch={clickSwitch}
         loopSwitch={loopSwitch}
+        beatStrip={beatStrip}
         moreContent={
           <div className="flex flex-col gap-3 text-sm">
             <div className="flex flex-wrap items-center gap-3">

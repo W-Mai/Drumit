@@ -8,6 +8,7 @@ interface Props {
   stopButton: ReactNode;
   clickSwitch: ReactNode;
   loopSwitch: ReactNode;
+  beatStrip: ReactNode;
   moreContent: ReactNode;
 }
 
@@ -18,6 +19,7 @@ export function MobilePlaybackBar({
   stopButton,
   clickSwitch,
   loopSwitch,
+  beatStrip,
   moreContent,
 }: Props) {
   const { t } = useI18n();
@@ -27,40 +29,38 @@ export function MobilePlaybackBar({
     <>
       <div
         className="
-          mobile-safe-scroll-x
           fixed bottom-0 z-30
           left-[max(0.5rem,env(safe-area-inset-left))]
           right-[max(0.5rem,env(safe-area-inset-right))]
-          flex flex-nowrap items-center gap-2 px-2 py-2 text-[11px]
+          flex flex-col
           rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-lg
           pb-[max(0.5rem,env(safe-area-inset-bottom))]
           lg:hidden
         "
       >
-        {/* Primary transport: keeps its intrinsic width, never shrinks. */}
-        <div className="flex flex-none items-center gap-1">
-          {playButton}
-          {stopButton}
+        {/* Top row: metronome + beat strip + loop — all rhythm cues. */}
+        <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-[11px]">
+          <div className="flex-none">{clickSwitch}</div>
+          <div className="min-w-0 flex-1">{beatStrip}</div>
+          <div className="flex-none">{loopSwitch}</div>
         </div>
-        <div
-          className="
-            mobile-safe-scroll-x
-            mx-auto flex min-w-0 flex-1 items-center justify-center gap-3
-            overflow-x-auto
-          "
-        >
-          {clickSwitch}
-          {loopSwitch}
+        {/* Bottom row: transport + overflow menu. */}
+        <div className="mobile-safe-scroll-x flex items-center gap-2 px-2 pt-1 pb-1 text-[11px]">
+          <div className="flex flex-none items-center gap-1">
+            {playButton}
+            {stopButton}
+          </div>
+          <div className="min-w-0 flex-1" />
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            aria-label={t("playback.more_options")}
+            title={t("playback.more")}
+            className="motion-press flex size-8 flex-none items-center justify-center rounded-full border border-stone-200 text-stone-700 hover:bg-stone-50 hover:text-stone-900"
+          >
+            <span className="text-base leading-none">⋯</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setSheetOpen(true)}
-          aria-label={t("playback.more_options")}
-          title={t("playback.more")}
-          className="motion-press flex size-8 flex-none items-center justify-center rounded-full border border-stone-200 text-stone-700 hover:bg-stone-50 hover:text-stone-900"
-        >
-          <span className="text-base leading-none">⋯</span>
-        </button>
       </div>
 
       {typeof document !== "undefined"
