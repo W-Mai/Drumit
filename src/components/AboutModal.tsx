@@ -52,7 +52,7 @@ export function AboutModal({ open, onClose, onResetWorkspace }: Props) {
           flex w-full flex-col overflow-hidden bg-white shadow-xl
           max-h-[85dvh] rounded-t-2xl
           sm:max-h-[85vh] sm:max-w-xl sm:rounded-2xl
-          pb-[min(env(safe-area-inset-bottom),40px)]
+          pb-[env(safe-area-inset-bottom)]
         "
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, y: 24, scale: 0.96 }}

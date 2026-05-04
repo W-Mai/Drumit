@@ -134,7 +134,7 @@ export function FloatingMenu({
             ref={menuRef}
             onClick={(e) => e.stopPropagation()}
             className={
-              "w-full max-h-[70dvh] overflow-auto rounded-t-2xl border-t border-stone-200 bg-white p-3 pb-[max(0.75rem,min(env(safe-area-inset-bottom),40px))] shadow-2xl " +
+              "w-full max-h-[70dvh] overflow-auto rounded-t-2xl border-t border-stone-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl " +
               (className ?? "")
             }
             role="dialog"

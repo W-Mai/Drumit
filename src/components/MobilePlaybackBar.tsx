@@ -33,6 +33,7 @@ export function MobilePlaybackBar({
           right-[max(0.5rem,env(safe-area-inset-right))]
           flex flex-nowrap items-center gap-2 px-2 py-2 text-[11px]
           rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-lg
+          pb-[max(0.5rem,env(safe-area-inset-bottom))]
           lg:hidden
         "
       >
@@ -85,7 +86,7 @@ export function MobilePlaybackBar({
                     className="
                       relative w-full rounded-t-2xl border-t border-stone-200 bg-white
                       px-4 pt-4
-                      pb-[max(1rem,min(env(safe-area-inset-bottom),40px))]
+                      pb-[max(1rem,env(safe-area-inset-bottom))]
                       shadow-2xl
                     "
                     initial={{ y: "100%" }}
