@@ -398,11 +398,14 @@ function subscribeViewport(onChange: () => void): () => void {
 
 function getShouldForceRotate(): boolean {
   if (typeof window === "undefined") return false;
+  // Rotate any time the viewport is taller than wide and narrow enough
+  // that a single row of bars would be unreadable. The old check for
+  // `pointer: coarse` missed iOS PWA standalone mode, which reports
+  // `pointer: fine` via WKWebView — PerformView then rendered portrait
+  // and overlapped the app chrome underneath.
   const isPortrait = window.innerHeight > window.innerWidth;
-  const isCoarse =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(pointer: coarse)").matches;
-  return isPortrait && isCoarse;
+  const isNarrow = window.innerWidth < 900;
+  return isPortrait && isNarrow;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
