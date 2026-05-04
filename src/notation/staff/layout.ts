@@ -119,6 +119,10 @@ interface RawNote {
 }
 
 function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
+  // Notes anchored at the center of each beat slot. That keeps the
+  // downbeat equidistant from the opening barline as the last
+  // sub-beat note is from the closing one — symmetric padding without
+  // special-casing first/last.
   const beatWidth = width / beatsPerBar;
   const beats = bar.beats.length > 0 ? bar.beats : fillEmptyBeats(beatsPerBar);
 
@@ -289,7 +293,10 @@ function collectVoice(
       }
       const noteDiv = r.hitDivisions.reduce((a, b) => Math.min(a, b), Infinity);
       notes.push({
-        x: beatStartX + (r.tick / finest) * beatWidth,
+        // Center each sub-tick inside its own (beatWidth / finest) slot
+        // so the first tick of bar 1 and the last tick of bar N sit
+        // symmetrically inside their respective barlines.
+        x: beatStartX + ((r.tick + 0.5) / finest) * beatWidth,
         duration: durationFor(noteDiv),
         glyphs,
         articulations: [...artSet],
