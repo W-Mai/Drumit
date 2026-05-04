@@ -178,29 +178,38 @@ export function PerformView({
       : `Bar ${focusedChip.sourceIndex + 1}`
     : `Bar ${focusedExpandedBar + 1}`;
 
-  const rotatedStyle: React.CSSProperties = forceRotate
-    ? {
-        transform: "rotate(90deg) translate(0, -100vw)",
-        transformOrigin: "top left",
-        width: "100vh",
-        height: "100vw",
-      }
-    : {};
-
   return (
     <motion.div
       ref={rootRef}
       className="fixed inset-0 z-[9999] flex flex-col bg-stone-950 text-stone-100"
-      style={{
-        paddingTop: "env(safe-area-inset-top)",
-        paddingLeft: "env(safe-area-inset-left)",
-        paddingRight: "env(safe-area-inset-right)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        ...rotatedStyle,
-      }}
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.96 }}
+      style={
+        forceRotate
+          ? {
+              // Motion owns `transform` on this element for the
+              // mount/exit scale animation, so it can't also carry
+              // the 90° rotate — those two fight and motion wins,
+              // leaving iOS PWA unrotated. When forcing rotation we
+              // drop the scale animation (rotate is already a bold
+              // enough entrance) and bake rotate + translate in here.
+              transform: "rotate(90deg) translate(0, -100vw)",
+              transformOrigin: "top left",
+              width: "100vh",
+              height: "100vw",
+              paddingTop: "env(safe-area-inset-top)",
+              paddingLeft: "env(safe-area-inset-left)",
+              paddingRight: "env(safe-area-inset-right)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }
+          : {
+              paddingTop: "env(safe-area-inset-top)",
+              paddingLeft: "env(safe-area-inset-left)",
+              paddingRight: "env(safe-area-inset-right)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }
+      }
+      initial={forceRotate ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+      animate={forceRotate ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+      exit={forceRotate ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
     >
       {/* Top bar */}
