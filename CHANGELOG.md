@@ -11,6 +11,38 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.04.1]
+
+### Added
+
+- **Visual picker for bar navigation markers** (Segno, Coda, To Coda,
+  Fine, D.C. / D.C. al Fine / D.C. al Coda, D.S. / D.S. al Fine /
+  D.S. al Coda). Previously these required hand-editing the source
+  pane; now each bar header carries a Navigation dropdown right next
+  to the ending / repeat chips. New `setBarNavigation` editor op.
+- **Bravura SMuFL glyphs** inlined as SVG paths: Segno (𝄋), Coda
+  (𝄌), and single-measure repeat (𝄎). Every device renders them
+  now — iOS/Android system fonts don't ship these codepoints. Glyph
+  font-baselines align with sibling `<text>` baselines.
+
+### Changed
+
+- Navigation label Y now dynamically drops closer to the bar when no
+  ending bracket is stacked above it; Staff view also respects the
+  tallest upper-voice stem tip so the label clears cymbal stems.
+- Dark theme: selection / playhead / hover tints use higher alphas
+  (`/45 → /60`, `/50 → /55`) so highlights stay visible against
+  the inverted chart background.
+- Drumit panel polish: bar index numbers shift off the top-left
+  corner with `tabular-nums`; repeat dots grow from r=2 to r=2.5
+  and spread; ending bracket numbers, ×N multipliers, and nav
+  labels bump 10px → 11px.
+
+### Fixed
+
+- Staff `SYSTEM_VERTICAL_PAD` widened so nav/ending labels in Row N
+  don't fall into Row N-1's down-stem flags.
+
 ## [2026.05.03.5]
 
 ### Added
