@@ -179,12 +179,17 @@ export function PerformView({
     : `Bar ${focusedExpandedBar + 1}`;
 
   return (
-    <motion.div
+    <div
       ref={rootRef}
-      className="fixed inset-0 z-[9999] flex flex-col bg-stone-950 text-stone-100"
+      className="fixed inset-0 z-[9999] bg-stone-950"
       style={
         forceRotate
           ? {
+              // Static wrapper owns the rotate transform exclusively so
+              // motion/react can't stomp on it from <motion.div>'s own
+              // transform-for-animation. The padding lives here too so
+              // it lands before rotate rather than fighting for the
+              // transform slot.
               transform: "rotate(90deg) translate(0, -100vw)",
               transformOrigin: "top left",
               width: "100vh",
@@ -205,6 +210,9 @@ export function PerformView({
               paddingBottom: "env(safe-area-inset-bottom)",
             }
       }
+    >
+    <motion.div
+      className="flex h-full w-full flex-col text-stone-100"
       initial={forceRotate ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
       animate={forceRotate ? { opacity: 1 } : { opacity: 1, scale: 1 }}
       exit={forceRotate ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
@@ -291,10 +299,11 @@ export function PerformView({
             <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-b bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-stone-950">
               ▾
              </div>
-          </div>
+           </div>
         ) : null}
       </div>
     </motion.div>
+    </div>
   );
 }
 
