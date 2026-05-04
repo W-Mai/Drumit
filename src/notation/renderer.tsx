@@ -558,16 +558,29 @@ function BarView({
         </>
       ) : null}
 
-      {/* Navigation marker (Segno / Coda / To Coda / Fine / D.C. / D.S.) */}
+      {/* Navigation marker (Segno / Coda / To Coda / Fine / D.C. / D.S.).
+          Segno / Coda are pictographic SMuFL glyphs that ride small in
+          their em-box — render them at roughly 2× the label text so
+          they match the height of neighboring Latin-text markers. */}
       {bar.navigation ? (
-        <text
-          x={x + width / 2}
-          y={barlineTop - 20}
-          textAnchor="middle"
-          className="fill-stone-700 text-[11px] font-bold italic tracking-wide"
-        >
-          {navigationLabel(bar.navigation)}
-        </text>
+        (() => {
+          const isGlyph =
+            bar.navigation.kind === "segno" || bar.navigation.kind === "coda";
+          return (
+            <text
+              x={x + width / 2}
+              y={barlineTop - (isGlyph ? 14 : 20)}
+              textAnchor="middle"
+              className={
+                isGlyph
+                  ? "fill-stone-700 text-[22px] leading-none"
+                  : "fill-stone-700 text-[11px] font-bold italic tracking-wide"
+              }
+            >
+              {navigationLabel(bar.navigation)}
+            </text>
+          );
+        })()
       ) : null}
 
       {bar.repeatPrevious ? (

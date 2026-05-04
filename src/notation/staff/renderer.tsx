@@ -322,7 +322,18 @@ function BarShell({
           className="fill-stone-900 font-bold italic"
           style={{ fontSize: 12 }}
         >
-          {bar.navigationLabel}
+          {splitGlyphLabel(bar.navigationLabel).map((part, i) =>
+            part.kind === "glyph" ? (
+              <tspan
+                key={i}
+                style={{ fontSize: 22, fontStyle: "normal" }}
+              >
+                {part.text}
+              </tspan>
+            ) : (
+              <tspan key={i}>{part.text}</tspan>
+            ),
+          )}
         </text>
       ) : null}
       {bar.endBarline === "repeat-end" ? (
@@ -440,6 +451,28 @@ function VoicePaint({
       ))}
     </g>
   );
+}
+
+// Split navigation labels around SMuFL glyphs (𝄋 Segno, 𝄌 Coda) so
+// the renderer can upscale only the glyph chars, which otherwise sit
+// far smaller than the surrounding Latin text at the same font-size.
+function splitGlyphLabel(label: string): Array<{ kind: "text" | "glyph"; text: string }> {
+  const parts: Array<{ kind: "text" | "glyph"; text: string }> = [];
+  let buf = "";
+  for (const ch of label) {
+    const isGlyph = ch === "𝄋" || ch === "𝄌";
+    if (isGlyph) {
+      if (buf) {
+        parts.push({ kind: "text", text: buf });
+        buf = "";
+      }
+      parts.push({ kind: "glyph", text: ch });
+    } else {
+      buf += ch;
+    }
+  }
+  if (buf) parts.push({ kind: "text", text: buf });
+  return parts;
 }
 
 // Axially-symmetric noteheads (X, slash, triangle, circle-x) look
