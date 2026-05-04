@@ -10,6 +10,13 @@ import type { PlaybackEngine } from "./engine";
 
 export type PlaybackState = "idle" | "playing" | "paused";
 
+export interface CountInTick {
+  /** 0-based beat index within the count-in (0..countInBeats-1). */
+  beat: number;
+  /** Total count-in beats (normally equals meter.beats). */
+  total: number;
+}
+
 export interface CursorPos {
   /** Source-bar index (flat, across all sections). */
   barIndex: number;
@@ -101,6 +108,8 @@ export class PlaybackController {
   private stateListeners = new Set<Listener<PlaybackState>>();
   private cursorListeners = new Set<Listener<CursorPos>>();
   private endListeners = new Set<Listener<void>>();
+  private countInListeners = new Set<Listener<CountInTick>>();
+  private countInTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: PlaybackControllerOptions) {
     this.engine = options.engine;
@@ -130,6 +139,12 @@ export class PlaybackController {
     this.endListeners.add(fn);
     return () => {
       this.endListeners.delete(fn);
+    };
+  }
+  onCountIn(fn: Listener<CountInTick>): () => void {
+    this.countInListeners.add(fn);
+    return () => {
+      this.countInListeners.delete(fn);
     };
   }
   getState(): PlaybackState {
@@ -239,17 +254,77 @@ export class PlaybackController {
     if (this.state === "playing") return;
     await this.engine.ensureReady();
 
-    const resumeFrom =
-      this.state === "paused"
-        ? this.pauseTime
-        : this.pendingStartTime !== null
-          ? this.pendingStartTime
-          : this.loop
-            ? this.computeBarTime(this.loop.startBar)
-            : this.computeBarTime(this.startBar);
+    const resumingFromPause = this.state === "paused";
+    const resumeFrom = resumingFromPause
+      ? this.pauseTime
+      : this.pendingStartTime !== null
+        ? this.pendingStartTime
+        : this.loop
+          ? this.computeBarTime(this.loop.startBar)
+          : this.computeBarTime(this.startBar);
     this.pendingStartTime = null;
 
+    // Count-in: when metronome is on and we're starting fresh (not
+    // resuming from pause), tick four beats — one bar's worth — of
+    // click before the score kicks in. Skipped on resume so a pause
+    // doesn't re-prime every time.
+    if (this.metronome && !resumingFromPause) {
+      this.runCountIn(() => this.beginPlayback(resumeFrom));
+      return;
+    }
+
     this.beginPlayback(resumeFrom);
+  }
+
+  private runCountIn(onDone: () => void): void {
+    const bpm =
+      this.tempoOverride && this.tempoOverride > 0
+        ? this.tempoOverride
+        : this.score.tempo?.bpm || 100;
+    const secondsPerBeat = 60 / bpm;
+    const total = Math.max(1, this.score.meter.beats);
+
+    // Schedule the click sounds relative to now (engine.scheduleEvent's
+    // second argument is "delay from now"). Reuse metronomeEvents'
+    // timbre choice so the count-in matches the in-song clicks.
+    for (let i = 0; i < total; i += 1) {
+      const isDownbeat = i === 0;
+      this.engine.scheduleEvent(
+        {
+          time: 0,
+          duration: 0.02,
+          velocity: isDownbeat ? 110 : 80,
+          hit: {
+            instrument: isDownbeat ? "rideBell" : "hihatFoot",
+            head: "x",
+            articulations: [],
+          },
+          barIndex: 0,
+          beatIndex: i,
+        },
+        i * secondsPerBeat,
+      );
+    }
+
+    // Drive the UI tick for each count-in beat so the BeatStrip can
+    // animate during the lead-in too.
+    this.setState("playing");
+    const emit = (beat: number) => {
+      this.countInListeners.forEach((fn) => fn({ beat, total }));
+    };
+    emit(0);
+    let tickIndex = 1;
+    const tickOne = () => {
+      if (tickIndex >= total) {
+        this.countInTimer = null;
+        onDone();
+        return;
+      }
+      emit(tickIndex);
+      tickIndex += 1;
+      this.countInTimer = globalThis.setTimeout(tickOne, secondsPerBeat * 1000);
+    };
+    this.countInTimer = globalThis.setTimeout(tickOne, secondsPerBeat * 1000);
   }
 
   /** Synchronous, no-ensureReady playback starter used by setters + play(). */
@@ -273,6 +348,13 @@ export class PlaybackController {
 
   pause(): void {
     if (this.state !== "playing") return;
+    // If we're still in the count-in window (no ticker yet), abort the
+    // count-in and fall back to idle. Resuming a half-finished count-in
+    // is more confusing than restarting it.
+    if (this.countInTimer !== null) {
+      this.stop();
+      return;
+    }
     const elapsed = this.currentTime();
     this.teardownScheduling();
     this.pauseTime = elapsed;
@@ -280,6 +362,10 @@ export class PlaybackController {
   }
 
   stop(): void {
+    if (this.countInTimer !== null) {
+      globalThis.clearTimeout(this.countInTimer);
+      this.countInTimer = null;
+    }
     this.teardownScheduling();
     this.pauseTime = 0;
     this.pendingStartTime = null;
@@ -298,6 +384,7 @@ export class PlaybackController {
     this.stateListeners.clear();
     this.cursorListeners.clear();
     this.endListeners.clear();
+    this.countInListeners.clear();
   }
 
   /**

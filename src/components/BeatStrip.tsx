@@ -7,6 +7,10 @@ interface Props {
   beatProgress: number;
   active: boolean;
   playing: boolean;
+  /** Count-in phase: strip ticks through its lead-in beats, but the
+   *  rest of the UI stays idle. Visually tints each pill a different
+   *  color so the user knows they're in pickup territory, not real time. */
+  countIn?: boolean;
   label?: string;
   className?: string;
 }
@@ -17,6 +21,7 @@ export function BeatStrip({
   beatProgress,
   active,
   playing,
+  countIn,
   label,
   className,
 }: Props) {
@@ -53,7 +58,10 @@ export function BeatStrip({
             )}
           >
             <div
-              className="absolute inset-0 bg-amber-500 transition-opacity duration-75 ease-out"
+              className={cn(
+                "absolute inset-0 transition-opacity duration-75 ease-out",
+                countIn ? "bg-sky-500" : "bg-amber-500",
+              )}
               style={{ opacity }}
             />
           </div>

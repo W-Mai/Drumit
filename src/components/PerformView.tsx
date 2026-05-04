@@ -21,6 +21,7 @@ import {
 } from "../notation/expand";
 import { computeExpandedBarStartTime } from "../notation/scheduler";
 import { useI18n } from "../i18n/useI18n";
+import { BeatStrip } from "./BeatStrip";
 
 type ViewMode = "drumit" | "staff";
 
@@ -42,8 +43,15 @@ export interface PerformViewProps {
   viewMode: ViewMode;
   engineKind: EngineKind;
   isPlaying: boolean;
+  metronome: boolean;
+  beatStripState: {
+    beatIndex: number;
+    beatProgress: number;
+    countIn: { beat: number; total: number } | null;
+  };
   onSeekTime(seconds: number): void;
   onTogglePlay(): void;
+  onToggleMetronome(): void;
   onExit(): void;
 }
 
@@ -71,8 +79,11 @@ export function PerformView({
   viewMode: _viewMode,
   engineKind,
   isPlaying,
+  metronome,
+  beatStripState,
   onSeekTime,
   onTogglePlay,
+  onToggleMetronome,
   onExit,
 }: PerformViewProps) {
   const { t } = useI18n();
@@ -229,9 +240,47 @@ export function PerformView({
         >
           ✕
         </button>
-        <div className="flex-1 text-center text-sm tabular-nums text-stone-300">
-          {readout}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex-none text-sm tabular-nums text-stone-300">
+            {readout}
+          </div>
+          <div className="min-w-0 flex-1">
+            <BeatStrip
+              beats={
+                beatStripState.countIn
+                  ? beatStripState.countIn.total
+                  : score.meter.beats
+              }
+              beatIndex={
+                beatStripState.countIn
+                  ? beatStripState.countIn.beat
+                  : beatStripState.beatIndex
+              }
+              beatProgress={
+                beatStripState.countIn ? 0 : beatStripState.beatProgress
+              }
+              active={metronome}
+              playing={isPlaying}
+              countIn={!!beatStripState.countIn}
+              label={t("playback.beat_strip_aria")}
+            />
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={onToggleMetronome}
+          className={
+            "motion-press grid h-10 w-10 place-items-center rounded-full text-sm font-bold transition-colors " +
+            (metronome
+              ? "bg-amber-400 text-stone-950 hover:bg-amber-300"
+              : "bg-stone-800 text-stone-300 hover:bg-stone-700")
+          }
+          aria-label={t("playback.click")}
+          title={t("playback.click")}
+          aria-pressed={metronome}
+        >
+          ♩
+        </button>
         <button
           type="button"
           onClick={onTogglePlay}

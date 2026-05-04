@@ -229,6 +229,12 @@ function AppInner() {
     expandedBarIndex: number;
     time: number;
   } | null>(null);
+  const [metronome, setMetronomeMirror] = useState(false);
+  const [beatStripState, setBeatStripState] = useState<{
+    beatIndex: number;
+    beatProgress: number;
+    countIn: { beat: number; total: number } | null;
+  }>({ beatIndex: -1, beatProgress: 0, countIn: null });
   const [engineKind, setEngineKind] = useState<EngineKind>("synth");
   const [expandedPreview, setExpandedPreview] = useState(false);
   // Selection inside the expanded (linearised) view. Kept separate from
@@ -1112,6 +1118,8 @@ function AppInner() {
           onStop={() => setPlayCursor(null)}
           onEngineChange={setEngineKind}
           onStateChange={setPlayState}
+          onMetronomeChange={setMetronomeMirror}
+          onBeatStripChange={setBeatStripState}
         />
 
         <Panel className="flex min-h-0 flex-[55_55_0%] flex-col">
@@ -1537,8 +1545,13 @@ function AppInner() {
             viewMode={viewMode}
             engineKind={engineKind}
             isPlaying={playState === "playing"}
+            metronome={metronome}
+            beatStripState={beatStripState}
             onSeekTime={(s) => playbackRef.current?.seekToTime(s)}
             onTogglePlay={() => playbackRef.current?.togglePlay()}
+            onToggleMetronome={() =>
+              playbackRef.current?.toggleMetronome()
+            }
             onExit={() => setPerformMode(false)}
           />
         ) : null}

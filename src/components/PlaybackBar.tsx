@@ -42,10 +42,18 @@ export interface PlaybackBarHandle {
   seekToBar(barIndex: number): void;
   seekToTime(seconds: number): void;
   togglePlay(): void;
+  toggleMetronome(): void;
+  getMetronome(): boolean;
 }
 
 interface Props {
   score: Score;
+  onMetronomeChange?: (on: boolean) => void;
+  onBeatStripChange?: (state: {
+    beatIndex: number;
+    beatProgress: number;
+    countIn: { beat: number; total: number } | null;
+  }) => void;
   /**
    * Source-bar index to treat as the loop start (and the initial
    * play-from bar on first mount). Changes to this prop while the
@@ -66,7 +74,16 @@ interface Props {
 }
 
 export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function PlaybackBar(
-  { score, startBar, onCursor, onStop, onEngineChange, onStateChange },
+  {
+    score,
+    startBar,
+    onCursor,
+    onStop,
+    onEngineChange,
+    onStateChange,
+    onMetronomeChange,
+    onBeatStripChange,
+  },
   ref,
 ) {
   const { t } = useI18n();
@@ -82,6 +99,21 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
     beatIndex: number;
     beatProgress: number;
   }>({ beatIndex: -1, beatProgress: 0 });
+  const [countIn, setCountIn] = useState<{ beat: number; total: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    onMetronomeChange?.(metronome);
+  }, [metronome, onMetronomeChange]);
+
+  useEffect(() => {
+    onBeatStripChange?.({
+      beatIndex: beatCursor.beatIndex,
+      beatProgress: beatCursor.beatProgress,
+      countIn,
+    });
+  }, [beatCursor, countIn, onBeatStripChange]);
 
   const midiAvailable =
     typeof navigator !== "undefined" && !!navigator.requestMIDIAccess;
@@ -170,10 +202,14 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
   useEffect(() => {
     const offState = controller.onStateChange((s) => {
       setPlayState(s);
+      if (s !== "playing") setCountIn(null);
       onStateChange?.(s);
     });
     const offCursor = controller.onCursor((p) => {
-      // Progress 0..1 within the current beat, for the beat strip.
+      // First cursor tick after count-in means the real score is
+      // rolling; drop the count-in overlay so the beat strip switches
+      // to real beat indices.
+      setCountIn(null);
       const bpm = tempoOverride || score.tempo?.bpm || 100;
       const beatSec = 60 / bpm;
       const frac = (p.time / beatSec) % 1;
@@ -181,10 +217,12 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       onCursor?.(p);
     });
     const offEnd = controller.onEnd(() => onStop?.());
+    const offCountIn = controller.onCountIn((t) => setCountIn(t));
     return () => {
       offState();
       offCursor();
       offEnd();
+      offCountIn();
     };
   }, [controller, onCursor, onStop, onStateChange, score, tempoOverride]);
 
@@ -219,8 +257,10 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
       seekToBar: (barIndex: number) => controller.setStartBar(barIndex),
       seekToTime: (seconds: number) => controller.setStartTime(seconds),
       togglePlay: () => controller.togglePlay(),
+      toggleMetronome: () => setMetronome((v) => !v),
+      getMetronome: () => metronome,
     }),
-    [controller],
+    [controller, metronome],
   );
 
   // Final cleanup on unmount.
@@ -310,11 +350,12 @@ export const PlaybackBar = forwardRef<PlaybackBarHandle, Props>(function Playbac
   );
   const beatStrip = (
     <BeatStrip
-      beats={score.meter.beats}
-      beatIndex={beatCursor.beatIndex}
-      beatProgress={beatCursor.beatProgress}
+      beats={countIn ? countIn.total : score.meter.beats}
+      beatIndex={countIn ? countIn.beat : beatCursor.beatIndex}
+      beatProgress={countIn ? 0 : beatCursor.beatProgress}
       active={metronome}
       playing={playState === "playing"}
+      countIn={!!countIn}
       label={t("playback.beat_strip_aria")}
     />
   );

@@ -75,6 +75,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -95,6 +98,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -121,6 +127,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={onSeekTime}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -145,6 +154,9 @@ describe("PerformView", () => {
           viewMode="drumit"
           engineKind="synth"
           isPlaying={false}
+          metronome={false}
+          beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+          onToggleMetronome={() => {}}
           onSeekTime={onSeekTime}
           onTogglePlay={() => {}}
           onExit={() => {}}
@@ -179,6 +191,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={onExit}
@@ -200,6 +215,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={onTogglePlay}
         onExit={() => {}}
@@ -223,6 +241,9 @@ describe("PerformView", () => {
           viewMode="drumit"
           engineKind="synth"
           isPlaying={false}
+          metronome={false}
+          beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+          onToggleMetronome={() => {}}
           onSeekTime={onSeekTime}
           onTogglePlay={() => {}}
           onExit={() => {}}
@@ -253,6 +274,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -278,6 +302,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -300,6 +327,9 @@ describe("PerformView", () => {
           viewMode="drumit"
           engineKind="synth"
           isPlaying={false}
+          metronome={false}
+          beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+          onToggleMetronome={() => {}}
           onSeekTime={() => {}}
           onTogglePlay={() => {}}
           onExit={() => {}}
@@ -334,6 +364,9 @@ describe("PerformView", () => {
           viewMode="drumit"
           engineKind="synth"
           isPlaying={false}
+          metronome={false}
+          beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+          onToggleMetronome={() => {}}
           onSeekTime={() => {}}
           onTogglePlay={() => {}}
           onExit={() => {}}
@@ -366,6 +399,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -390,6 +426,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -417,6 +456,9 @@ describe("PerformView", () => {
           viewMode="drumit"
           engineKind="synth"
           isPlaying={false}
+          metronome={false}
+          beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+          onToggleMetronome={() => {}}
           onSeekTime={() => {}}
           onTogglePlay={() => {}}
           onExit={() => {}}
@@ -450,6 +492,9 @@ describe("PerformView", () => {
         viewMode="drumit"
         engineKind="synth"
         isPlaying={false}
+        metronome={false}
+        beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+        onToggleMetronome={() => {}}
         onSeekTime={() => {}}
         onTogglePlay={() => {}}
         onExit={() => {}}
@@ -473,6 +518,9 @@ describe("PerformView", () => {
           viewMode="drumit"
           engineKind="synth"
           isPlaying={false}
+          metronome={false}
+          beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+          onToggleMetronome={() => {}}
           onSeekTime={() => {}}
           onTogglePlay={() => {}}
           onExit={() => {}}
@@ -497,6 +545,9 @@ describe("PerformView", () => {
           viewMode="drumit"
           engineKind="synth"
           isPlaying={false}
+          metronome={false}
+          beatStripState={{ beatIndex: -1, beatProgress: 0, countIn: null }}
+          onToggleMetronome={() => {}}
           onSeekTime={() => {}}
           onTogglePlay={() => {}}
           onExit={() => {}}

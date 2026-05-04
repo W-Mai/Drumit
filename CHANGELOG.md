@@ -11,6 +11,54 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.04.3]
+
+### Added
+
+- **Beat strip** visualisation in the playback bar (desktop and mobile)
+  and in Perform view — one pill per beat, current pill flashes amber
+  as the click hits it. Same visual language across both places.
+- **Count-in** — enabling the metronome primes playback with one bar
+  of click (meter.beats) before the score kicks in. The beat strip
+  turns sky-blue during count-in so the pickup phase is unmistakable.
+  Pause during count-in resets rather than resuming a half-finished
+  pickup.
+- **Perform view metronome** toggle (♩ button in the top bar) + inline
+  beat strip, so rehearsal mode now has the same click controls as
+  the main transport.
+- **Double-click a bar** in Preview to expand the editor panel (on top
+  of the existing single-click "select / seek"). 350 ms threshold on
+  the same bar index; iOS double-tap friendly.
+- **Editor header** click target covers the entire left strip
+  (chevron + title + "read-only" tag + empty space up to the actions
+  row). `PanelHeader` grows an `onTitleClick` prop that bolts a
+  fully-clickable `<button>` over the title area when provided.
+
+### Changed
+
+- Playback bar layout on desktop: **Loop** sits before **Click** so
+  the metronome and beat strip stay adjacent.
+- Mobile playback bar is now two rows: top row
+  `[Click] [BeatStrip] [Loop]` (rhythm cues), bottom row `[Play]
+  [Stop] … [⋯]`. No more horizontal overflow on narrow screens.
+- Drop the "click indicator dot" from the Click switch's label —
+  the dedicated beat strip covers that job.
+
+### Fixed
+
+- Perform view's CSS-rotated branch: motion/react was overwriting
+  the 90° rotate transform with its own scale animation, leaving iOS
+  PWA stuck in a portrait render that overlapped the main app. Now
+  the static rotate wrapper owns the transform and motion.div only
+  handles opacity on mount.
+- iOS PWA safe-area chaos: home-indicator / dynamic-island padding
+  was toggling between "too big" and "missing" across background
+  resumes. Switched to plain env(safe-area-inset-bottom) after
+  several dead-ends with ResizeObserver-driven custom properties
+  and min() clamps.
+- Bar index number, repeat dots, ending/navigation labels in the
+  Drumit chart get a polish pass.
+
 ## [2026.05.04.2]
 
 ### Added
