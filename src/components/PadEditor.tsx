@@ -19,6 +19,7 @@ import { FloatingMenu } from "./FloatingMenu";
 import { InstrumentIcon } from "./InstrumentIcon";
 import { Button, Chip, ChipGroup, useDialog } from "./ui";
 import { useHotkeys, type Hotkey } from "../lib/useHotkeys";
+import { useMediaQuery } from "../lib/useMediaQuery";
 import { useI18n } from "../i18n/useI18n";
 import {
   DIGIT_BY_INSTRUMENT,
@@ -294,6 +295,8 @@ export function PadEditor({
   onPrevBar,
 }: Props) {
   const { t } = useI18n();
+  // sm breakpoint — matches Tailwind's `sm:` everywhere else in the app.
+  const isDesktop = useMediaQuery("(min-width: 640px)");
   const [barResolution, setBarResolution] = useState<Resolution>(
     () => inferBarResolution(bar) ?? DEFAULT_RESOLUTION,
   );
@@ -702,28 +705,56 @@ export function PadEditor({
             autoAdvance={autoAdvance}
             onToggleAutoAdvance={() => setAutoAdvance((v) => !v)}
           />
-        <StepGrid
-          bar={bar}
-          beatsPerBar={beatsPerBar}
-          barResolution={barResolution}
-          presentInstruments={presentInstruments}
-          availableInstruments={ALL_INSTRUMENTS.filter(
-            (i) => !presentInstruments.includes(i),
-          )}
-          cursor={clampedCursor}
-          onAddInstrument={(i) =>
-            setExtraInstruments((prev) =>
-              prev.includes(i) ? prev : [...prev, i],
-            )
-          }
-          onSetDivision={onSetDivision}
-          onSetGroupDivision={onSetGroupDivision}
-          onSplitBeat={onSplitBeat}
-          onToggleSlot={onToggleSlot}
-          onToggleArticulation={onToggleArticulation}
-          onSetSticking={onSetSticking}
-          onCycleDots={onCycleDots}
-        />
+        {isDesktop ? (
+          <StepGrid
+            bar={bar}
+            beatsPerBar={beatsPerBar}
+            barResolution={barResolution}
+            presentInstruments={presentInstruments}
+            availableInstruments={ALL_INSTRUMENTS.filter(
+              (i) => !presentInstruments.includes(i),
+            )}
+            cursor={clampedCursor}
+            onAddInstrument={(i) =>
+              setExtraInstruments((prev) =>
+                prev.includes(i) ? prev : [...prev, i],
+              )
+            }
+            onSetDivision={onSetDivision}
+            onSetGroupDivision={onSetGroupDivision}
+            onSplitBeat={onSplitBeat}
+            onToggleSlot={onToggleSlot}
+            onToggleArticulation={onToggleArticulation}
+            onSetSticking={onSetSticking}
+            onCycleDots={onCycleDots}
+          />
+        ) : (
+          <LanePager
+            bar={bar}
+            beatsPerBar={beatsPerBar}
+            barResolution={barResolution}
+            presentInstruments={presentInstruments}
+            availableInstruments={ALL_INSTRUMENTS.filter(
+              (i) => !presentInstruments.includes(i),
+            )}
+            cursor={clampedCursor}
+            onLaneChange={(laneIdx) =>
+              setCursor((c) => ({ ...c, laneIdx, slotIndex: 0 }))
+            }
+            onAddInstrument={(i) =>
+              setExtraInstruments((prev) =>
+                prev.includes(i) ? prev : [...prev, i],
+              )
+            }
+            onSetDivision={onSetDivision}
+            onSetGroupDivision={onSetGroupDivision}
+            onSplitBeat={onSplitBeat}
+            onToggleSlot={onToggleSlot}
+            onToggleArticulation={onToggleArticulation}
+            onSetSticking={onSetSticking}
+            onCycleDots={onCycleDots}
+          />
+        )}
         </>
       )}
 
@@ -1139,6 +1170,169 @@ function InstrumentRow({
         );
       })}
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile: one lane at a time + lane switcher                         */
+/* ------------------------------------------------------------------ */
+
+function LanePager({
+  bar,
+  beatsPerBar,
+  barResolution,
+  presentInstruments,
+  availableInstruments,
+  cursor,
+  onLaneChange,
+  onAddInstrument,
+  onSetDivision,
+  onSetGroupDivision,
+  onSplitBeat,
+  onToggleSlot,
+  onToggleArticulation,
+  onSetSticking,
+  onCycleDots,
+}: {
+  bar: Bar;
+  beatsPerBar: number;
+  barResolution: Resolution;
+  presentInstruments: Instrument[];
+  availableInstruments: Instrument[];
+  cursor: { beatIndex: number; slotIndex: number; laneIdx: number };
+  onLaneChange: (laneIdx: number) => void;
+  onAddInstrument: (i: Instrument) => void;
+  onSetDivision: Props["onSetDivision"];
+  onSetGroupDivision: Props["onSetGroupDivision"];
+  onSplitBeat: Props["onSplitBeat"];
+  onToggleSlot: Props["onToggleSlot"];
+  onToggleArticulation: Props["onToggleArticulation"];
+  onSetSticking: Props["onSetSticking"];
+  onCycleDots: Props["onCycleDots"];
+}) {
+  const currentInstrument = presentInstruments[cursor.laneIdx];
+
+  if (!currentInstrument) {
+    // No instruments in this bar yet. Surface the add menu directly.
+    return (
+      <div className="rounded-xl border border-stone-200 bg-white p-4">
+        <AddInstrumentMenu
+          options={availableInstruments}
+          onPick={onAddInstrument}
+        />
+      </div>
+    );
+  }
+
+  const canPrev = cursor.laneIdx > 0;
+  const canNext = cursor.laneIdx < presentInstruments.length - 1;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-2 py-2">
+        <button
+          type="button"
+          onClick={() => canPrev && onLaneChange(cursor.laneIdx - 1)}
+          disabled={!canPrev}
+          aria-label="Previous lane"
+          className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+        >
+          ‹
+        </button>
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+          <InstrumentIcon
+            instrument={currentInstrument}
+            className="size-5 shrink-0 text-stone-700"
+          />
+          <span className="truncate text-sm font-bold text-stone-900">
+            {instrumentLabels[currentInstrument]}
+          </span>
+          <span className="truncate font-mono text-[10px] text-stone-500">
+            {canonicalAlias[currentInstrument]}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => canNext && onLaneChange(cursor.laneIdx + 1)}
+          disabled={!canNext}
+          aria-label="Next lane"
+          className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+        >
+          ›
+        </button>
+      </div>
+
+      {presentInstruments.length > 1 ? (
+        <div className="flex items-center justify-center gap-1.5">
+          {presentInstruments.map((ins, idx) => (
+            <button
+              key={ins}
+              type="button"
+              onClick={() => onLaneChange(idx)}
+              aria-label={instrumentLabels[ins]}
+              className={cn(
+                "size-2 rounded-full transition-colors",
+                idx === cursor.laneIdx
+                  ? "bg-stone-900"
+                  : "bg-stone-300 hover:bg-stone-500",
+              )}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      <div
+        className="grid rounded-xl border border-stone-200 bg-white"
+        style={{
+          gridTemplateColumns: `repeat(${beatsPerBar}, minmax(0, 1fr))`,
+        }}
+      >
+        {Array.from({ length: beatsPerBar }, (_, beatIndex) => (
+          <div
+            key={`mbh-${beatIndex}`}
+            className={cn(
+              "flex h-7 items-center justify-center border-r border-b border-stone-200 bg-stone-50 text-[10px] font-extrabold tracking-wide text-stone-500",
+              beatIndex === 0 && "border-l-2 border-l-stone-400",
+              beatIndex === beatsPerBar - 1 && "border-r-0",
+            )}
+          >
+            {beatIndex + 1}
+          </div>
+        ))}
+        {Array.from({ length: beatsPerBar }, (_, beatIndex) => {
+          const lane = bar.beats[beatIndex]?.lanes.find(
+            (l) => l.instrument === currentInstrument,
+          );
+          const plan = planLaneBeat(lane, beatIndex, barResolution);
+          const cursorBeatMatch = cursor.beatIndex === beatIndex;
+          return (
+            <LaneBeatCell
+              key={`${currentInstrument}-${beatIndex}`}
+              plan={plan}
+              bar={bar}
+              instrument={currentInstrument}
+              isFirstBeat={beatIndex === 0}
+              cursorBeatMatch={cursorBeatMatch}
+              cursorLaneMatch
+              cursorSlotIndex={cursorBeatMatch ? cursor.slotIndex : undefined}
+              onSetDivision={onSetDivision}
+              onSetGroupDivision={onSetGroupDivision}
+              onSplitBeat={onSplitBeat}
+              onToggleSlot={onToggleSlot}
+              onToggleArticulation={onToggleArticulation}
+              onSetSticking={onSetSticking}
+              onCycleDots={onCycleDots}
+              barResolution={barResolution}
+            />
+          );
+        })}
+      </div>
+
+      <AddInstrumentMenu
+        options={availableInstruments}
+        onPick={onAddInstrument}
+      />
+    </div>
   );
 }
 
