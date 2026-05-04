@@ -11,6 +11,77 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.03.5]
+
+### Added
+
+- **Cyberpunk theme** — cyan (#00e5ff) + lime + hot-pink on deep
+  blue-black, inspired by the `cyber` palette from uinspy. Body
+  scanline overlay, cyan hover glow on Panels, neon title
+  text-shadow, tight 2-4px radii. Registered as a new theme choice
+  alongside light / dark / sepia. A new `cyber:` Tailwind variant
+  lets components opt into cyberpunk-only adjustments without
+  polluting the main palette flip.
+- **`+ Add bar` placeholder** for sections that have zero bars.
+  Dashed pane rendered inline in DrumChart so users can reach
+  the section to add content again. Interaction-only: stripped
+  from SVG / PNG / PDF / HTML exports and hidden in PerformView.
+
+### Changed
+
+- **Preview / header alignment overhaul**:
+  - Section tab is now a bookmark shape (rounded top, flat bottom)
+    with geometry pinned to `SECTION_HEADER_HEIGHT`; bar rows and
+    placeholders connect flush.
+  - Title, artist, meta, divider line, section tabs, bars, and
+    placeholders all align to a shared `contentLeft` / `contentRight`
+    grid derived from `leftMargin` — no more floating headers.
+  - Title band widened to 54 px so the first section tab has room
+    below the divider line.
+- **Selection / playhead highlight** drops the stroke border; the
+  tint-only look stops glyphs from sitting under a crossing line.
+- **Bar hover tint** now fires on the whole `<g>` via
+  `group/bar`, so moving the pointer over a notehead or beam keeps
+  the bar lit instead of losing hover state.
+- **Staff notation**:
+  - Stems and beams pass through the x-axis of axially symmetric
+    noteheads (X / slash / triangle / circle-x). Oval heads still
+    hug their side edge. Mixed runs compute per-endpoint beam x.
+  - Each sub-tick note is centered inside its own
+    `beatWidth/finest` cell so every bar has symmetric padding at
+    both barlines.
+  - Ending brackets and navigation labels (`D.S.`, `To Coda`, …)
+    hoisted above the up-stem zone and into a dedicated band.
+  - Row spacing (`SYSTEM_VERTICAL_PAD`) widened to 16 × STAFF_SPACE
+    so down-stem flags from the previous system plus up-labels on
+    this system don't collide.
+- **Theme system**:
+  - Fix several dark-theme contrast issues with `dark:` Tailwind
+    variant wired to `[data-theme="dark"]`; soft-tinted surfaces
+    (Badge, Toast, tinted cards, active-item amber) now read cleanly
+    at both themes.
+  - Section header pill flips with the theme (light: ink pill +
+    amber label; dark: light pill + deep-amber label; cyberpunk:
+    dark pill + bright cyan label).
+  - Theme audit tool (`?theme-audit`) added for live contrast
+    debugging via `window.__themeAudit()`.
+- **Reset workspace** moved from the header into an About modal
+  "Danger zone" — destructive actions don't need top-chrome real
+  estate.
+- **PerformView**: section label floats above the chip without being
+  scaled away by the active chip.
+
+### Fixed
+
+- Documents panel hover-menu, SelectMenu selected state, kick-lane
+  hit, and Source editor preserve their ink-on-warm look across
+  themes via literal color pins where the palette flip would have
+  broken them.
+- `dark:bg-*` soft tints bumped from /15 alpha to /25 (and some to
+  solid `-900`) so small tinted-surface text stays legible.
+- Placeholder and selection interaction rects are stripped from
+  static exports via `stripInteractionLayers`.
+
 ## [2026.05.03.4]
 
 ### Added
