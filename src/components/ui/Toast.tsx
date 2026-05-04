@@ -59,7 +59,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 fixed z-50
                 right-2 sm:right-4
                 left-2 sm:left-auto
-                bottom-[3.5rem] sm:bottom-4
+                bottom-[calc(var(--drumit-playback-h,3.5rem)+0.5rem)] sm:bottom-4
                 flex flex-col items-center gap-2 sm:items-end
               "
             >
