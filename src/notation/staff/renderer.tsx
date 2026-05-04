@@ -317,7 +317,7 @@ function BarShell({
       {bar.navigationLabel ? (
         <text
           x={bar.x + bar.width - 4}
-          y={staffY - STAFF_SPACE * 7}
+          y={staffY - STAFF_SPACE * (bar.ending ? 7 : 2.5)}
           textAnchor="end"
           className="fill-stone-900 font-bold italic"
           style={{ fontSize: 12 }}

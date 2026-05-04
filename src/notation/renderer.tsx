@@ -561,15 +561,23 @@ function BarView({
       {/* Navigation marker (Segno / Coda / To Coda / Fine / D.C. / D.S.).
           Segno / Coda are pictographic SMuFL glyphs that ride small in
           their em-box — render them at roughly 2× the label text so
-          they match the height of neighboring Latin-text markers. */}
+          they match the height of neighboring Latin-text markers. Y
+          nudges up when an ending bracket is stacked above this bar. */}
       {bar.navigation ? (
         (() => {
           const isGlyph =
             bar.navigation.kind === "segno" || bar.navigation.kind === "coda";
+          // Glyph labels need a bit more top margin because they render
+          // taller than the Latin-text labels at their upscaled size.
+          const baseOffset = bar.ending
+            ? 20
+            : isGlyph
+              ? 10
+              : 6;
           return (
             <text
               x={x + width / 2}
-              y={barlineTop - (isGlyph ? 14 : 20)}
+              y={barlineTop - baseOffset}
               textAnchor="middle"
               className={
                 isGlyph
