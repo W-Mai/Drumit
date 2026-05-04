@@ -11,6 +11,49 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.04.2]
+
+### Added
+
+- **Document manager modal** — opens from a folder icon in the header
+  at every breakpoint, with grid + list view modes. Replaces the
+  desktop sidebar and the old mobile nav drawer.
+  - Grid cards show a live-theme thumbnail rendered from each doc's
+    drum chart, plus title / bar count / tempo.
+  - List rows use the same thumbnail scaled smaller.
+  - Per-item `⋯` menu: Rename / Duplicate / Export .drumtab / .mid /
+    Delete.
+  - View mode persists to `localStorage["drumit.docMgrView"]`.
+  - Fixed modal size (720 px tall desktop, 85 dvh mobile) so
+    swapping between grid and list doesn't resize the window.
+
+### Changed
+
+- **Main content capped at 1400 px** and centered horizontally on
+  wide 16:9 displays — previously Preview + Editor stretched
+  edge-to-edge.
+- **Preview focus ring removed** (the hover-lift already signals
+  selection). `tabIndex` retained for hotkey routing.
+- **Bar editor title bar** is now fully clickable — any tap in the
+  chevron / "Bar editor" / "· read-only" strip toggles the panel.
+- **App header** respects `env(safe-area-inset-top)` so iOS PWA
+  standalone mode no longer overlaps the Dynamic Island.
+- **Header menu icon**: hamburger → folder glyph to match
+  "Documents" semantics.
+
+### Fixed
+
+- **Thumbnail rendering leaked styles into the Preview panel**: the
+  shared SVG export pipeline wraps every chart in an inline
+  `<style>` block, which is not scoped when injected via
+  `dangerouslySetInnerHTML`. Opening the Document Manager pushed
+  those light-palette rules into the main DOM and reverted the
+  Preview panel's colors. New thumbnail path skips `<style>` and
+  writes every `fill-stone-*` / `stroke-stone-*` class inline as
+  `var(--color-*)`, so thumbnails stay scoped AND follow the live
+  theme. Cache bumped to v2 so clients with the broken v1 payload
+  regenerate cleanly.
+
 ## [2026.05.04.1]
 
 ### Added
