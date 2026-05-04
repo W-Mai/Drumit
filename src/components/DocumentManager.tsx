@@ -106,8 +106,8 @@ export function DocumentManager({
           <motion.div
             className="
               flex w-full flex-col overflow-hidden bg-white shadow-xl
-              max-h-[85dvh] rounded-t-2xl
-              sm:max-h-[85vh] sm:max-w-4xl sm:rounded-2xl
+              h-[85dvh] rounded-t-2xl
+              sm:h-[min(720px,85vh)] sm:w-full sm:max-w-4xl sm:rounded-2xl
               pb-[env(safe-area-inset-bottom)]
             "
             initial={{ y: 24, scale: 0.96, opacity: 0 }}
