@@ -33,24 +33,27 @@ export function BeatStrip({
       {Array.from({ length: beats }, (_, i) => {
         const isCurrent = playing && active && i === beatIndex;
         const isDownbeat = i === 0;
-        // When it's this pill's turn, flash it full-width and let the
-        // opacity fade as the beat progresses into the next one — so a
-        // 4-beat bar reads as 4 distinct blinks instead of a slowly-
-        // filling progress bar that always leaves the last pill "half
-        // done" at the end of the bar.
+        // Flash each pill on its own beat; fade as the beat elapses.
+        // Every beat uses the same amber because the metronome clicks
+        // every beat too — only the sound timbre differs between
+        // downbeat and off-beats, not the fact that a beat happens.
+        // The downbeat is still marked visually by a slightly
+        // brighter/larger dot, not by being the only lit pill.
         const opacity = isCurrent
           ? 1 - Math.min(0.7, Math.max(0, beatProgress) * 0.7)
           : 0;
         return (
           <div
             key={i}
-            className="relative h-[6px] min-w-[10px] flex-1 overflow-hidden rounded-full bg-stone-300 dark:bg-stone-200/30"
+            className={cn(
+              "relative h-[6px] min-w-[10px] flex-1 overflow-hidden rounded-full",
+              isDownbeat
+                ? "bg-amber-200/60 dark:bg-amber-500/30"
+                : "bg-stone-300 dark:bg-stone-200/30",
+            )}
           >
             <div
-              className={cn(
-                "absolute inset-0 transition-opacity duration-75 ease-out",
-                isDownbeat ? "bg-amber-500" : "bg-emerald-500",
-              )}
+              className="absolute inset-0 bg-amber-500 transition-opacity duration-75 ease-out"
               style={{ opacity }}
             />
           </div>
