@@ -8,6 +8,7 @@ import type {
   Instrument,
   LaneBeat,
   LaneGroup,
+  NavigationMarker,
   RepeatHint,
   Score,
 } from "./types";
@@ -257,6 +258,16 @@ export function deleteBar(score: Score, globalIndex: number): Score {
   if (!loc) return next;
   next.sections[loc.sectionIndex].bars.splice(loc.barIndex, 1);
   return next;
+}
+
+export function setBarNavigation(
+  score: Score,
+  globalIndex: number,
+  nav: NavigationMarker | null,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    bar.navigation = nav ?? undefined;
+  });
 }
 
 export function setBarRepeatPrevious(

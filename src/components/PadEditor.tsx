@@ -11,6 +11,7 @@ import type {
   Hit,
   Instrument,
   LaneBeat,
+  NavigationMarker,
   RepeatHint,
 } from "../notation/types";
 import { AnimatePresence, motion } from "motion/react";
@@ -48,6 +49,7 @@ interface Props {
   onToggleRepeatStart: () => void;
   onToggleRepeatEnd: () => void;
   onCycleEnding: () => void;
+  onSetNavigation: (nav: NavigationMarker | null) => void;
   onInsertAfter: () => void;
   onDelete: () => void;
   onSetDivision: (
@@ -278,6 +280,7 @@ export function PadEditor({
   onToggleRepeatStart,
   onToggleRepeatEnd,
   onCycleEnding,
+  onSetNavigation,
   onInsertAfter,
   onDelete,
   onSetDivision,
@@ -679,6 +682,7 @@ export function PadEditor({
         onToggleRepeatStart={onToggleRepeatStart}
         onToggleRepeatEnd={onToggleRepeatEnd}
         onCycleEnding={onCycleEnding}
+        onSetNavigation={onSetNavigation}
         onInsertAfter={onInsertAfter}
         onDelete={onDelete}
       />
@@ -834,6 +838,7 @@ function BarHeader({
   onToggleRepeatStart,
   onToggleRepeatEnd,
   onCycleEnding,
+  onSetNavigation,
   onInsertAfter,
   onDelete,
 }: {
@@ -847,6 +852,7 @@ function BarHeader({
   onToggleRepeatStart: () => void;
   onToggleRepeatEnd: () => void;
   onCycleEnding: () => void;
+  onSetNavigation: (nav: NavigationMarker | null) => void;
   onInsertAfter: () => void;
   onDelete: () => void;
 }) {
@@ -903,6 +909,11 @@ function BarHeader({
             {bar.ending ? `[${bar.ending}.]` : t("editor.ending_none")}
           </Chip>
         </ChipGroup>
+
+        <NavigationPicker
+          nav={bar.navigation ?? null}
+          onChange={onSetNavigation}
+        />
       </div>
 
       <div className="flex items-center gap-3">
@@ -1709,6 +1720,101 @@ function LaneSettingsPopover({
 /* ------------------------------------------------------------------ */
 /* Add instrument menu                                                 */
 /* ------------------------------------------------------------------ */
+
+const NAV_OPTIONS: Array<{
+  key: string;
+  nav: NavigationMarker | null;
+  label: string;
+}> = [
+  { key: "none", nav: null, label: "—" },
+  { key: "segno", nav: { kind: "segno" }, label: "Segno 𝄋" },
+  { key: "coda", nav: { kind: "coda" }, label: "Coda 𝄌" },
+  { key: "toCoda", nav: { kind: "toCoda" }, label: "To Coda" },
+  { key: "fine", nav: { kind: "fine" }, label: "Fine" },
+  { key: "dc", nav: { kind: "dc" }, label: "D.C." },
+  { key: "dc-fine", nav: { kind: "dc", target: "fine" }, label: "D.C. al Fine" },
+  { key: "dc-coda", nav: { kind: "dc", target: "coda" }, label: "D.C. al Coda" },
+  { key: "ds", nav: { kind: "ds" }, label: "D.S." },
+  { key: "ds-fine", nav: { kind: "ds", target: "fine" }, label: "D.S. al Fine" },
+  { key: "ds-coda", nav: { kind: "ds", target: "coda" }, label: "D.S. al Coda" },
+];
+
+function navKey(nav: NavigationMarker | null): string {
+  if (!nav) return "none";
+  if (nav.kind === "dc" || nav.kind === "ds") {
+    return nav.target ? `${nav.kind}-${nav.target}` : nav.kind;
+  }
+  return nav.kind;
+}
+
+function NavigationPicker({
+  nav,
+  onChange,
+}: {
+  nav: NavigationMarker | null;
+  onChange: (nav: NavigationMarker | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const active = NAV_OPTIONS.find((o) => o.key === navKey(nav)) ?? NAV_OPTIONS[0];
+  return (
+    <>
+      <button
+        ref={setAnchor}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="Navigation marker"
+        className={cn(
+          "flex h-6 items-center gap-1 rounded-full border px-2 text-[11px] font-bold transition",
+          nav
+            ? "border-amber-500 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
+            : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50",
+        )}
+      >
+        <span className="tracking-wide">{active.label}</span>
+        <svg
+          viewBox="0 0 12 12"
+          className="size-3 opacity-60"
+          fill="currentColor"
+          aria-hidden
+        >
+          <path d="M2 4 L6 8 L10 4 Z" />
+        </svg>
+      </button>
+      <FloatingMenu anchor={anchor} open={open} onClose={() => setOpen(false)}>
+        <div className="w-[200px]">
+          <div className="mb-1.5 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
+            Navigation
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {NAV_OPTIONS.map((opt) => {
+              const isActive = opt.key === active.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.nav);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex items-center justify-between rounded-md px-2 py-1 text-left text-[12px] font-medium",
+                    isActive
+                      ? "bg-stone-900 text-stone-50"
+                      : "text-stone-700 hover:bg-stone-100",
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {isActive ? <span className="opacity-60">✓</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </FloatingMenu>
+    </>
+  );
+}
 
 function AddInstrumentMenu({
   options,

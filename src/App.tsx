@@ -21,6 +21,7 @@ import {
   extractBars,
   insertBarAfter,
   pasteBarsBefore,
+  setBarNavigation,
   setBarRepeatPrevious,
   clearBar,
   renameSection,
@@ -1514,6 +1515,11 @@ function AppInner() {
                 onCycleEnding={() =>
                   applyScoreUpdate((s) =>
                     cycleBarEnding(s, clampedSelectedBar),
+                  )
+                }
+                onSetNavigation={(nav) =>
+                  applyScoreUpdate((s) =>
+                    setBarNavigation(s, clampedSelectedBar, nav),
                   )
                 }
                 onInsertAfter={() => {
