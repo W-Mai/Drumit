@@ -108,7 +108,7 @@ export function DocumentManager({
               flex w-full flex-col overflow-hidden bg-white shadow-xl
               h-[85dvh] rounded-t-2xl
               sm:h-[min(720px,85vh)] sm:w-full sm:max-w-4xl sm:rounded-2xl
-              pb-[env(safe-area-inset-bottom)]
+              pb-[min(env(safe-area-inset-bottom),40px)]
             "
             initial={{ y: 24, scale: 0.96, opacity: 0 }}
             animate={{ y: 0, scale: 1, opacity: 1 }}

@@ -199,7 +199,7 @@ export function PerformView({
               // is physically there. Fall back to 44 px so the
               // visually-left edge still clears it.
               paddingBottom: "max(env(safe-area-inset-top), 44px)",
-              paddingTop: "env(safe-area-inset-bottom)",
+              paddingTop: "min(env(safe-area-inset-bottom), 40px)",
               paddingLeft: "env(safe-area-inset-left)",
               paddingRight: "env(safe-area-inset-right)",
             }
@@ -207,7 +207,7 @@ export function PerformView({
               paddingTop: "env(safe-area-inset-top)",
               paddingLeft: "env(safe-area-inset-left)",
               paddingRight: "env(safe-area-inset-right)",
-              paddingBottom: "env(safe-area-inset-bottom)",
+              paddingBottom: "min(env(safe-area-inset-bottom), 40px)",
             }
       }
     >
