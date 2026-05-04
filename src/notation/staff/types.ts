@@ -103,8 +103,8 @@ export interface StaffBar {
   repeatTimes?: number;
   /** First / second ending bracket above this bar. */
   ending?: "1" | "2";
-  /** Rendered navigation label, e.g. "D.C. al Fine" or "𝄋". */
-  navigationLabel?: string;
+  /** Original navigation marker — renderer decides text + glyph mix. */
+  navigation?: import("../types").NavigationMarker;
   /** True when this bar is a "%" (repeat the previous bar) placeholder.
    *  Renderer draws the single-measure-repeat symbol instead of notes. */
   repeatPrevious?: boolean;

@@ -1,10 +1,4 @@
-import type {
-  Bar,
-  Hit,
-  LaneGroup,
-  NavigationMarker,
-  Score,
-} from "../types";
+import type { Bar, Hit, LaneGroup, Score } from "../types";
 import { mappingFor, type DrumStaffMapping } from "./drumMap";
 import type {
   Duration,
@@ -146,7 +140,7 @@ function layoutBar({ bar, barIndex, x, width, beatsPerBar }: BarCtx): StaffBar {
     repeatStart: !!bar.repeatStart,
     repeatTimes: bar.repeatEnd?.times,
     ending: bar.ending,
-    navigationLabel: bar.navigation ? navigationLabel(bar.navigation) : undefined,
+    navigation: bar.navigation,
     repeatPrevious: isRepeatPrev,
   };
 }
@@ -455,31 +449,6 @@ function computeBeams(
   }
 
   return out;
-}
-
-function navigationLabel(nav: NavigationMarker): string {
-  switch (nav.kind) {
-    case "segno":
-      return "𝄋";
-    case "coda":
-      return "𝄌";
-    case "toCoda":
-      return "To Coda 𝄌";
-    case "fine":
-      return "Fine";
-    case "dc":
-      return nav.target === "coda"
-        ? "D.C. al Coda"
-        : nav.target === "fine"
-          ? "D.C. al Fine"
-          : "D.C.";
-    case "ds":
-      return nav.target === "coda"
-        ? "D.S. al Coda"
-        : nav.target === "fine"
-          ? "D.S. al Fine"
-          : "D.S.";
-  }
 }
 
 function fillEmptyBeats(n: number) {

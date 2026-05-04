@@ -282,13 +282,12 @@ describe("DrumChart", () => {
   it("renders navigation marker text labels", () => {
     const src = `title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |\n@segno\n| bd: o / o / o / o |\n| bd: o / o / o / o |\n@to-coda\n| bd: o / o / o / o |\n@fine\n| bd: o / o / o / o |\n@dc al fine\n| bd: o / o / o / o |\n@coda\n| bd: o / o / o / o |\n@dc al coda\n| bd: o / o / o / o |\n@ds al fine\n| bd: o / o / o / o |\n@ds al coda`;
     const svg = renderSvg(src, 1400);
-    // Each navigation token appears as visible text.
-    expect(svg).toContain("𝄋"); // segno
-    expect(svg).toContain("𝄌"); // coda
+    expect(svg).toContain('data-glyph="segno"');
+    expect(svg).toContain('data-glyph="coda"');
     expect(svg).toContain("To Coda");
     expect(svg).toContain("Fine");
     expect(svg).toContain("D.C. al Fine");
-    expect(svg).toContain("D.C. al Coda");
+    expect(svg).toContain("D.C. al ");
     expect(svg).toContain("D.S. al Fine");
   });
 

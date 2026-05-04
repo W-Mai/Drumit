@@ -1,33 +1,77 @@
 import { Fragment } from "react";
 import { SECTION_HEADER_HEIGHT } from "./layout";
 import type { LaidOutBar, LaidOutHit, LaidOutLayout, RowGroup } from "./layout";
-import type { Hit } from "./types";
+import type { Hit, NavigationMarker } from "./types";
 import { instrumentSizeScale } from "./instruments";
 import { cn } from "../lib/utils";
+import { SegnoGlyph, CodaGlyph } from "./glyphs";
+import { navigationSegments } from "./navSegments";
 
-function navigationLabel(nav: import("./types").NavigationMarker): string {
-  switch (nav.kind) {
-    case "segno":
-      return "𝄋";
-    case "coda":
-      return "𝄌";
-    case "toCoda":
-      return "To Coda";
-    case "fine":
-      return "Fine";
-    case "dc":
-      return nav.target === "fine"
-        ? "D.C. al Fine"
-        : nav.target === "coda"
-          ? "D.C. al Coda"
-          : "D.C.";
-    case "ds":
-      return nav.target === "fine"
-        ? "D.S. al Fine"
-        : nav.target === "coda"
-          ? "D.S. al Coda"
-          : "D.S.";
-  }
+function NavigationBadge({
+  nav,
+  cx,
+  bottomY,
+}: {
+  nav: NavigationMarker;
+  cx: number;
+  bottomY: number;
+}) {
+  const segments = navigationSegments(nav);
+  const textSize = 11;
+  const glyphSize = 18;
+  const widths = segments.map((s) =>
+    s.kind === "text" ? s.text.length * textSize * 0.55 : glyphSize,
+  );
+  const total = widths.reduce((a, b) => a + b, 0);
+  const startX = cx - total / 2;
+  // Prefix sum so each segment knows its own left edge without
+  // mutating state across map callbacks.
+  const offsets = widths.reduce<number[]>((acc, w) => {
+    acc.push((acc[acc.length - 1] ?? 0) + w);
+    return acc;
+  }, [0]);
+  const baselineY = bottomY;
+  return (
+    <g>
+      {segments.map((seg, i) => {
+        const w = widths[i];
+        const segCx = startX + offsets[i] + w / 2;
+        if (seg.kind === "segno") {
+          return (
+            <SegnoGlyph
+              key={i}
+              cx={segCx}
+              cy={baselineY - glyphSize * 0.45}
+              size={glyphSize}
+              className="fill-stone-700"
+            />
+          );
+        }
+        if (seg.kind === "coda") {
+          return (
+            <CodaGlyph
+              key={i}
+              cx={segCx}
+              cy={baselineY - glyphSize * 0.45}
+              size={glyphSize}
+              className="fill-stone-700"
+            />
+          );
+        }
+        return (
+          <text
+            key={i}
+            x={segCx}
+            y={baselineY}
+            textAnchor="middle"
+            className="fill-stone-700 text-[11px] font-bold italic tracking-wide"
+          >
+            {seg.text}
+          </text>
+        );
+      })}
+    </g>
+  );
 }
 
 const PLAYHEAD_PALETTE: Record<
@@ -558,37 +602,12 @@ function BarView({
         </>
       ) : null}
 
-      {/* Navigation marker (Segno / Coda / To Coda / Fine / D.C. / D.S.).
-          Segno / Coda are pictographic SMuFL glyphs that ride small in
-          their em-box — render them at roughly 2× the label text so
-          they match the height of neighboring Latin-text markers. Y
-          nudges up when an ending bracket is stacked above this bar. */}
       {bar.navigation ? (
-        (() => {
-          const isGlyph =
-            bar.navigation.kind === "segno" || bar.navigation.kind === "coda";
-          // Glyph labels need a bit more top margin because they render
-          // taller than the Latin-text labels at their upscaled size.
-          const baseOffset = bar.ending
-            ? 20
-            : isGlyph
-              ? 10
-              : 6;
-          return (
-            <text
-              x={x + width / 2}
-              y={barlineTop - baseOffset}
-              textAnchor="middle"
-              className={
-                isGlyph
-                  ? "fill-stone-700 text-[22px] leading-none"
-                  : "fill-stone-700 text-[11px] font-bold italic tracking-wide"
-              }
-            >
-              {navigationLabel(bar.navigation)}
-            </text>
-          );
-        })()
+        <NavigationBadge
+          nav={bar.navigation}
+          cx={x + width / 2}
+          bottomY={barlineTop - (bar.ending ? 16 : 4)}
+        />
       ) : null}
 
       {bar.repeatPrevious ? (

@@ -135,7 +135,7 @@ meter: 4/4
     expect(svg).toContain("D.C. al Fine");
   });
 
-  it("prints Segno glyph 𝄋 when a bar carries the segno marker", () => {
+  it("renders Segno glyph when a bar carries the segno marker", () => {
     const src = `title: T
 meter: 4/4
 [A]
@@ -144,7 +144,7 @@ meter: 4/4
 | bd: o / o / o / o |`;
     const { score } = parseDrumtab(src);
     const svg = renderToStaticMarkup(createElement(StaffView, { score }));
-    expect(svg).toContain("𝄋");
+    expect(svg).toContain('data-glyph="segno"');
   });
 });
 

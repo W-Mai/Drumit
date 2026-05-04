@@ -23,6 +23,8 @@ import {
   TimeSignature,
 } from "./glyphs";
 import { layoutStaff } from "./layout";
+import { SegnoGlyph, CodaGlyph } from "../glyphs";
+import { navigationSegments } from "../navSegments";
 import type {
   StaffBar,
   StaffBeam,
@@ -327,31 +329,16 @@ function BarShell({
           label={`${bar.ending}.`}
         />
       ) : null}
-      {bar.navigationLabel ? (
-        <text
-          x={bar.x + bar.width - 4}
-          y={
+      {bar.navigation ? (
+        <NavigationBadge
+          nav={bar.navigation}
+          rightX={bar.x + bar.width - 4}
+          bottomY={
             bar.ending
               ? staffY - STAFF_SPACE * 7
               : Math.min(upperStemCeilingY - 6, staffY - STAFF_SPACE * 2.5)
           }
-          textAnchor="end"
-          className="fill-stone-900 font-bold italic"
-          style={{ fontSize: 12 }}
-        >
-          {splitGlyphLabel(bar.navigationLabel).map((part, i) =>
-            part.kind === "glyph" ? (
-              <tspan
-                key={i}
-                style={{ fontSize: 22, fontStyle: "normal" }}
-              >
-                {part.text}
-              </tspan>
-            ) : (
-              <tspan key={i}>{part.text}</tspan>
-            ),
-          )}
-        </text>
+        />
       ) : null}
       {bar.endBarline === "repeat-end" ? (
         <RepeatBarline
@@ -491,26 +478,70 @@ function VoicePaint({
   );
 }
 
-// Split navigation labels around SMuFL glyphs (𝄋 Segno, 𝄌 Coda) so
-// the renderer can upscale only the glyph chars, which otherwise sit
-// far smaller than the surrounding Latin text at the same font-size.
-function splitGlyphLabel(label: string): Array<{ kind: "text" | "glyph"; text: string }> {
-  const parts: Array<{ kind: "text" | "glyph"; text: string }> = [];
-  let buf = "";
-  for (const ch of label) {
-    const isGlyph = ch === "𝄋" || ch === "𝄌";
-    if (isGlyph) {
-      if (buf) {
-        parts.push({ kind: "text", text: buf });
-        buf = "";
-      }
-      parts.push({ kind: "glyph", text: ch });
-    } else {
-      buf += ch;
-    }
-  }
-  if (buf) parts.push({ kind: "text", text: buf });
-  return parts;
+function NavigationBadge({
+  nav,
+  rightX,
+  bottomY,
+}: {
+  nav: import("../types").NavigationMarker;
+  rightX: number;
+  bottomY: number;
+}) {
+  const segments = navigationSegments(nav);
+  const textSize = 12;
+  const glyphSize = 20;
+  const widths = segments.map((s) =>
+    s.kind === "text" ? s.text.length * textSize * 0.55 : glyphSize,
+  );
+  const total = widths.reduce((a, b) => a + b, 0);
+  const startX = rightX - total;
+  const offsets = widths.reduce<number[]>((acc, w) => {
+    acc.push((acc[acc.length - 1] ?? 0) + w);
+    return acc;
+  }, [0]);
+  const baselineY = bottomY;
+  return (
+    <g>
+      {segments.map((seg, i) => {
+        const w = widths[i];
+        const segCx = startX + offsets[i] + w / 2;
+        if (seg.kind === "segno") {
+          return (
+            <SegnoGlyph
+              key={i}
+              cx={segCx}
+              cy={baselineY - glyphSize * 0.45}
+              size={glyphSize}
+              className="fill-stone-900"
+            />
+          );
+        }
+        if (seg.kind === "coda") {
+          return (
+            <CodaGlyph
+              key={i}
+              cx={segCx}
+              cy={baselineY - glyphSize * 0.45}
+              size={glyphSize}
+              className="fill-stone-900"
+            />
+          );
+        }
+        return (
+          <text
+            key={i}
+            x={segCx}
+            y={baselineY}
+            textAnchor="middle"
+            className="fill-stone-900 font-bold italic"
+            style={{ fontSize: textSize }}
+          >
+            {seg.text}
+          </text>
+        );
+      })}
+    </g>
+  );
 }
 
 // Axially-symmetric noteheads (X, slash, triangle, circle-x) look
