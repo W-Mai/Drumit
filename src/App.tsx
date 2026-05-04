@@ -921,7 +921,10 @@ function AppInner() {
   return (
     <HotkeyContextProvider>
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-stone-50">
-      <header className="flex flex-none flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-3 py-2 lg:gap-3 lg:px-5">
+      <header
+        className="flex flex-none flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-3 py-2 lg:gap-3 lg:px-5"
+        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+      >
         <div className="flex items-center gap-2 lg:gap-3">
           <button
             type="button"
@@ -1228,26 +1231,27 @@ function AppInner() {
           <Panel className="flex min-h-0 flex-1 flex-col">
           <PanelHeader
             title={
-              <span className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setEditorCollapsed((v) => !v)}
-                  title={
-                    editorCollapsed
-                      ? t("editor.show_editor")
-                      : t("editor.hide_editor")
-                  }
-                  aria-label={
-                    editorCollapsed
-                      ? t("editor.show_editor")
-                      : t("editor.hide_editor")
-                  }
-                  className="flex size-5 items-center justify-center rounded text-stone-500 hover:bg-stone-100 hover:text-stone-900"
-                >
+              <button
+                type="button"
+                onClick={() => setEditorCollapsed((v) => !v)}
+                title={
+                  editorCollapsed
+                    ? t("editor.show_editor")
+                    : t("editor.hide_editor")
+                }
+                aria-label={
+                  editorCollapsed
+                    ? t("editor.show_editor")
+                    : t("editor.hide_editor")
+                }
+                aria-expanded={!editorCollapsed}
+                className="-m-1 flex items-center gap-1.5 rounded px-1 py-1 text-left hover:bg-stone-100"
+              >
+                <span className="flex size-5 items-center justify-center text-stone-500">
                   <span className="text-[10px] leading-none">
                     {editorCollapsed ? "▸" : "▾"}
                   </span>
-                </button>
+                </span>
                 <span>
                   {mode === "visual"
                     ? t("editor.bar_editor")
@@ -1258,7 +1262,7 @@ function AppInner() {
                     {t("editor.readonly_tag")}
                   </span>
                 ) : null}
-              </span>
+              </button>
             }
           >
             <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
