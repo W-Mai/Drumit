@@ -54,7 +54,7 @@ import {
   type DocumentRecord,
   type ViewMode,
 } from "./lib/storage";
-import { DocumentList } from "./components/DocumentList";
+import { DocumentManager } from "./components/DocumentManager";
 import { HotkeyPanel } from "./components/HotkeyPanel";
 import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { HoverClickPopover } from "./components/HoverClickPopover";
@@ -96,7 +96,6 @@ function nameToFilename(doc: { name: string; source: string }): string {
 function loadInitialWorkspace(): {
   documents: DocumentRecord[];
   activeId: string;
-  sidebarCollapsed: boolean;
   editorCollapsed: boolean;
   viewMode: ViewMode;
 } {
@@ -105,7 +104,6 @@ function loadInitialWorkspace(): {
     return {
       documents: ws.documents,
       activeId: ws.activeId ?? ws.documents[0].id,
-      sidebarCollapsed: ws.ui?.sidebarCollapsed ?? false,
       editorCollapsed: ws.ui?.editorCollapsed ?? true,
       viewMode: ws.ui?.viewMode ?? "drumit",
     };
@@ -121,7 +119,6 @@ function loadInitialWorkspace(): {
       },
     ],
     activeId: id,
-    sidebarCollapsed: false,
     editorCollapsed: true,
     viewMode: "drumit",
   };
@@ -178,20 +175,8 @@ function AppInner() {
   // user copied from Drumit and the system clipboard was mangled.
   const barClipboardRef = useRef<Bar[] | null>(null);
   const [showLabels, setShowLabels] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => loadInitialWorkspace().sidebarCollapsed,
-  );
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  useEffect(() => {
-    if (!mobileNavOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileNavOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [mobileNavOpen]);
+  const [docsOpen, setDocsOpen] = useState(false);
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
   );
@@ -211,7 +196,7 @@ function AppInner() {
         version: 4,
         documents,
         activeId,
-        ui: { sidebarCollapsed, editorCollapsed, viewMode },
+        ui: { editorCollapsed, viewMode },
       });
       setSavedAt(Date.now());
     }, 400);
@@ -221,7 +206,7 @@ function AppInner() {
         saveTimer.current = null;
       }
     };
-  }, [documents, activeId, sidebarCollapsed, editorCollapsed, viewMode]);
+  }, [documents, activeId, editorCollapsed, viewMode]);
 
   const validation = useMemo(() => validateScore(score), [score]);
   const diagnostics = [...textDiagnostics, ...validation];
@@ -940,10 +925,10 @@ function AppInner() {
         <div className="flex items-center gap-2 lg:gap-3">
           <button
             type="button"
-            onClick={() => setMobileNavOpen(true)}
+            onClick={() => setDocsOpen(true)}
             aria-label={t("header.open_docs")}
             title={t("header.docs")}
-            className="motion-press flex size-8 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 lg:hidden"
+            className="motion-press flex size-8 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
           >
             <svg
               viewBox="0 0 24 24"
@@ -1038,147 +1023,37 @@ function AppInner() {
         }}
       />
 
-      <AnimatePresence>
-        {mobileNavOpen ? (
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("header.mobile_docs_title")}
-            className="fixed inset-0 z-50 flex lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <button
-              type="button"
-              aria-label={t("header.close_docs")}
-              onClick={() => setMobileNavOpen(false)}
-              className="absolute inset-0 bg-overlay-backdrop"
-            />
-            <motion.div
-              className="relative flex h-full w-[85vw] max-w-sm flex-col bg-white shadow-xl"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 320, damping: 34 }}
-            >
-              <DocumentList
-                documents={documents.map((d) => ({
-                  id: d.id,
-                  name: d.name,
-                  source: d.source,
-                }))}
-                activeId={activeId}
-                onSelect={(id) => {
-                  handleSelectDoc(id);
-                  setMobileNavOpen(false);
-                }}
-                onCreate={() => {
-                  handleCreateDoc();
-                  setMobileNavOpen(false);
-                }}
-                onDuplicate={handleDuplicateDoc}
-                onRename={handleRenameDoc}
-                onDelete={handleDeleteDoc}
-                onExport={handleExportDoc}
-                onExportMidi={handleExportDocMidi}
-                onImport={(src) => {
-                  handleImportDoc(src);
-                  setMobileNavOpen(false);
-                }}
-                samples={samples.map(({ id, label }) => ({ id, label }))}
-                onLoadSample={(id) => {
-                  handleLoadSample(id);
-                  setMobileNavOpen(false);
-                }}
-                onCollapse={() => setMobileNavOpen(false)}
-              />
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      <DocumentManager
+        open={docsOpen}
+        onClose={() => setDocsOpen(false)}
+        documents={documents.map((d) => ({
+          id: d.id,
+          name: d.name,
+          source: d.source,
+        }))}
+        activeId={activeId}
+        onSelect={handleSelectDoc}
+        onCreate={() => {
+          handleCreateDoc();
+          setDocsOpen(false);
+        }}
+        onDuplicate={handleDuplicateDoc}
+        onRename={handleRenameDoc}
+        onDelete={handleDeleteDoc}
+        onExport={handleExportDoc}
+        onExportMidi={handleExportDocMidi}
+        onImport={(src) => {
+          handleImportDoc(src);
+          setDocsOpen(false);
+        }}
+        samples={samples.map(({ id, label }) => ({ id, label }))}
+        onLoadSample={(id) => {
+          handleLoadSample(id);
+          setDocsOpen(false);
+        }}
+      />
 
-      <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-3 lg:flex-row">
-        {/* Sidebar is desktop-only. On <lg, it's replaced by a drawer
-            opened from the header hamburger — see S3. */}
-        <motion.div
-          className="relative hidden flex-none flex-col overflow-x-hidden lg:flex"
-          initial={false}
-          animate={{ width: sidebarCollapsed ? 36 : 200 }}
-          transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            {sidebarCollapsed ? (
-              <motion.div
-                key="collapsed"
-                className="flex items-start justify-center pt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.12 }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setSidebarCollapsed(false)}
-                  title={t("panel.show_documents")}
-                  aria-label={t("panel.show_documents")}
-                  className="motion-press flex size-8 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
-                >
-                  <span className="text-[14px] font-bold leading-none">⇥</span>
-                </button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="expanded"
-                className="flex h-full flex-col"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.12, delay: 0.05 }}
-              >
-                <DocumentList
-                  documents={documents.map((d) => ({
-                    id: d.id,
-                    name: d.name,
-                    source: d.source,
-                  }))}
-                  activeId={activeId}
-                  onSelect={handleSelectDoc}
-                  onCreate={handleCreateDoc}
-                  onDuplicate={handleDuplicateDoc}
-                  onRename={handleRenameDoc}
-                  onDelete={handleDeleteDoc}
-                  onExport={handleExportDoc}
-                  onExportMidi={handleExportDocMidi}
-                  onImport={handleImportDoc}
-                  samples={samples.map(({ id, label }) => ({ id, label }))}
-                  onLoadSample={handleLoadSample}
-                  onCollapse={() => setSidebarCollapsed(true)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-        <button
-          type="button"
-          onClick={() => setSidebarCollapsed((v) => !v)}
-          title={
-            sidebarCollapsed
-              ? t("panel.show_documents")
-              : t("panel.hide_documents")
-          }
-          aria-label={
-            sidebarCollapsed
-              ? t("panel.show_documents")
-              : t("panel.hide_documents")
-          }
-          className="group mx-0.5 hidden w-2.5 flex-none items-center justify-center hover:bg-stone-200/70 lg:flex"
-        >
-          <span className="h-10 w-[2px] rounded-full bg-stone-200 group-hover:bg-stone-400" />
-        </button>
-
-
+      <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-3">
       <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         <PlaybackBar
           ref={playbackRef}

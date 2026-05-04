@@ -237,6 +237,11 @@ const zh: Dict = {
   "doclist.btn_new": "+ 新建",
   "doclist.btn_import": "↑ 导入",
   "doclist.sample_placeholder": "♪ 示例…",
+  "doclist.manager_title": "文档",
+  "doclist.view_grid": "图标视图",
+  "doclist.view_list": "列表视图",
+  "doclist.bars_count": "{count} 小节",
+  "doclist.manage": "管理",
 
   // Hotkeys panel
   "hotkeys.section.instruments": "乐器",
@@ -536,6 +541,11 @@ const en: Dict = {
   "doclist.btn_new": "+ New",
   "doclist.btn_import": "↑ Import",
   "doclist.sample_placeholder": "♪ Example…",
+  "doclist.manager_title": "Documents",
+  "doclist.view_grid": "Grid view",
+  "doclist.view_list": "List view",
+  "doclist.bars_count": "{count} bars",
+  "doclist.manage": "Manage",
 
   "hotkeys.section.instruments": "Instruments",
   "hotkeys.section.transport": "Transport",
