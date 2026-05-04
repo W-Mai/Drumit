@@ -32,7 +32,6 @@ export function MobilePlaybackBar({
           right-[max(0.5rem,env(safe-area-inset-right))]
           flex flex-nowrap items-center gap-2 px-2 py-2 text-[11px]
           rounded-t-xl border border-b-0 border-stone-200 bg-white shadow-lg
-          pb-[max(0.5rem,env(safe-area-inset-bottom))]
           lg:hidden
         "
       >
