@@ -371,15 +371,10 @@ function BarShell({
         />
       )}
       {bar.repeatPrevious ? (
-        <text
-          x={bar.x + bar.width / 2}
-          y={staffY + stepToY(0) + STAFF_SPACE * 1.2}
-          textAnchor="middle"
-          className="fill-stone-900"
-          style={{ fontSize: STAFF_SPACE * 3.6 }}
-        >
-          𝄎
-        </text>
+        <MeasureRepeatGlyph
+          cx={bar.x + bar.width / 2}
+          cy={staffY + stepToY(0) + STAFF_SPACE * 0.6}
+        />
       ) : bar.upper.notes.length === 0 && bar.lower.notes.length === 0 ? (
         // No notes in either voice → draw a whole-bar rest (space/half/quarter
         // rests would visually lie about the structure). Appears any time a
@@ -391,6 +386,32 @@ function BarShell({
           <VoicePaint voice={bar.lower} staffY={staffY} />
         </>
       )}
+    </g>
+  );
+}
+
+// Hand-drawn single-measure repeat glyph (𝄎). U+1D10E has no font
+// coverage on most mobile systems, so we draw it ourselves: a thick
+// slash with a dot on each side, centered on (cx, cy).
+function MeasureRepeatGlyph({ cx, cy }: { cx: number; cy: number }) {
+  const slashHalf = STAFF_SPACE * 1.2;
+  const slashThickness = STAFF_SPACE * 0.55;
+  const dotR = STAFF_SPACE * 0.35;
+  const dotDx = STAFF_SPACE * 0.9;
+  const dotDy = STAFF_SPACE * 0.5;
+  return (
+    <g className="fill-stone-900">
+      <line
+        x1={cx - slashHalf}
+        y1={cy + slashHalf}
+        x2={cx + slashHalf}
+        y2={cy - slashHalf}
+        className="stroke-stone-900"
+        strokeWidth={slashThickness}
+        strokeLinecap="round"
+      />
+      <circle cx={cx - dotDx} cy={cy + dotDy} r={dotR} />
+      <circle cx={cx + dotDx} cy={cy - dotDy} r={dotR} />
     </g>
   );
 }
