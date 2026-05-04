@@ -83,12 +83,13 @@ export function PerformView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
 
-  const landscapeState = useFullscreenLifecycle(rootRef, onExit);
-  const needsCssRotation = useForceLandscapeRotation();
-  // Only fake-rotate once we know the native lock isn't coming (failed).
-  // While pending, trust the browser — avoids a visible rotate-then-
-  // unrotate flash when the native path does eventually succeed.
-  const forceRotate = landscapeState === "failed" && needsCssRotation;
+  useFullscreenLifecycle(rootRef, onExit);
+  // CSS-rotate whenever the viewport itself is still portrait. If the
+  // browser honored our native orientation.lock the viewport will
+  // already be landscape and this hook returns false on its own, so
+  // there's no double-rotate risk. On iOS (no working lock) the
+  // viewport stays portrait and the rotate kicks in.
+  const forceRotate = useForceLandscapeRotation();
 
   const expanded = useMemo(() => expandScore(score), [score]);
 
@@ -421,38 +422,27 @@ function getShouldForceRotate(): boolean {
 // took us landscape — if not, the caller falls back to a CSS-rotate
 // fake. iOS Safari / PWA standalone rejects both APIs, so we end up
 // faking; desktop Chrome / Android Chrome accepts and goes native.
-/** Tri-state: pending = still waiting for the native lock promise,
- *  success = native lock resolved, failed = we should fake it. */
-type LandscapeResult = "pending" | "success" | "failed";
-
 function useFullscreenLifecycle(
   rootRef: React.RefObject<HTMLDivElement | null>,
   onExit: () => void,
-): LandscapeResult {
-  const [state, setState] = useState<LandscapeResult>("pending");
-
+): void {
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    let cancelled = false;
-
     type Fs = {
       requestFullscreen?: () => Promise<void>;
       webkitRequestFullscreen?: () => Promise<void>;
     };
     const target = el as unknown as Fs;
-    const fsPromise = (() => {
-      try {
-        return (
-          target.requestFullscreen?.() ??
-          target.webkitRequestFullscreen?.() ??
-          null
-        );
-      } catch {
-        return null;
+    try {
+      const p =
+        target.requestFullscreen?.() ?? target.webkitRequestFullscreen?.();
+      if (p && typeof (p as Promise<void>).catch === "function") {
+        (p as Promise<void>).catch(() => {});
       }
-    })();
-
+    } catch {
+      // ignore
+    }
     type LockableOrientation = {
       lock?: (dir: "landscape") => Promise<void>;
       unlock?: () => void;
@@ -460,32 +450,13 @@ function useFullscreenLifecycle(
     const orientation = (screen as unknown as {
       orientation?: LockableOrientation;
     }).orientation;
-
-    // Orientation lock only works inside a successful fullscreen, so
-    // chain them. If fullscreen fails we still try the lock for
-    // browsers that allow it standalone (rare), but don't count on it.
-    const tryLock = async () => {
-      try {
-        await fsPromise;
-      } catch {
-        // fullscreen rejected; continue to lock attempt anyway.
-      }
-      try {
-        const lockP = orientation?.lock?.("landscape");
-        if (!lockP) {
-          if (!cancelled) setState("failed");
-          return;
-        }
-        await lockP;
-        if (!cancelled) setState("success");
-      } catch {
-        if (!cancelled) setState("failed");
-      }
-    };
-    void tryLock();
-
+    try {
+      const p = orientation?.lock?.("landscape");
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {
+      // ignore
+    }
     return () => {
-      cancelled = true;
       try {
         void document.exitFullscreen?.().catch(() => {});
       } catch {
@@ -506,8 +477,6 @@ function useFullscreenLifecycle(
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, [onExit]);
-
-  return state;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
