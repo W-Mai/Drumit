@@ -31,9 +31,8 @@ const HEADER_HEIGHT = 42;
 const STAFF_TOP_PAD = 72;
 const STAFF_SPACE = 10;
 const STAFF_HEIGHT = STAFF_SPACE * 4;
-/** Vertical buffer below a system to hold sticking letters (≈62 px
- *  below staff top at STAFF_SPACE * 6.2) plus stem tails. */
-const SYSTEM_VERTICAL_PAD = STAFF_SPACE * 7;
+// Needs to clear down-stems + flags from lower-voice kicks at high steps.
+const SYSTEM_VERTICAL_PAD = STAFF_SPACE * 11;
 const STAFF_ROW_HEIGHT = STAFF_HEIGHT + SYSTEM_VERTICAL_PAD;
 /** Extra padding below the last system so content never reaches the
  *  viewBox bottom edge (sticking labels, stem tails, flag curls). */
