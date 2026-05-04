@@ -397,9 +397,9 @@ function BarView({
       ))}
 
       <text
-        x={x}
-        y={y + 10}
-        className="fill-stone-500 text-[10px] font-semibold"
+        x={x + 5}
+        y={y + 12}
+        className="fill-stone-400 text-[11px] font-bold tabular-nums tracking-tight"
       >
         {bar.index}
         {bar.repeatCount > 1 ? ` · ×${bar.repeatCount}` : ""}
@@ -453,15 +453,15 @@ function BarView({
             strokeWidth={1}
           />
           <circle
-            cx={x + 5}
-            cy={(barlineTop + barlineBottom) / 2 - 5}
-            r={2}
+            cx={x + 7}
+            cy={(barlineTop + barlineBottom) / 2 - 6}
+            r={2.5}
             className="fill-stone-700"
           />
           <circle
-            cx={x + 5}
-            cy={(barlineTop + barlineBottom) / 2 + 5}
-            r={2}
+            cx={x + 7}
+            cy={(barlineTop + barlineBottom) / 2 + 6}
+            r={2.5}
             className="fill-stone-700"
           />
         </>
@@ -480,15 +480,15 @@ function BarView({
       {bar.repeatEnd ? (
         <>
           <circle
-            cx={x + width - 5}
-            cy={(barlineTop + barlineBottom) / 2 - 5}
-            r={2}
+            cx={x + width - 7}
+            cy={(barlineTop + barlineBottom) / 2 - 6}
+            r={2.5}
             className="fill-stone-700"
           />
           <circle
-            cx={x + width - 5}
-            cy={(barlineTop + barlineBottom) / 2 + 5}
-            r={2}
+            cx={x + width - 7}
+            cy={(barlineTop + barlineBottom) / 2 + 6}
+            r={2.5}
             className="fill-stone-700"
           />
           <line
@@ -512,7 +512,7 @@ function BarView({
               x={x + width - 4}
               y={barlineTop - 6}
               textAnchor="end"
-              className="fill-stone-700 text-[10px] font-extrabold"
+              className="fill-stone-700 text-[11px] font-extrabold tabular-nums"
             >
               ×{bar.repeatEnd.times}
             </text>
@@ -549,9 +549,9 @@ function BarView({
             strokeWidth={1}
           />
           <text
-            x={x + 5}
-            y={barlineTop - 6}
-            className="fill-stone-700 text-[10px] font-extrabold"
+            x={x + 6}
+            y={barlineTop - 5}
+            className="fill-stone-700 text-[11px] font-extrabold"
           >
             {bar.ending}.
           </text>
@@ -562,9 +562,9 @@ function BarView({
       {bar.navigation ? (
         <text
           x={x + width / 2}
-          y={barlineTop - 18}
+          y={barlineTop - 20}
           textAnchor="middle"
-          className="fill-stone-700 text-[10px] font-bold italic"
+          className="fill-stone-700 text-[11px] font-bold italic tracking-wide"
         >
           {navigationLabel(bar.navigation)}
         </text>
