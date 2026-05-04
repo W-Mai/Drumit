@@ -598,6 +598,7 @@ export function NoteheadStem({
   bottomStep,
   direction,
   tipY,
+  centerStem,
 }: {
   x: number;
   staffY: number;
@@ -606,11 +607,15 @@ export function NoteheadStem({
   direction: "up" | "down";
   /** Override the stem's far end (used when a beam pins all stems to the same y). */
   tipY?: number;
+  /** If the note has an axially-symmetric head (X / slash / …), the
+   *  stem passes through x directly instead of hugging a side edge. */
+  centerStem?: boolean;
 }): ReactNode {
+  const offset = centerStem ? 0 : NOTEHEAD_HALF_WIDTH;
   if (direction === "up") {
     const baseY = staffY + stepToY(bottomStep);
     const y = tipY ?? staffY + stepToY(topStep) - STEM_LENGTH;
-    const stemX = x + NOTEHEAD_HALF_WIDTH;
+    const stemX = x + offset;
     return (
       <line
         x1={stemX}
@@ -625,7 +630,7 @@ export function NoteheadStem({
   }
   const baseY = staffY + stepToY(topStep);
   const y = tipY ?? staffY + stepToY(bottomStep) + STEM_LENGTH;
-  const stemX = x - NOTEHEAD_HALF_WIDTH;
+  const stemX = x - offset;
   return (
     <line
       x1={stemX}
@@ -652,6 +657,7 @@ export function NoteheadFlags({
   direction,
   count,
   tipYOverride,
+  centerStem,
 }: {
   x: number;
   staffY: number;
@@ -661,12 +667,12 @@ export function NoteheadFlags({
   count: number;
   /** When the stem is pinned by a beam, supply the stem's actual tip Y. */
   tipYOverride?: number;
+  centerStem?: boolean;
 }): ReactNode {
   if (count <= 0) return null;
+  const offset = centerStem ? 0 : NOTEHEAD_HALF_WIDTH;
   const stemX =
-    direction === "up"
-      ? x + NOTEHEAD_HALF_WIDTH
-      : x - NOTEHEAD_HALF_WIDTH;
+    direction === "up" ? x + offset : x - offset;
   const tipY =
     tipYOverride ??
     (direction === "up"

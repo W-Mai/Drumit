@@ -442,6 +442,19 @@ function VoicePaint({
   );
 }
 
+// Axially-symmetric noteheads (X, slash, triangle, circle-x) look
+// wrong with the stem pinned to a side — the stem should pass through
+// the glyph's own center line, per standard percussion engraving.
+function hasAxialNotehead(note: StaffNote): boolean {
+  return note.glyphs.some(
+    (g) =>
+      g.head === "x" ||
+      g.head === "circle-x" ||
+      g.head === "triangle" ||
+      g.head === "slash",
+  );
+}
+
 function NoteMarker({
   note,
   staffY,
@@ -493,6 +506,7 @@ function NoteMarker({
           bottomStep={bottomStep}
           direction={direction}
           tipY={stemTipY}
+          centerStem={hasAxialNotehead(note)}
         />
       ) : null}
       {!stemless && !suppressFlag ? (
@@ -503,6 +517,7 @@ function NoteMarker({
           bottomStep={bottomStep}
           direction={direction}
           count={flagsFor(note.duration)}
+          centerStem={hasAxialNotehead(note)}
         />
       ) : null}
       {note.articulations.includes("accent") ? (
@@ -589,8 +604,9 @@ function BeamLine({
   const start = notes[beam.start];
   const end = notes[beam.end];
   if (!start || !end) return null;
-  const stemXOffset =
-    direction === "up" ? STAFF_SPACE * 0.58 : -STAFF_SPACE * 0.58;
+  const sign = direction === "up" ? 1 : -1;
+  const startOffset = hasAxialNotehead(start) ? 0 : STAFF_SPACE * 0.58 * sign;
+  const endOffset = hasAxialNotehead(end) ? 0 : STAFF_SPACE * 0.58 * sign;
   // Horizontal beam: pick a single y line that every note in the run
   // can reach with a ≥STEM_LENGTH_SCREEN stem. For stem-up that's the
   // minimum tip-y (the highest point); for stem-down it's the maximum.
@@ -605,8 +621,8 @@ function BeamLine({
       return staffY + stepToY(bottomStep) + STEM_LENGTH_SCREEN;
     });
   const beamY = direction === "up" ? Math.min(...tipYs) : Math.max(...tipYs);
-  const x1 = start.x + stemXOffset;
-  const x2 = end.x + stemXOffset;
+  const x1 = start.x + startOffset;
+  const x2 = end.x + endOffset;
   const baseDy = direction === "up" ? 1 : -1;
   const dy = (beam.level - 1) * BEAM_GAP * baseDy;
   return (
