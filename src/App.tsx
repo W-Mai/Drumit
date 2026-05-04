@@ -936,10 +936,11 @@ function AppInner() {
               className="size-5"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="1.75"
               strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <path d="M4 6h16M4 12h16M4 18h16" />
+              <path d="M3 7.5a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5Z" />
             </svg>
           </button>
           <p className="text-brand text-[11px] font-bold tracking-[0.18em] uppercase">
