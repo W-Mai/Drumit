@@ -36,12 +36,6 @@ function NavigationBadge({
     return acc;
   }, [0]);
   const baselineY = bottomY;
-  // Text baseline sits on bottomY (SVG <text> default). Glyphs are
-  // centered on their own geometric midpoint, so we lift them by
-  // half the visual height plus the optical descent that Latin
-  // text would occupy (~1/4 size), landing the glyph's bottom near
-  // the text baseline.
-  const glyphCy = baselineY - glyphSize * 0.5 - textSize * 0.2;
   return (
     <g>
       {segments.map((seg, i) => {
@@ -52,7 +46,7 @@ function NavigationBadge({
             <SegnoGlyph
               key={i}
               cx={segCx}
-              cy={glyphCy}
+              baselineY={baselineY}
               size={glyphSize}
               className="fill-stone-700"
             />
@@ -63,7 +57,7 @@ function NavigationBadge({
             <CodaGlyph
               key={i}
               cx={segCx}
-              cy={glyphCy}
+              baselineY={baselineY}
               size={glyphSize}
               className="fill-stone-700"
             />

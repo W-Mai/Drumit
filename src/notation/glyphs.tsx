@@ -21,15 +21,18 @@ const REPEAT_PATH =
 const REPEAT_VB = { x: 0, y: -279, w: 532, h: 529 };
 
 interface GlyphProps {
+  /** Horizontal center of the rendered glyph in SVG coordinates. */
   cx: number;
-  cy: number;
+  /** Baseline Y — aligns with sibling <text y={baselineY}> elements. */
+  baselineY: number;
+  /** Visual height (px) at which the glyph should render. */
   size: number;
   className?: string;
 }
 
 function Glyph({
   cx,
-  cy,
+  baselineY,
   size,
   className,
   path,
@@ -40,12 +43,12 @@ function Glyph({
   vb: { x: number; y: number; w: number; h: number };
   dataGlyph: string;
 }) {
-  // `size` = target visual height; each glyph scales by its own vb.h
-  // so proportions stay intact (Coda's wider-than-tall bbox still
-  // fits, Segno's tall S still reaches `size` tall).
   const scale = size / vb.h;
+  // Font-units already y-flipped: font baseline is y=0 in path space.
+  // Center the glyph's bbox horizontally on cx, anchor its baseline
+  // (y=0) to baselineY, so text + glyph share a single baseline.
   const gx = cx - (vb.x + vb.w / 2) * scale;
-  const gy = cy - (vb.y + vb.h / 2) * scale;
+  const gy = baselineY;
   return (
     <g
       className={className}

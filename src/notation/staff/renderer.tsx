@@ -366,7 +366,7 @@ function BarShell({
       {bar.repeatPrevious ? (
         <MeasureRepeatGlyph
           cx={bar.x + bar.width / 2}
-          cy={staffY + stepToY(0) + STAFF_SPACE * 0.6}
+          baselineY={staffY + stepToY(0) + STAFF_SPACE * 1.2}
           size={STAFF_SPACE * 3.6}
         />
       ) : bar.upper.notes.length === 0 && bar.lower.notes.length === 0 ? (
@@ -484,7 +484,6 @@ function NavigationBadge({
     return acc;
   }, [0]);
   const baselineY = bottomY;
-  const glyphCy = baselineY - glyphSize * 0.5 - textSize * 0.2;
   return (
     <g>
       {segments.map((seg, i) => {
@@ -495,7 +494,7 @@ function NavigationBadge({
             <SegnoGlyph
               key={i}
               cx={segCx}
-              cy={glyphCy}
+              baselineY={baselineY}
               size={glyphSize}
               className="fill-stone-900"
             />
@@ -506,7 +505,7 @@ function NavigationBadge({
             <CodaGlyph
               key={i}
               cx={segCx}
-              cy={glyphCy}
+              baselineY={baselineY}
               size={glyphSize}
               className="fill-stone-900"
             />
