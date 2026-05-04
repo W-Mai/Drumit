@@ -178,6 +178,7 @@ function AppInner() {
   // isn't available (insecure context / permission denied) or when the
   // user copied from Drumit and the system clipboard was mangled.
   const barClipboardRef = useRef<Bar[] | null>(null);
+  const lastBarClickRef = useRef<{ index: number; time: number } | null>(null);
   const [showLabels, setShowLabels] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -375,6 +376,21 @@ function AppInner() {
       // Plain click = seek. Shift-click extends the selection and
       // shouldn't move the playhead.
       playbackRef.current?.seekToBar(index);
+
+      // Double-click on the same bar expands the editor panel. Keep
+      // the threshold generous on touch (iOS registers taps ~200 ms
+      // apart as a double-tap).
+      const now = Date.now();
+      const last = lastBarClickRef.current;
+      if (
+        last &&
+        last.index === index &&
+        now - last.time < 350 &&
+        editorCollapsed
+      ) {
+        setEditorCollapsed(false);
+      }
+      lastBarClickRef.current = { index, time: now };
     }
     // Park focus inside the Preview scope so scoped hotkeys fire.
     chartContainer?.focus();
@@ -1252,23 +1268,15 @@ function AppInner() {
         >
           <Panel className="flex min-h-0 flex-1 flex-col">
           <PanelHeader
+            onTitleClick={() => setEditorCollapsed((v) => !v)}
+            titleClickLabel={
+              editorCollapsed
+                ? t("editor.show_editor")
+                : t("editor.hide_editor")
+            }
+            titleExpanded={!editorCollapsed}
             title={
-              <button
-                type="button"
-                onClick={() => setEditorCollapsed((v) => !v)}
-                title={
-                  editorCollapsed
-                    ? t("editor.show_editor")
-                    : t("editor.hide_editor")
-                }
-                aria-label={
-                  editorCollapsed
-                    ? t("editor.show_editor")
-                    : t("editor.hide_editor")
-                }
-                aria-expanded={!editorCollapsed}
-                className="-m-1 flex items-center gap-1.5 rounded px-1 py-1 text-left hover:bg-stone-100"
-              >
+              <>
                 <span className="flex size-5 items-center justify-center text-stone-500">
                   <span className="text-[10px] leading-none">
                     {editorCollapsed ? "▸" : "▾"}
@@ -1284,7 +1292,7 @@ function AppInner() {
                     {t("editor.readonly_tag")}
                   </span>
                 ) : null}
-              </button>
+              </>
             }
           >
             <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
