@@ -1,7 +1,18 @@
-// Hand-drawn music symbols that aren't reliably covered by system
-// fonts. Used in both Drumit and Staff views. Every glyph is centered
-// on (cx, cy) and sized so `size` roughly matches the em-box the
-// Unicode version would occupy.
+// SMuFL glyph paths dumped from Bravura.otf (OFL).
+// Regenerate with: `bun scripts/dump-smufl-glyphs.ts /tmp/Bravura.otf`.
+// Paths are in font-units (em=2048), Y already flipped for SVG.
+
+const SEGNO_PATH =
+  "M 276.48 1361.92 C 288.77 1361.92 303.1 1357.82 309.25 1335.3 L 313.34 1320.96 C 327.68 1265.66 358.4 1144.83 462.85 1144.83 C 546.82 1144.83 604.16 1193.98 604.16 1282.05 C 604.16 1312.77 598.02 1345.54 587.78 1378.3 C 555.01 1472.51 417.79 1507.33 313.34 1507.33 C 169.98 1507.33 8.19 1331.2 8.19 1128.45 C 8.19 1079.3 18.43 1028.1 40.96 976.9 C 106.5 827.39 403.46 645.12 419.84 638.98 C 428.03 634.88 432.13 630.78 432.13 622.59 C 432.13 614.4 428.03 604.16 419.84 589.82 C 405.5 561.15 110.59 30.72 110.59 30.72 C 106.5 22.53 104.45 12.29 104.45 4.1 C 104.45 -28.67 129.02 -55.3 161.79 -55.3 C 182.27 -55.3 202.75 -43.01 212.99 -24.58 C 212.99 -24.58 530.43 548.86 536.58 561.15 C 536.58 559.1 552.96 571.39 561.15 571.39 C 591.87 565.25 1001.47 444.42 1001.47 249.86 C 1001.47 169.98 952.32 116.74 882.69 106.5 L 876.54 104.45 C 833.54 104.45 798.72 133.12 798.72 196.61 L 798.72 219.14 C 798.72 296.96 747.52 354.3 690.18 354.3 C 681.98 354.3 673.79 352.26 665.6 350.21 C 589.82 331.78 520.19 299.01 520.19 217.09 C 520.19 92.16 647.17 -16.38 768 -16.38 C 794.62 -16.38 823.3 -12.29 854.02 -2.05 C 1017.86 53.25 1126.4 186.37 1126.4 356.35 C 1126.4 374.78 1124.35 395.26 1122.3 415.74 C 1091.58 641.02 768 823.3 743.42 835.58 C 718.85 849.92 708.61 858.11 708.61 868.35 C 708.61 872.45 710.66 876.54 712.7 880.64 C 722.94 897.02 1040.38 1468.42 1040.38 1468.42 C 1046.53 1478.66 1048.58 1486.85 1048.58 1497.09 C 1048.58 1529.86 1021.95 1554.43 991.23 1554.43 C 970.75 1554.43 950.27 1544.19 940.03 1525.76 C 940.03 1525.76 614.4 937.98 602.11 919.55 C 595.97 909.31 591.87 903.17 583.68 903.17 C 577.54 903.17 571.39 905.22 563.2 909.31 C 544.77 915.46 235.52 1034.24 182.27 1126.4 C 169.98 1148.93 153.6 1191.94 153.6 1234.94 C 153.6 1290.24 178.18 1347.58 264.19 1361.92 M 849.92 954.37 C 849.92 890.88 903.17 837.63 966.66 837.63 C 1032.19 837.63 1083.39 890.88 1083.39 954.37 C 1083.39 1019.9 1032.19 1071.1 966.66 1071.1 C 903.17 1071.1 849.92 1019.9 849.92 954.37 M 286.72 540.67 C 286.72 604.16 235.52 657.41 169.98 657.41 C 106.5 657.41 53.25 604.16 53.25 540.67 C 53.25 475.14 106.5 423.94 169.98 423.94 C 235.52 423.94 286.72 475.14 286.72 540.67";
+const SEGNO_VB = { x: 4, y: -759, w: 546, h: 786 };
+
+const CODA_PATH =
+  "M 1918.98 819.2 L 1675.26 819.2 C 1654.78 1204.22 1368.06 1513.47 1036.29 1540.1 L 1036.29 1804.29 C 1036.29 1830.91 1013.76 1839.1 987.14 1839.1 C 960.51 1839.1 937.98 1830.91 937.98 1804.29 L 937.98 1540.1 C 606.21 1513.47 321.54 1206.27 299.01 819.2 L 28.67 819.2 C 0 819.2 -8.19 796.67 -8.19 770.05 C -8.19 743.42 0 720.9 28.67 720.9 L 299.01 720.9 C 321.54 337.92 606.21 26.62 937.98 0 L 937.98 -286.72 C 937.98 -315.39 960.51 -323.58 987.14 -323.58 C 1013.76 -323.58 1036.29 -315.39 1036.29 -286.72 L 1036.29 0 C 1368.06 26.62 1654.78 337.92 1675.26 720.9 L 1918.98 720.9 C 1947.65 720.9 1955.84 743.42 1955.84 770.05 C 1955.84 796.67 1947.65 819.2 1918.98 819.2 M 1337.34 819.2 L 1036.29 819.2 L 1036.29 1425.41 C 1323.01 1400.83 1337.34 1150.98 1337.34 819.2 M 937.98 1425.41 L 937.98 819.2 L 647.17 819.2 C 647.17 1150.98 647.17 1400.83 937.98 1425.41 M 647.17 720.9 L 937.98 720.9 L 937.98 98.3 C 673.79 129.02 649.22 405.5 647.17 720.9 M 1036.29 98.3 L 1036.29 720.9 L 1337.34 720.9 C 1331.2 407.55 1292.29 129.02 1036.29 98.3";
+const CODA_VB = { x: -4, y: -898, w: 959, h: 1056 };
+
+const REPEAT_PATH =
+  "M 1079.3 540.67 C 1085.44 548.86 1089.54 555.01 1089.54 561.15 C 1089.54 567.3 1085.44 571.39 1077.25 571.39 L 860.16 571.39 C 847.87 571.39 837.63 559.1 823.3 540.67 L 6.14 -483.33 C 2.05 -487.42 0 -493.57 0 -497.66 C 0 -505.86 6.14 -512 16.38 -512 L 219.14 -512 C 237.57 -512 251.9 -495.62 262.14 -483.33 M 126.98 409.6 C 57.34 409.6 0 352.26 0 280.58 C 0 210.94 57.34 153.6 126.98 153.6 C 198.66 153.6 256 210.94 256 280.58 C 256 352.26 198.66 409.6 126.98 409.6 M 960.51 -100.35 C 890.88 -100.35 833.54 -157.7 833.54 -229.38 C 833.54 -299.01 890.88 -356.35 960.51 -356.35 C 1032.19 -356.35 1089.54 -299.01 1089.54 -229.38 C 1089.54 -157.7 1032.19 -100.35 960.51 -100.35";
+const REPEAT_VB = { x: 0, y: -279, w: 532, h: 529 };
 
 interface GlyphProps {
   cx: number;
@@ -10,101 +21,68 @@ interface GlyphProps {
   className?: string;
 }
 
-/**
- * Segno — italic S drawn as two cubic Béziers (top bowl turning left,
- * bottom bowl turning right), an angled slash crossing the glyph, and
- * two dots in the opposite quadrants. Path points are tuned on the
- * `size` scale to match Bravura's visual proportions.
- */
-export function SegnoGlyph({
+function Glyph({
   cx,
   cy,
   size,
-  className = "fill-stone-700",
-}: GlyphProps) {
-  // All coordinates below are expressed as fractions of `size` from
-  // the center (cx, cy). Chart-height of the S = size.
-  const sw = size * 0.14;
-  // Two cubic Béziers chained; tweakpoints picked to echo the printed
-  // symbol: fat strokes, tilted ~20°, terminals curling back.
-  const p = (dx: number, dy: number) =>
-    `${cx + size * dx} ${cy + size * dy}`;
-  const sPath = [
-    `M ${p(0.25, -0.45)}`,
-    `C ${p(-0.05, -0.55)} ${p(-0.42, -0.3)} ${p(-0.15, -0.05)}`,
-    `C ${p(0.12, 0.2)} ${p(0.42, 0.3)} ${p(0.15, 0.45)}`,
-    `C ${p(-0.05, 0.52)} ${p(-0.25, 0.45)} ${p(-0.3, 0.3)}`,
-  ].join(" ");
-  const slash = size * 0.65;
-  const dotR = size * 0.08;
-  const dotOff = size * 0.42;
+  className,
+  path,
+  vb,
+  dataGlyph,
+}: GlyphProps & {
+  path: string;
+  vb: { x: number; y: number; w: number; h: number };
+  dataGlyph: string;
+}) {
+  // Scale so the glyph's tallest dimension equals `size`, center on
+  // (cx, cy). SVG `transform` composes right-to-left: translate to
+  // center, then scale, then shift to the glyph's own origin.
+  const scale = size / Math.max(vb.w, vb.h);
+  const gx = cx - (vb.x + vb.w / 2) * scale;
+  const gy = cy - (vb.y + vb.h / 2) * scale;
   return (
-    <g className={className} data-glyph="segno">
-      <path
-        d={sPath}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={sw}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <line
-        x1={cx - slash}
-        y1={cy + slash}
-        x2={cx + slash}
-        y2={cy - slash}
-        stroke="currentColor"
-        strokeWidth={sw * 0.85}
-        strokeLinecap="round"
-      />
-      <circle cx={cx - dotOff} cy={cy - dotOff * 0.4} r={dotR} />
-      <circle cx={cx + dotOff} cy={cy + dotOff * 0.4} r={dotR} />
+    <g
+      className={className}
+      data-glyph={dataGlyph}
+      transform={`translate(${gx.toFixed(2)} ${gy.toFixed(2)}) scale(${scale.toFixed(4)})`}
+    >
+      <path d={path} fill="currentColor" />
     </g>
   );
 }
 
-/**
- * Coda — a ring pierced by a horizontal and vertical cross that both
- * extend a bit past the ring. Looks like a telescope reticle.
- */
-export function CodaGlyph({
-  cx,
-  cy,
-  size,
-  className = "fill-stone-700",
-}: GlyphProps) {
-  const ringR = size * 0.38;
-  const strokeW = size * 0.11;
-  const crossExtend = size * 0.52;
+export function SegnoGlyph(props: GlyphProps) {
   return (
-    <g className={className} data-glyph="coda">
-      <ellipse
-        cx={cx}
-        cy={cy}
-        rx={ringR}
-        ry={ringR * 0.95}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={strokeW}
-      />
-      <line
-        x1={cx}
-        y1={cy - crossExtend}
-        x2={cx}
-        y2={cy + crossExtend}
-        stroke="currentColor"
-        strokeWidth={strokeW}
-        strokeLinecap="round"
-      />
-      <line
-        x1={cx - crossExtend}
-        y1={cy}
-        x2={cx + crossExtend}
-        y2={cy}
-        stroke="currentColor"
-        strokeWidth={strokeW}
-        strokeLinecap="round"
-      />
-    </g>
+    <Glyph
+      {...props}
+      className={props.className ?? "fill-stone-700"}
+      path={SEGNO_PATH}
+      vb={SEGNO_VB}
+      dataGlyph="segno"
+    />
+  );
+}
+
+export function CodaGlyph(props: GlyphProps) {
+  return (
+    <Glyph
+      {...props}
+      className={props.className ?? "fill-stone-700"}
+      path={CODA_PATH}
+      vb={CODA_VB}
+      dataGlyph="coda"
+    />
+  );
+}
+
+export function MeasureRepeatGlyph(props: GlyphProps) {
+  return (
+    <Glyph
+      {...props}
+      className={props.className ?? "fill-stone-900"}
+      path={REPEAT_PATH}
+      vb={REPEAT_VB}
+      dataGlyph="repeat-measure"
+    />
   );
 }
