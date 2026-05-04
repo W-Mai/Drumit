@@ -195,10 +195,16 @@ export function PerformView({
               transformOrigin: "top left",
               width: "100vh",
               height: "100vw",
-              paddingTop: "env(safe-area-inset-top)",
-              paddingLeft: "env(safe-area-inset-left)",
+              // CSS-rotated 90° clockwise: element edges map to screen
+              // positions as top→right, right→bottom, bottom→left,
+              // left→top. The device physically stays portrait, so the
+              // notch is still reported via env(safe-area-inset-top)
+              // and home-indicator via -bottom. Re-wire paddings so
+              // each element edge avoids the right portrait inset.
+              paddingTop: "env(safe-area-inset-left)",
               paddingRight: "env(safe-area-inset-right)",
-              paddingBottom: "env(safe-area-inset-bottom)",
+              paddingBottom: "env(safe-area-inset-top)",
+              paddingLeft: "env(safe-area-inset-bottom)",
             }
           : {
               paddingTop: "env(safe-area-inset-top)",
