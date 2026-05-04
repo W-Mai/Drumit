@@ -309,7 +309,7 @@ function BarShell({
       {bar.ending ? (
         <EndingBracket
           x={bar.x + 4}
-          y={staffY - STAFF_SPACE * 1.8}
+          y={staffY - STAFF_SPACE * 5.5}
           width={bar.width - 8}
           label={`${bar.ending}.`}
         />
@@ -317,7 +317,7 @@ function BarShell({
       {bar.navigationLabel ? (
         <text
           x={bar.x + bar.width - 4}
-          y={staffY - 4}
+          y={staffY - STAFF_SPACE * 7}
           textAnchor="end"
           className="fill-stone-900 font-bold italic"
           style={{ fontSize: 12 }}
