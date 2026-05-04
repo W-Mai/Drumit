@@ -79,6 +79,10 @@ import type { Bar, Score } from "./notation/types";
 import { cn } from "./lib/utils";
 import { useHistory } from "./lib/useHistory";
 import { useFlashBars } from "./lib/useFlashBars";
+import {
+  applyServiceWorkerUpdate,
+  UPDATE_READY_EVENT,
+} from "./lib/registerServiceWorker";
 import { useI18n } from "./i18n/useI18n";
 
 type Mode = "source" | "visual";
@@ -615,6 +619,24 @@ function AppInner() {
     // Only seed on doc switch; subsequent edits go through writeActiveDocSource.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
+
+  useEffect(() => {
+    const onReady = () => {
+      toast.toast({
+        message: t("toast.update_ready"),
+        tone: "info",
+        duration: 0,
+        action: {
+          label: t("toast.update_refresh"),
+          onClick: () => {
+            void applyServiceWorkerUpdate();
+          },
+        },
+      });
+    };
+    window.addEventListener(UPDATE_READY_EVENT, onReady);
+    return () => window.removeEventListener(UPDATE_READY_EVENT, onReady);
+  }, [toast, t]);
 
   // Write back a new source string into the active document.
   function writeActiveDocSource(source: string) {

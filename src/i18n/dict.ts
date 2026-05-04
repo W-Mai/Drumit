@@ -313,6 +313,8 @@ const zh: Dict = {
   "toast.workspace_reset": "已重置所有文档",
   "toast.undo": "撤销",
   "toast.dismiss": "关闭",
+  "toast.update_ready": "新版本可用",
+  "toast.update_refresh": "刷新",
 
   // Saved-at indicator
   "saved.just_now": "刚刚保存",
@@ -611,6 +613,8 @@ const en: Dict = {
   "toast.workspace_reset": "All documents reset",
   "toast.undo": "Undo",
   "toast.dismiss": "Dismiss",
+  "toast.update_ready": "Update available",
+  "toast.update_refresh": "Refresh",
 
   "saved.just_now": "Saved just now",
   "saved.at": "Saved at {time}",
