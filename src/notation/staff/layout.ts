@@ -31,8 +31,9 @@ const HEADER_HEIGHT = 42;
 const STAFF_TOP_PAD = 72;
 const STAFF_SPACE = 10;
 const STAFF_HEIGHT = STAFF_SPACE * 4;
-// Needs to clear down-stems + flags from lower-voice kicks at high steps.
-const SYSTEM_VERTICAL_PAD = STAFF_SPACE * 11;
+// Needs to clear (prev row) down-stems + flags + sticking AND
+// (this row) up-stem tips + ending bracket + nav labels.
+const SYSTEM_VERTICAL_PAD = STAFF_SPACE * 16;
 const STAFF_ROW_HEIGHT = STAFF_HEIGHT + SYSTEM_VERTICAL_PAD;
 /** Extra padding below the last system so content never reaches the
  *  viewBox bottom edge (sticking labels, stem tails, flag curls). */
