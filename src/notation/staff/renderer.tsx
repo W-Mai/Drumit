@@ -236,6 +236,19 @@ function BarShell({
   const barHeight = STAFF_SPACE * 5;
   const beatWidth = bar.width / bar.beats;
   const playhead = PLAYHEAD_PALETTE[playheadEngine];
+  // Highest point the upper-voice stem-up tips reach in this bar.
+  // Anything rendered above the staff (nav labels, ending brackets)
+  // must clear this y or it will sit on top of stems / flags.
+  const upperStemCeilingY = (() => {
+    if (bar.upper.notes.length === 0) return staffY;
+    let minTipY = staffY;
+    for (const n of bar.upper.notes) {
+      const topStep = Math.min(...n.glyphs.map((g) => g.step));
+      const tipY = staffY + stepToY(topStep) - STEM_LENGTH_SCREEN;
+      if (tipY < minTipY) minTipY = tipY;
+    }
+    return minTipY;
+  })();
   return (
     <g
       onClick={onSelect ? (e) => onSelect(e.shiftKey) : undefined}
@@ -317,7 +330,11 @@ function BarShell({
       {bar.navigationLabel ? (
         <text
           x={bar.x + bar.width - 4}
-          y={staffY - STAFF_SPACE * (bar.ending ? 7 : 2.5)}
+          y={
+            bar.ending
+              ? staffY - STAFF_SPACE * 7
+              : Math.min(upperStemCeilingY - 6, staffY - STAFF_SPACE * 2.5)
+          }
           textAnchor="end"
           className="fill-stone-900 font-bold italic"
           style={{ fontSize: 12 }}
