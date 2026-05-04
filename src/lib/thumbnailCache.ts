@@ -1,7 +1,7 @@
 import { parseDrumtab } from "../notation/parser";
-import { renderScoreToSvg } from "../notation/exporters/svg";
+import { renderScoreToThumbnailSvg } from "../notation/exporters/svg";
 
-const STORAGE_KEY = "drumit.thumbCache.v1";
+const STORAGE_KEY = "drumit.thumbCache.v2";
 const MAX_BYTES = 2_000_000;
 
 interface CacheEntry {
@@ -75,7 +75,10 @@ export async function generateThumbnail(
   const { score, diagnostics } = parseDrumtab(source);
   if (diagnostics.some((d) => d.level === "error")) return null;
   try {
-    const svg = await renderScoreToSvg(score, { width, showLabels: false });
+    const svg = await renderScoreToThumbnailSvg(score, {
+      width,
+      showLabels: false,
+    });
     memory[docId] = { hash: hash(source), width, svg };
     // Keep recently-touched keys at the end of insertion order for the
     // LRU eviction above: delete then re-insert.

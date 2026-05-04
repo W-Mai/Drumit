@@ -217,3 +217,95 @@ export function renderScoreToSvgFromDom(
 ): string {
   return postProcessSvg(svgEl.outerHTML, title, options);
 }
+
+/**
+ * Thumbnail variant: produces a self-contained SVG snippet safe to
+ * inline with dangerouslySetInnerHTML. The main export path wraps a
+ * global <style> block, which leaks into the surrounding document
+ * when embedded (SVG inline styles are NOT scoped). Here we instead
+ * rewrite every fill-/stroke-<color> Tailwind class into a literal
+ * attribute value, drop transient interaction layers, and return a
+ * minimal <svg>…</svg>.
+ */
+export async function renderScoreToThumbnailSvg(
+  score: Score,
+  options: RenderSvgOptions = {},
+): Promise<string> {
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { createElement } = await import("react");
+  const { DrumChart } = await import("../renderer");
+  const layout = layoutScore(score, {
+    showLabels: options.showLabels ?? false,
+    expanded: false,
+    width: options.width ?? 980,
+  });
+  const raw = renderToStaticMarkup(
+    createElement(DrumChart, {
+      layout,
+      showLabels: options.showLabels ?? false,
+    }),
+  );
+  const cleaned = stripInteractionLayers(
+    neutralizeTransientClasses(raw),
+  );
+  const withNamespace = cleaned.replace(
+    /<svg([^>]*)>/,
+    (_m, attrs) => `<svg${attrs} xmlns="http://www.w3.org/2000/svg">`,
+  );
+  return inlineColorClasses(withNamespace);
+}
+
+// Tailwind class → attribute value. Uses CSS custom properties for
+// the stone / accent palette so cached thumbnails re-paint instantly
+// when the theme flips (var lookup resolves against the host <html>'s
+// [data-theme] override). Literal values cover the "never inverts"
+// cases like `none` and `transparent`.
+const CLASS_TO_FILL: Record<string, string> = {
+  "fill-stone-50": "var(--color-stone-50)",
+  "fill-stone-100": "var(--color-stone-100)",
+  "fill-stone-200": "var(--color-stone-200)",
+  "fill-stone-300": "var(--color-stone-300)",
+  "fill-stone-400": "var(--color-stone-400)",
+  "fill-stone-500": "var(--color-stone-500)",
+  "fill-stone-700": "var(--color-stone-700)",
+  "fill-stone-900": "var(--color-stone-900)",
+  "fill-amber-100": "var(--color-amber-100)",
+  "fill-amber-800": "var(--color-amber-800)",
+  "fill-emerald-300/40": "color-mix(in srgb, var(--color-emerald-300) 40%, transparent)",
+  "fill-none": "none",
+  "fill-transparent": "transparent",
+  "fill-current": "currentColor",
+};
+const CLASS_TO_STROKE: Record<string, string> = {
+  "stroke-stone-300": "var(--color-stone-300)",
+  "stroke-stone-400": "var(--color-stone-400)",
+  "stroke-stone-600": "var(--color-stone-600)",
+  "stroke-stone-700": "var(--color-stone-700)",
+  "stroke-stone-900": "var(--color-stone-900)",
+  "stroke-transparent": "transparent",
+};
+
+function inlineColorClasses(svg: string): string {
+  return svg.replace(/class="([^"]*)"/g, (_m, cls: string) => {
+    const keep: string[] = [];
+    let fill: string | null = null;
+    let stroke: string | null = null;
+    for (const tok of cls.split(/\s+/)) {
+      if (!tok) continue;
+      if (tok in CLASS_TO_FILL) {
+        fill = CLASS_TO_FILL[tok];
+        continue;
+      }
+      if (tok in CLASS_TO_STROKE) {
+        stroke = CLASS_TO_STROKE[tok];
+        continue;
+      }
+      keep.push(tok);
+    }
+    const attrs: string[] = [];
+    if (keep.length) attrs.push(`class="${keep.join(" ")}"`);
+    if (fill !== null) attrs.push(`fill="${fill}"`);
+    if (stroke !== null) attrs.push(`stroke="${stroke}"`);
+    return attrs.join(" ");
+  });
+}
