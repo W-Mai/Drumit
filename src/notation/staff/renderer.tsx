@@ -23,7 +23,13 @@ import {
   TimeSignature,
 } from "./glyphs";
 import { layoutStaff } from "./layout";
-import { SegnoGlyph, CodaGlyph, MeasureRepeatGlyph } from "../glyphs";
+import {
+  SegnoGlyph,
+  CodaGlyph,
+  MeasureRepeatGlyph,
+  SEGNO_ASPECT,
+  CODA_ASPECT,
+} from "../glyphs";
 import { navigationSegments } from "../navSegments";
 import type {
   StaffBar,
@@ -464,10 +470,13 @@ function NavigationBadge({
 }) {
   const segments = navigationSegments(nav);
   const textSize = 12;
-  const glyphSize = 20;
-  const widths = segments.map((s) =>
-    s.kind === "text" ? s.text.length * textSize * 0.55 : glyphSize,
-  );
+  const glyphSize = 14;
+  const widths = segments.map((s) => {
+    if (s.kind === "text") return s.text.length * textSize * 0.55;
+    const aspect =
+      s.kind === "coda" ? CODA_ASPECT : s.kind === "segno" ? SEGNO_ASPECT : 1;
+    return glyphSize * aspect + 2;
+  });
   const total = widths.reduce((a, b) => a + b, 0);
   const startX = rightX - total;
   const offsets = widths.reduce<number[]>((acc, w) => {
@@ -475,6 +484,7 @@ function NavigationBadge({
     return acc;
   }, [0]);
   const baselineY = bottomY;
+  const glyphCy = baselineY - glyphSize * 0.5 - textSize * 0.2;
   return (
     <g>
       {segments.map((seg, i) => {
@@ -485,7 +495,7 @@ function NavigationBadge({
             <SegnoGlyph
               key={i}
               cx={segCx}
-              cy={baselineY - glyphSize * 0.45}
+              cy={glyphCy}
               size={glyphSize}
               className="fill-stone-900"
             />
@@ -496,7 +506,7 @@ function NavigationBadge({
             <CodaGlyph
               key={i}
               cx={segCx}
-              cy={baselineY - glyphSize * 0.45}
+              cy={glyphCy}
               size={glyphSize}
               className="fill-stone-900"
             />

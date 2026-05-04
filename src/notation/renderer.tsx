@@ -4,7 +4,7 @@ import type { LaidOutBar, LaidOutHit, LaidOutLayout, RowGroup } from "./layout";
 import type { Hit, NavigationMarker } from "./types";
 import { instrumentSizeScale } from "./instruments";
 import { cn } from "../lib/utils";
-import { SegnoGlyph, CodaGlyph } from "./glyphs";
+import { SegnoGlyph, CodaGlyph, SEGNO_ASPECT, CODA_ASPECT } from "./glyphs";
 import { navigationSegments } from "./navSegments";
 
 function NavigationBadge({
@@ -18,19 +18,30 @@ function NavigationBadge({
 }) {
   const segments = navigationSegments(nav);
   const textSize = 11;
-  const glyphSize = 18;
-  const widths = segments.map((s) =>
-    s.kind === "text" ? s.text.length * textSize * 0.55 : glyphSize,
-  );
+  const glyphSize = 13;
+  // Each segment's width: text approximated from char count, glyphs
+  // scaled by their own aspect so wide Coda gets more room than
+  // narrow Segno. A tiny horizontal pad keeps labels like
+  // "To Coda [coda]" from welding the glyph against its prefix.
+  const widths = segments.map((s) => {
+    if (s.kind === "text") return s.text.length * textSize * 0.55;
+    const aspect =
+      s.kind === "coda" ? CODA_ASPECT : s.kind === "segno" ? SEGNO_ASPECT : 1;
+    return glyphSize * aspect + 2;
+  });
   const total = widths.reduce((a, b) => a + b, 0);
   const startX = cx - total / 2;
-  // Prefix sum so each segment knows its own left edge without
-  // mutating state across map callbacks.
   const offsets = widths.reduce<number[]>((acc, w) => {
     acc.push((acc[acc.length - 1] ?? 0) + w);
     return acc;
   }, [0]);
   const baselineY = bottomY;
+  // Text baseline sits on bottomY (SVG <text> default). Glyphs are
+  // centered on their own geometric midpoint, so we lift them by
+  // half the visual height plus the optical descent that Latin
+  // text would occupy (~1/4 size), landing the glyph's bottom near
+  // the text baseline.
+  const glyphCy = baselineY - glyphSize * 0.5 - textSize * 0.2;
   return (
     <g>
       {segments.map((seg, i) => {
@@ -41,7 +52,7 @@ function NavigationBadge({
             <SegnoGlyph
               key={i}
               cx={segCx}
-              cy={baselineY - glyphSize * 0.45}
+              cy={glyphCy}
               size={glyphSize}
               className="fill-stone-700"
             />
@@ -52,7 +63,7 @@ function NavigationBadge({
             <CodaGlyph
               key={i}
               cx={segCx}
-              cy={baselineY - glyphSize * 0.45}
+              cy={glyphCy}
               size={glyphSize}
               className="fill-stone-700"
             />
