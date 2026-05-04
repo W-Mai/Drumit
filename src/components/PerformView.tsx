@@ -83,8 +83,12 @@ export function PerformView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
 
-  useFullscreenLifecycle(rootRef, onExit);
-  const forceRotate = useForceLandscapeRotation();
+  const landscapeState = useFullscreenLifecycle(rootRef, onExit);
+  const needsCssRotation = useForceLandscapeRotation();
+  // Only fake-rotate once we know the native lock isn't coming (failed).
+  // While pending, trust the browser — avoids a visible rotate-then-
+  // unrotate flash when the native path does eventually succeed.
+  const forceRotate = landscapeState === "failed" && needsCssRotation;
 
   const expanded = useMemo(() => expandScore(score), [score]);
 
@@ -413,39 +417,75 @@ function getShouldForceRotate(): boolean {
  * rejection on browsers that don't support orientation.lock / etc.
  * ───────────────────────────────────────────────────────────────────── */
 
+// Try native landscape + fullscreen. Returns whether the OS actually
+// took us landscape — if not, the caller falls back to a CSS-rotate
+// fake. iOS Safari / PWA standalone rejects both APIs, so we end up
+// faking; desktop Chrome / Android Chrome accepts and goes native.
+/** Tri-state: pending = still waiting for the native lock promise,
+ *  success = native lock resolved, failed = we should fake it. */
+type LandscapeResult = "pending" | "success" | "failed";
+
 function useFullscreenLifecycle(
   rootRef: React.RefObject<HTMLDivElement | null>,
   onExit: () => void,
-): void {
+): LandscapeResult {
+  const [state, setState] = useState<LandscapeResult>("pending");
+
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
+    let cancelled = false;
+
     type Fs = {
       requestFullscreen?: () => Promise<void>;
       webkitRequestFullscreen?: () => Promise<void>;
     };
     const target = el as unknown as Fs;
-    try {
-      const p = target.requestFullscreen?.() ?? target.webkitRequestFullscreen?.();
-      if (p && typeof (p as Promise<void>).catch === "function") {
-        (p as Promise<void>).catch(() => {});
+    const fsPromise = (() => {
+      try {
+        return (
+          target.requestFullscreen?.() ??
+          target.webkitRequestFullscreen?.() ??
+          null
+        );
+      } catch {
+        return null;
       }
-    } catch {
-      // ignore
-    }
+    })();
+
     type LockableOrientation = {
       lock?: (dir: "landscape") => Promise<void>;
       unlock?: () => void;
     };
-    const orientation = (screen as unknown as { orientation?: LockableOrientation })
-      .orientation;
-    try {
-      const p = orientation?.lock?.("landscape");
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    } catch {
-      // ignore
-    }
+    const orientation = (screen as unknown as {
+      orientation?: LockableOrientation;
+    }).orientation;
+
+    // Orientation lock only works inside a successful fullscreen, so
+    // chain them. If fullscreen fails we still try the lock for
+    // browsers that allow it standalone (rare), but don't count on it.
+    const tryLock = async () => {
+      try {
+        await fsPromise;
+      } catch {
+        // fullscreen rejected; continue to lock attempt anyway.
+      }
+      try {
+        const lockP = orientation?.lock?.("landscape");
+        if (!lockP) {
+          if (!cancelled) setState("failed");
+          return;
+        }
+        await lockP;
+        if (!cancelled) setState("success");
+      } catch {
+        if (!cancelled) setState("failed");
+      }
+    };
+    void tryLock();
+
     return () => {
+      cancelled = true;
       try {
         void document.exitFullscreen?.().catch(() => {});
       } catch {
@@ -466,6 +506,8 @@ function useFullscreenLifecycle(
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, [onExit]);
+
+  return state;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
