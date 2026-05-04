@@ -185,26 +185,18 @@ export function PerformView({
       style={
         forceRotate
           ? {
-              // Motion owns `transform` on this element for the
-              // mount/exit scale animation, so it can't also carry
-              // the 90° rotate — those two fight and motion wins,
-              // leaving iOS PWA unrotated. When forcing rotation we
-              // drop the scale animation (rotate is already a bold
-              // enough entrance) and bake rotate + translate in here.
               transform: "rotate(90deg) translate(0, -100vw)",
               transformOrigin: "top left",
               width: "100vh",
               height: "100vw",
-              // CSS-rotated 90° clockwise: element edges map to screen
-              // positions as top→right, right→bottom, bottom→left,
-              // left→top. The device physically stays portrait, so the
-              // notch is still reported via env(safe-area-inset-top)
-              // and home-indicator via -bottom. Re-wire paddings so
-              // each element edge avoids the right portrait inset.
-              paddingTop: "env(safe-area-inset-left)",
+              // iOS PWA standalone + black-translucent status bar
+              // reports inset-top = 0 even though the dynamic island
+              // is physically there. Fall back to 44 px so the
+              // visually-left edge still clears it.
+              paddingBottom: "max(env(safe-area-inset-top), 44px)",
+              paddingTop: "env(safe-area-inset-bottom)",
+              paddingLeft: "env(safe-area-inset-left)",
               paddingRight: "env(safe-area-inset-right)",
-              paddingBottom: "env(safe-area-inset-top)",
-              paddingLeft: "env(safe-area-inset-bottom)",
             }
           : {
               paddingTop: "env(safe-area-inset-top)",
