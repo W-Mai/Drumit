@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../i18n/useI18n";
@@ -22,31 +22,10 @@ export function MobilePlaybackBar({
 }: Props) {
   const { t } = useI18n();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [bar, setBar] = useState<HTMLDivElement | null>(null);
-
-  // Publish the bar's rendered height (incl. safe-area padding) as a
-  // CSS custom property on <html>, so the main content area + Toast
-  // can reserve exactly the right amount of space above it regardless
-  // of design tweaks or OS inset.
-  useEffect(() => {
-    if (!bar) return;
-    const el = document.documentElement;
-    const update = () => {
-      el.style.setProperty("--drumit-playback-h", `${bar.offsetHeight}px`);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(bar);
-    return () => {
-      ro.disconnect();
-      el.style.removeProperty("--drumit-playback-h");
-    };
-  }, [bar]);
 
   return (
     <>
       <div
-        ref={setBar}
         className="
           mobile-safe-scroll-x
           fixed bottom-0 z-30
