@@ -128,7 +128,7 @@ describe("edit operations — per-lane independence", () => {
     expect(hh.slots[2]).not.toBeNull();
   });
 
-  it("splitting with count=1 merges a split lane back to a single group", () => {
+  it("splitting with count=1 merges a split lane preserving every hit", () => {
     const { score } = loadBar(
       `title: T\nmeter: 4/4\n[A]\n| hh: o , xx / x / x / x |`,
     );
@@ -137,9 +137,9 @@ describe("edit operations — per-lane independence", () => {
       (l) => l.instrument === "hihatClosed",
     )!;
     expect(hh.groups).toBeUndefined();
-    // first group's slot (single hit) survives as the merged content
-    expect(hh.slots).toHaveLength(1);
-    expect(hh.slots[0]).not.toBeNull();
+    // All three hits (o, x, x) flatten into the merged lane.
+    expect(hh.slots).toHaveLength(3);
+    expect(hh.slots.filter((s) => s !== null)).toHaveLength(3);
   });
 });
 

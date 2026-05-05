@@ -350,10 +350,16 @@ export function setGroupDivision(
     if (!lane || !lane.groups) return;
     const group = lane.groups[groupIndex];
     if (!group) return;
+    const hits = flattenLaneHits(lane);
     group.division = division;
-    const prev = group.slots;
-    group.slots = Array.from({ length: division }, (_, i) => prev[i] ?? null);
     group.tuplet = deriveAutoTuplet(division);
+    group.slots = Array.from({ length: division }, () => null);
+    refillGroupsWithHits(lane.groups, hits);
+    if (groupIndex === 0) {
+      lane.division = group.division;
+      lane.slots = group.slots;
+      lane.tuplet = group.tuplet;
+    }
   });
 }
 
@@ -369,40 +375,64 @@ export function splitBeatIntoGroups(
     const beat = bar.beats[beatIndex] ?? emptyBeat();
     if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
     const lane = findOrCreateLane(beat, instrument);
+    const hits = flattenLaneHits(lane);
     if (count <= 1) {
-      // Merge back: collapse to a single-group lane, keep first group's data.
-      if (lane.groups && lane.groups.length) {
-        const first = lane.groups[0];
-        lane.division = first.division;
-        lane.slots = first.slots;
-        lane.tuplet = first.tuplet;
-      }
+      lane.division = Math.max(1, hits.length || lane.division);
+      lane.slots = padSlotsTo(hits, lane.division);
+      lane.tuplet = deriveAutoTuplet(lane.division);
       lane.groups = undefined;
       return;
     }
     const ratio = 1 / count;
+    const prevDivs = lane.groups?.map((g) => g.division) ?? [];
+    const nonEmpty = hits.filter((h): h is Hit => h !== null);
+    // Pick a default division that can hold every surviving hit.
+    const hitCount = nonEmpty.length;
+    const defaultDiv =
+      hitCount > 0 ? Math.max(1, Math.ceil(hitCount / count)) : 1;
     const groups: LaneGroup[] = Array.from({ length: count }, (_, i) => {
-      // Preserve existing content in the first group when transitioning
-      // from a single-group lane into a split one.
-      if (i === 0 && (!lane.groups || lane.groups.length === 0)) {
-        return {
-          ratio,
-          division: lane.division,
-          tuplet: lane.tuplet,
-          slots: lane.slots,
-        };
-      }
-      if (lane.groups && lane.groups[i]) {
-        const existing = lane.groups[i];
-        return { ...existing, ratio };
-      }
-      return { ratio, division: 1, slots: [null] };
+      const division = prevDivs[i] ?? defaultDiv;
+      return {
+        ratio,
+        division,
+        tuplet: deriveAutoTuplet(division),
+        slots: Array.from({ length: division }, () => null),
+      };
     });
+    refillGroupsWithHits(groups, hits);
     lane.groups = groups;
     lane.division = groups[0].division;
     lane.slots = groups[0].slots;
     lane.tuplet = groups[0].tuplet;
   });
+}
+
+function flattenLaneHits(lane: LaneBeat): Array<Hit | null> {
+  if (lane.groups && lane.groups.length) {
+    return lane.groups.flatMap((g) => g.slots);
+  }
+  return lane.slots.slice();
+}
+
+function padSlotsTo(
+  hits: Array<Hit | null>,
+  division: number,
+): Array<Hit | null> {
+  return Array.from({ length: division }, (_, i) => hits[i] ?? null);
+}
+
+function refillGroupsWithHits(
+  groups: LaneGroup[],
+  hits: Array<Hit | null>,
+) {
+  const nonEmpty = hits.filter((h): h is Hit => h !== null);
+  let cursor = 0;
+  for (const g of groups) {
+    for (let i = 0; i < g.division; i += 1) {
+      g.slots[i] = nonEmpty[cursor] ?? null;
+      if (nonEmpty[cursor]) cursor += 1;
+    }
+  }
 }
 
 function deriveAutoTuplet(division: number): number | undefined {
