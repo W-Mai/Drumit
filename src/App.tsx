@@ -1302,22 +1302,29 @@ function AppInner() {
             />
           ) : null}
         </AnimatePresence>
-        <div
-          // Overlay: only the shell's size/position animates (CSS
-          // transition on width/height/inset). The content inside is
-          // mounted/unmounted as-is, so nothing gets stretched — you
-          // see the box grow and the real content sitting at rest.
+        <motion.div
+          // Same DOM node morphs from the collapsed strip into the
+          // expanded card. motion's `layout` prop does the FLIP — that's
+          // the Material card-expansion feel.
+          //
+          // In overlay mode BOTH states are position: fixed so the
+          // transform interpolates in one coordinate system. Collapsed
+          // hugs the short-axis edge (bottom in portrait, right in
+          // landscape); expanded fills 80% of the short axis, still
+          // above the MobilePlaybackBar which outranks us via z-index.
+          layout
+          transition={{ type: "spring", stiffness: 360, damping: 36 }}
           className={cn(
-            "relative min-h-0 flex-col overflow-hidden",
+            "min-h-0 flex-col",
             !isOverlayEditor &&
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
             isOverlayEditor &&
               cn(
-                "fixed z-40 flex transition-[width,height,inset,max-width] duration-300 ease-out",
+                "fixed z-40 flex",
                 !editorCollapsed && "drop-shadow-2xl",
                 isLandscape
                   ? editorCollapsed
-                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-10 max-w-10"
+                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-10"
                     : "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[88vw] max-w-[820px]"
                   : editorCollapsed
                     ? "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-11"
@@ -1325,20 +1332,12 @@ function AppInner() {
               ),
           )}
         >
-          {/* Landscape collapsed overlay: covers the cramped Panel peek
-              with a clean vertical label, fades out as the card opens
-              so the real PanelHeader takes over. */}
-          {isOverlayEditor && isLandscape ? (
+          {isOverlayEditor && editorCollapsed && isLandscape ? (
             <button
               type="button"
               onClick={() => setEditorCollapsed(false)}
               aria-label={t("editor.show_editor")}
-              className={cn(
-                "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-3xl bg-white text-stone-700 transition-opacity duration-200",
-                editorCollapsed
-                  ? "opacity-100"
-                  : "pointer-events-none opacity-0",
-              )}
+              className="panel-hover-lift flex h-full w-full flex-col items-center justify-center gap-2 rounded-3xl border border-stone-200 bg-white text-stone-700 shadow-xl shadow-stone-900/5 hover:bg-stone-50"
             >
               <span className="text-xs text-stone-500">▸</span>
               <span className="[writing-mode:vertical-rl] text-sm font-extrabold tracking-wide">
@@ -1350,8 +1349,8 @@ function AppInner() {
                 {t("editor.readonly_tag")}
               </span>
             </button>
-          ) : null}
-          <Panel className="flex min-h-0 w-full flex-1 flex-col">
+          ) : (
+          <Panel className="flex min-h-0 flex-1 flex-col">
           <PanelHeader
             onTitleClick={() => setEditorCollapsed((v) => !v)}
             titleClickLabel={
@@ -1610,7 +1609,8 @@ function AppInner() {
           )}
           </AnimatePresence>
           </Panel>
-        </div>
+          )}
+        </motion.div>
       </section>
       </div>
       <AnimatePresence>
