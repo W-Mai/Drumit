@@ -46,7 +46,10 @@ export function HotkeyPanel() {
         { keys: ["←", "→"], label: t("hotkeys.slot_cell") },
         { keys: ["↑", "↓"], label: t("hotkeys.lane") },
         { keys: ["Home", "End"], label: t("hotkeys.bar_start_end") },
-        { keys: ["⌘←", "⌘→"], label: t("hotkeys.prev_next_bar") },
+        {
+          keys: ["⌘←", "⌘→", "[", "]"],
+          label: t("hotkeys.prev_next_bar"),
+        },
         { keys: ["Tab"], label: t("hotkeys.autoadvance") },
         { keys: ["Del"], label: t("hotkeys.clear_slot") },
       ],
