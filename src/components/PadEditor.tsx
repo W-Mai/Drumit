@@ -666,7 +666,11 @@ export function PadEditor({
     })),
   ].map((hk) => ({ ...hk, scope: "editor" }));
 
-  useHotkeys(editorHotkeys, currentInstrument !== undefined);
+  // Keep editor hotkeys live even when no instrument is present —
+  // the digit keys (1234…) need to work from an empty bar to bring
+  // their instrument into the lane. Handlers that genuinely require
+  // a current instrument guard themselves.
+  useHotkeys(editorHotkeys);
 
   return (
     <div className="flex flex-col gap-4" data-drumit-scope="editor">
