@@ -1332,7 +1332,7 @@ function AppInner() {
             isOverlayEditor &&
               cn(
                 "fixed z-40 flex transition-[width,max-height,top,right,bottom,left,max-width] duration-300 ease-out",
-                !editorCollapsed && "drop-shadow-2xl",
+                editorCollapsed ? "drop-shadow-lg" : "drop-shadow-2xl",
                 isLandscape
                   ? editorCollapsed
                     ? // Collapsed landscape: a compact tab anchored to
@@ -1342,7 +1342,11 @@ function AppInner() {
                       // width). Bottom stays pinned so the growth
                       // reads as 'unfolding from this corner'.
                       "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14 max-h-56"
-                    : "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[92vw] max-w-[960px] max-h-[calc(100vh-3.75rem-env(safe-area-inset-top))]"
+                    : // expanded max-h = viewport - bottom anchor
+                      // (playback bar + safe) - top clearance
+                      // (app header + safe-top + 0.5rem breathing).
+                      // Keeps the card off the header and off-screen.
+                      "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[92vw] max-w-[960px] max-h-[calc(100vh-9.25rem-max(0.5rem,env(safe-area-inset-top))-max(0.5rem,env(safe-area-inset-bottom)))]"
                   : editorCollapsed
                     ? // collapsed portrait: height follows the actual
                       // PanelHeader content (no dead strip under it),
@@ -1361,7 +1365,7 @@ function AppInner() {
               type="button"
               onClick={() => setEditorCollapsed(false)}
               aria-label={t("editor.show_editor")}
-              className="flex flex-1 flex-col items-center justify-center gap-2 bg-white px-1 py-4 text-stone-700"
+              className="flex flex-1 flex-col items-center justify-center gap-2 border border-stone-200 bg-white px-1 py-4 text-stone-700 shadow-xl shadow-stone-900/5"
             >
               <span className="text-xs text-stone-500">▸</span>
               <span className="[writing-mode:vertical-rl] text-sm font-extrabold tracking-wide">
