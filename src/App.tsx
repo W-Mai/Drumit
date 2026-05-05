@@ -1129,7 +1129,10 @@ function AppInner() {
           isOverlayEditor
             ? isLandscape
               ? "pr-[calc(3.5rem+max(0.5rem,env(safe-area-inset-right)))] pb-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
-              : "pb-[calc(9rem+max(0.5rem,env(safe-area-inset-bottom)))]"
+              : // playback 5.5rem + its safe-area + collapsed strip
+                // 3.5rem + 0.5rem breathing gap so the preview doesn't
+                // leave a dead band under the chart.
+                "pb-[calc(9.5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
             : "pb-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))]",
         )}
       >
@@ -1328,15 +1331,21 @@ function AppInner() {
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
             isOverlayEditor &&
               cn(
-                "fixed z-40 flex transition-[width,height,top,right,bottom,left,max-width] duration-300 ease-out",
+                "fixed z-40 flex transition-[width,max-height,top,right,bottom,left,max-width] duration-300 ease-out",
                 !editorCollapsed && "drop-shadow-2xl",
                 isLandscape
                   ? editorCollapsed
-                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14"
+                    ? // collapsed landscape: a vertical strip. height
+                      // fills top→bottom naturally via top/bottom
+                      // anchors; width is the animated axis.
+                      "top-[calc(3.25rem+env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14"
                     : "top-[calc(3.25rem+env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[88vw] max-w-[820px]"
                   : editorCollapsed
-                    ? "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-14"
-                    : "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[min(80vh,calc(100vh-8rem))]",
+                    ? // collapsed portrait: height follows the actual
+                      // PanelHeader content (no dead strip under it),
+                      // animated via max-height.
+                      "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-auto max-h-12"
+                    : "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-auto max-h-[min(80vh,calc(100vh-8rem))]",
               ),
           )}
         >
