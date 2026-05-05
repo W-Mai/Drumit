@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "../../lib/utils";
 import { useI18n } from "../../i18n/useI18n";
 
@@ -30,6 +31,23 @@ export function NumberStepper({
     if (Number.isNaN(n)) return;
     onChange(clamp(n));
   };
+  // Draft so mid-typing values below `min` don't snap back each keystroke.
+  const [draft, setDraft] = useState<string>(String(value));
+  const [lastValue, setLastValue] = useState<number>(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    setDraft(String(value));
+  }
+  const commitDraft = () => {
+    const n = Number.parseInt(draft, 10);
+    if (Number.isNaN(n)) {
+      setDraft(String(value));
+      return;
+    }
+    const c = clamp(n);
+    setDraft(String(c));
+    if (c !== value) onChange(c);
+  };
 
   return (
     <span
@@ -53,12 +71,23 @@ export function NumberStepper({
       <input
         type="number"
         inputMode="numeric"
-        value={value}
+        value={draft}
         min={min === -Infinity ? undefined : min}
         max={max === Infinity ? undefined : max}
         step={step}
         disabled={disabled}
-        onChange={(e) => commit(Number.parseInt(e.target.value, 10))}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commitDraft}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitDraft();
+            (e.target as HTMLInputElement).blur();
+          } else if (e.key === "Escape") {
+            setDraft(String(value));
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
         /* Base font-size ≥ 16px prevents iOS Safari's focus-zoom; override
            back to the compact xs size on pointer:fine where zoom isn't an
            issue. */
