@@ -124,6 +124,8 @@ type Resolution = {
   kind: "binary" | "triplet";
   slotsPerBeat: number;
   label: string;
+  /** Shorter label used when the header has to fit on a phone. */
+  shortLabel?: string;
 };
 
 const RESOLUTIONS: Resolution[] = [
@@ -131,8 +133,8 @@ const RESOLUTIONS: Resolution[] = [
   { kind: "binary", slotsPerBeat: 2, label: "1/8" },
   { kind: "binary", slotsPerBeat: 4, label: "1/16" },
   { kind: "binary", slotsPerBeat: 8, label: "1/32" },
-  { kind: "triplet", slotsPerBeat: 3, label: "Triplet" },
-  { kind: "triplet", slotsPerBeat: 6, label: "Sextuplet" },
+  { kind: "triplet", slotsPerBeat: 3, label: "Triplet", shortLabel: "3×" },
+  { kind: "triplet", slotsPerBeat: 6, label: "Sextuplet", shortLabel: "6×" },
 ];
 
 const DEFAULT_RESOLUTION: Resolution = RESOLUTIONS[2]; // 1/16
@@ -835,23 +837,33 @@ function SectionStrip({
         </span>
       </div>
       <div className="flex gap-1">
-        <Button size="xs" onClick={promptRename} title={t("editor.rename_section_tip")}>
-          {t("editor.rename")}
+        <Button
+          size="xs"
+          onClick={promptRename}
+          title={t("editor.rename_section_tip")}
+          aria-label={t("editor.rename_section_tip")}
+        >
+          <span className="sm:hidden text-base leading-none">✎</span>
+          <span className="hidden sm:inline">{t("editor.rename")}</span>
         </Button>
         <Button
           size="xs"
           onClick={promptSplit}
           title={t("editor.new_section_tip")}
+          aria-label={t("editor.new_section_tip")}
         >
-          {t("editor.split")}
+          <span className="sm:hidden text-base leading-none">+</span>
+          <span className="hidden sm:inline">{t("editor.split")}</span>
         </Button>
         <Button
           size="xs"
           variant="danger"
           onClick={onDelete}
           title={t("editor.delete_section_tip")}
+          aria-label={t("editor.delete_section_tip")}
         >
-          {t("editor.section_delete")}
+          <span className="sm:hidden text-base leading-none">×</span>
+          <span className="hidden sm:inline">{t("editor.section_delete")}</span>
         </Button>
       </div>
     </div>
@@ -957,8 +969,16 @@ function BarHeader({
                 barResolution.slotsPerBeat === r.slotsPerBeat
               }
               onClick={() => onChangeResolution(r)}
+              title={r.label}
             >
-              {r.label}
+              {r.shortLabel ? (
+                <>
+                  <span className="sm:hidden">{r.shortLabel}</span>
+                  <span className="hidden sm:inline">{r.label}</span>
+                </>
+              ) : (
+                r.label
+              )}
             </Chip>
           ))}
         </ChipGroup>
