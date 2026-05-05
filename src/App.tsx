@@ -1110,7 +1110,16 @@ function AppInner() {
       />
 
       <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col p-2 sm:p-3">
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 pb-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))] lg:pb-0">
+      <section
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col gap-3 lg:pb-0",
+          isOverlayEditor
+            ? isLandscape
+              ? "pr-11 pb-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
+              : "pb-[calc(8rem+max(0.5rem,env(safe-area-inset-bottom)))]"
+            : "pb-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))]",
+        )}
+      >
         <PlaybackBar
           ref={playbackRef}
           score={score}
@@ -1294,27 +1303,53 @@ function AppInner() {
           ) : null}
         </AnimatePresence>
         <motion.div
-          // Same DOM node grows from the inline header strip (collapsed)
-          // to the fixed overlay card (expanded). motion's `layout` prop
-          // interpolates the size/position change FLIP-style — that's the
-          // Material card-expansion feel.
+          // Same DOM node morphs from the collapsed strip into the
+          // expanded card. motion's `layout` prop does the FLIP — that's
+          // the Material card-expansion feel.
+          //
+          // In overlay mode BOTH states are position: fixed so the
+          // transform interpolates in one coordinate system. Collapsed
+          // hugs the short-axis edge (bottom in portrait, right in
+          // landscape); expanded fills 80% of the short axis, still
+          // above the MobilePlaybackBar which outranks us via z-index.
           layout
           transition={{ type: "spring", stiffness: 360, damping: 36 }}
           className={cn(
             "min-h-0 flex-col",
             !isOverlayEditor &&
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
-            isOverlayEditor && editorCollapsed && "flex flex-none",
             isOverlayEditor &&
-              !editorCollapsed &&
               cn(
-                "fixed z-40 flex drop-shadow-2xl",
+                "fixed z-40 flex",
+                !editorCollapsed && "drop-shadow-2xl",
                 isLandscape
-                  ? "top-2 right-2 bottom-2 w-[80vw] max-w-[640px]"
-                  : "inset-x-2 bottom-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[80vh]",
+                  ? editorCollapsed
+                    ? "top-2 right-2 bottom-2 w-10"
+                    : "top-2 right-2 bottom-2 w-[80vw] max-w-[640px]"
+                  : editorCollapsed
+                    ? "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-11"
+                    : "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[min(80vh,calc(100vh-8rem))]",
               ),
           )}
         >
+          {isOverlayEditor && editorCollapsed && isLandscape ? (
+            <button
+              type="button"
+              onClick={() => setEditorCollapsed(false)}
+              aria-label={t("editor.show_editor")}
+              className="panel-hover-lift flex h-full w-full flex-col items-center justify-center gap-2 rounded-3xl border border-stone-200 bg-white text-stone-700 shadow-xl shadow-stone-900/5 hover:bg-stone-50"
+            >
+              <span className="text-xs text-stone-500">▸</span>
+              <span className="[writing-mode:vertical-rl] rotate-180 text-sm font-extrabold tracking-wide">
+                {mode === "visual"
+                  ? t("editor.bar_editor")
+                  : t("editor.source")}
+              </span>
+              <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] font-medium text-stone-500">
+                {t("editor.readonly_tag")}
+              </span>
+            </button>
+          ) : (
           <Panel className="flex min-h-0 flex-1 flex-col">
           <PanelHeader
             onTitleClick={() => setEditorCollapsed((v) => !v)}
@@ -1574,6 +1609,7 @@ function AppInner() {
           )}
           </AnimatePresence>
           </Panel>
+          )}
         </motion.div>
       </section>
       </div>

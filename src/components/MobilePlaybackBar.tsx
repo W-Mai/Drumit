@@ -29,7 +29,7 @@ export function MobilePlaybackBar({
     <>
       <div
         className="
-          fixed bottom-0 z-30
+          fixed bottom-0 z-50
           left-[max(0.5rem,env(safe-area-inset-left))]
           right-[max(0.5rem,env(safe-area-inset-right))]
           flex flex-col
@@ -70,7 +70,7 @@ export function MobilePlaybackBar({
                 <motion.div
                   role="dialog"
                   aria-modal="true"
-                  className="fixed inset-0 z-40 flex items-end lg:hidden"
+                  className="fixed inset-0 z-[60] flex items-end lg:hidden"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
