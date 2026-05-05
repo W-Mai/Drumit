@@ -1128,11 +1128,8 @@ function AppInner() {
           "flex min-h-0 min-w-0 flex-1 flex-col gap-3 lg:pb-0",
           isOverlayEditor
             ? isLandscape
-              ? "pr-[calc(3.5rem+max(0.5rem,env(safe-area-inset-right)))] pb-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
-              : // playback 5.5rem + its safe-area + collapsed strip
-                // 3.5rem + 0.5rem breathing gap so the preview doesn't
-                // leave a dead band under the chart.
-                "pb-[calc(9.5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
+              ? "pr-[calc(3.5rem+max(0.5rem,env(safe-area-inset-right)))] pb-[calc(4.5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
+              : "pb-[calc(8.25rem+max(0.5rem,env(safe-area-inset-bottom)))]"
             : "pb-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))]",
         )}
       >
@@ -1331,7 +1328,7 @@ function AppInner() {
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
             isOverlayEditor &&
               cn(
-                "fixed z-40 flex transition-[width,max-height,top,right,bottom,left,max-width] duration-300 ease-out",
+                "fixed z-40 flex transition-[width,height,max-height,top,right,bottom,left] duration-500 ease-out [will-change:width,max-height]",
                 editorCollapsed ? "drop-shadow-lg" : "drop-shadow-2xl",
                 isLandscape
                   ? // Landscape overlay. Right + bottom always pinned
@@ -1343,15 +1340,12 @@ function AppInner() {
                     cn(
                       "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))]",
                       editorCollapsed
-                        ? "top-[calc(3.25rem+max(0.5rem,env(safe-area-inset-top)))] w-14"
-                        : "top-[max(0.5rem,env(safe-area-inset-top))] w-[92vw] max-w-[960px]",
+                        ? "top-[calc(3.25rem+max(0.5rem,env(safe-area-inset-top)))] w-[3.5rem]"
+                        : "top-[max(0.5rem,env(safe-area-inset-top))] w-[min(92vw,60rem)]",
                     )
                   : editorCollapsed
-                    ? // collapsed portrait: height follows the actual
-                      // PanelHeader content (no dead strip under it),
-                      // animated via max-height.
-                      "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-auto max-h-12"
-                    : "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-auto max-h-[min(80vh,calc(100vh-8rem))]",
+                    ? "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-auto max-h-12"
+                    : "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-auto max-h-[calc(100vh-9rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]",
               ),
           )}
         >
