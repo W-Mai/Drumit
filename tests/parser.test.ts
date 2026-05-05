@@ -425,19 +425,19 @@ describe("parseDrumtab", () => {
     expect(beat.lanes[0].division).toBe(2);
   });
 
-  it("end-slot dot borrows backward from the preceding slot", () => {
-    // `o-o.` — last slot dotted with nothing after. Falls back to
-    // borrowing half of the previous slot's time so the dotted tail
-    // still lands inside the beat.
+  it("dotted slots use a fixed nominal duration", () => {
+    // `o-o.` — dotted slot is an always 'dotted eighth' (3/4 beat);
+    // remaining beat time (1/4) is shared evenly across the two
+    // undotted slots → 1/8 each.
     const { score } = parseDrumtab(
       `title: T\nmeter: 4/4\n[A]\n| bd: o-o. / - / - / - |`,
     );
     const lane = score.sections[0].bars[0].beats[0].lanes[0];
     expect(lane.groups).toHaveLength(3);
     const ratios = lane.groups!.map((g) => g.ratio);
-    expect(ratios[0]).toBeCloseTo(1 / 3);
-    expect(ratios[1]).toBeCloseTo(1 / 6);
-    expect(ratios[2]).toBeCloseTo(1 / 2);
+    expect(ratios[0]).toBeCloseTo(1 / 8);
+    expect(ratios[1]).toBeCloseTo(1 / 8);
+    expect(ratios[2]).toBeCloseTo(3 / 4);
     expect(lane.groups![2].slots[0]?.dots).toBe(1);
   });
 

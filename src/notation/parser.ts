@@ -306,14 +306,22 @@ function buildBeat(
       );
       const division = slots.length;
       const autoTuplet = detectTuplet(division, explicitTuplet);
-      const dottedGroups = maybeExpandDotted(slots);
-      if (dottedGroups) {
+      const dotted = maybeExpandDotted(slots);
+      if (dotted) {
+        if (dotted.overflow) {
+          diagnostics.push(
+            warn(
+              lineNumber,
+              `Dotted notes exceed one beat; durations normalised to fit.`,
+            ),
+          );
+        }
         laneBeats.push({
           instrument: lane.instrument,
-          division: dottedGroups[0].division,
-          tuplet: dottedGroups[0].tuplet,
-          slots: dottedGroups[0].slots,
-          groups: dottedGroups,
+          division: dotted.groups[0].division,
+          tuplet: dotted.groups[0].tuplet,
+          slots: dotted.groups[0].slots,
+          groups: dotted.groups,
         });
         return;
       }
@@ -340,7 +348,18 @@ function buildBeat(
         const division = slots.length;
         const expanded = maybeExpandDotted(slots);
         if (expanded) {
-          return expanded.map((g) => ({ ...g, ratio: g.ratio * outerRatio }));
+          if (expanded.overflow) {
+            diagnostics.push(
+              warn(
+                lineNumber,
+                `Dotted notes exceed the group's time; durations normalised to fit.`,
+              ),
+            );
+          }
+          return expanded.groups.map((g) => ({
+            ...g,
+            ratio: g.ratio * outerRatio,
+          }));
         }
         return [
           {
@@ -410,45 +429,45 @@ function extractTuplet(raw: string): { tuplet?: number; body: string } {
   return { tuplet: n, body: match[2] };
 }
 
+/**
+ * Dotted slots use a fixed nominal duration (o. = dotted eighth =
+ * 3/4 beat, o.. = 7/8). Undotted slots share whatever beat-time is
+ * left, evenly. Overflow (too many dots) falls back to proportional
+ * normalisation and flags `overflow`.
+ */
 export function maybeExpandDotted(
   slots: Array<Hit | null>,
-): LaneGroup[] | null {
+):
+  | { groups: LaneGroup[]; overflow: boolean }
+  | null {
   const dots = slots.map((s) => s?.dots ?? 0);
   if (dots.every((d) => d === 0)) return null;
   const N = slots.length;
-  const share = new Array<number>(N).fill(1 / N);
-  let anyBorrow = false;
-  for (let i = 0; i < N; i += 1) {
-    const d = dots[i];
-    if (d === 0) continue;
-    const augment = d === 1 ? 0.5 : 0.75;
-    if (i < N - 1) {
-      // Mid-group dot: steal `augment * share[i]` from every following
-      // slot, spread evenly. `o.xx` → [1/2, 1/4, 1/4].
-      const K = N - 1 - i;
-      const take = (share[i] * augment) / K;
-      let pool = 0;
-      for (let j = i + 1; j < N; j += 1) {
-        share[j] -= take;
-        pool += take;
-      }
-      share[i] += pool;
-    } else {
-      // Tail dot: borrow half of the previous slot so the dotted tail
-      // still lands inside the group.
-      if (i === 0) continue;
-      const take = share[i - 1] * (d === 1 ? 0.5 : 0.75);
-      share[i] += take;
-      share[i - 1] -= take;
-    }
-    anyBorrow = true;
+  const nominalDotted = dots.map((d) =>
+    d === 0 ? 0 : 0.5 * (2 - Math.pow(0.5, d)),
+  );
+  const dottedSum = nominalDotted.reduce((a, b) => a + b, 0);
+  const undottedCount = dots.filter((d) => d === 0).length;
+  const remaining = 1 - dottedSum;
+  const overflow = remaining <= 0;
+  let ratios: number[];
+  if (overflow) {
+    const perUndotted = 1 / N;
+    const scaleNominal = dots.map((d) =>
+      d === 0 ? perUndotted : 0.5 * (2 - Math.pow(0.5, d)),
+    );
+    const total = scaleNominal.reduce((a, b) => a + b, 0);
+    ratios = scaleNominal.map((v) => v / total);
+  } else {
+    const perUndotted = undottedCount > 0 ? remaining / undottedCount : 0;
+    ratios = dots.map((d, i) => (d === 0 ? perUndotted : nominalDotted[i]));
   }
-  if (!anyBorrow) return null;
-  return slots.map((slot, idx) => ({
-    ratio: share[idx],
+  const groups = slots.map((slot, idx) => ({
+    ratio: ratios[idx],
     division: 1,
     slots: [slot],
   }));
+  return { groups, overflow };
 }
 
 function tokenizeBeat(raw: string): string[] {

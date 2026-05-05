@@ -213,10 +213,9 @@ describe("articulation expansion", () => {
     expect(bd[1].time).toBeCloseTo(0.875, 3);
   });
 
-  it("end-slot dot borrows backward so its onset shifts earlier", () => {
-    // `o-o.` slot 2 has nothing after. Falls back to borrowing half
-    // the preceding slot's time → ratios 1/3, 1/6, 1/2. At tempo 60
-    // bd hits land at 0 and 0.5s (instead of 0 and 2/3).
+  it("end-slot dotted eighth lands at 1/4 beat", () => {
+    // `o-o.` — undotted slots each take 1/8 beat, the dotted eighth
+    // takes 3/4 beat. At tempo 60 the second onset lands at 0.25s.
     const { score } = parseDrumtab(
       `title: T\ntempo: 60\nmeter: 4/4\n[A]\n| bd: o-o. / - / - / - |`,
     );
@@ -224,7 +223,7 @@ describe("articulation expansion", () => {
     const bd = events.filter((e) => e.hit.instrument === "kick");
     expect(bd).toHaveLength(2);
     expect(bd[0].time).toBeCloseTo(0, 3);
-    expect(bd[1].time).toBeCloseTo(0.5, 3);
+    expect(bd[1].time).toBeCloseTo(0.25, 3);
   });
 
   it("total duration is unchanged when the beat contains dots", () => {

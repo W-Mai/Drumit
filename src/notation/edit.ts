@@ -608,7 +608,7 @@ export function cycleDots(
         division: 1,
         tuplet: undefined,
         slots: [flat[0] ?? null],
-        groups: expanded,
+        groups: expanded.groups,
       };
     } else {
       beat.lanes[laneIdx] = {

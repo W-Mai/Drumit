@@ -128,13 +128,19 @@ function serializeBeatLane(
     const allSingle = lane.groups.every(
       (g) => g.division === 1 && g.slots.length === 1,
     );
+    const anyDotted =
+      allSingle && lane.groups.some((g) => (g.slots[0]?.dots ?? 0) > 0);
     const equalRatios =
       allSingle &&
       lane.groups.every(
         (g) =>
           Math.abs(g.ratio - 1 / lane.groups!.length) < 1e-6,
       );
-    if (allSingle && !equalRatios) {
+    // Dot-expanded lanes flatten back to a slot list so `o. -`,
+    // `o.. -`, and overflow cases like `o.o.` round-trip. Only
+    // equal-ratio groups with no dots are considered an intentional
+    // `,` split.
+    if (allSingle && (!equalRatios || anyDotted)) {
       const flat = lane.groups.flatMap((g) => g.slots);
       return serializeGroup({
         ratio: 1,
