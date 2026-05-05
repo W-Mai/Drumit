@@ -167,6 +167,7 @@ const zh: Dict = {
   "editor.previous_lane": "上一条声部",
   "editor.next_lane": "下一条声部",
   "editor.jump_to_lane": "跳到声部：{name}",
+  "editor.bar_actions_more": "更多小节操作",
   "editor.fix_errors": "修复解析错误后预览才会更新。",
   "editor.switch_to_compact":
     "切回折叠视图以编辑小节。",
@@ -479,6 +480,7 @@ const en: Dict = {
   "editor.previous_lane": "Previous lane",
   "editor.next_lane": "Next lane",
   "editor.jump_to_lane": "Jump to lane: {name}",
+  "editor.bar_actions_more": "More bar actions",
   "editor.fix_errors": "Fix parse errors to update the preview.",
   "editor.switch_to_compact":
     "Switch back to the compact view to edit bars.",
