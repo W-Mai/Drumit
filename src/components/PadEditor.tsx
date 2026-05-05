@@ -244,20 +244,12 @@ function planLaneBeat(
     };
   }
 
-  // Un-split lane:
-  //   A lane "locks in" its own division only once the user has committed
-  //   to it — concretely, when any slot carries a hit. A lane that exists
-  //   but is all-rest is treated as "free": it follows the bar-level
-  //   resolution so changing the global grid re-slices it.
-  const laneHasHit = !!lane?.slots.some((s) => s !== null);
-  const laneDiv = lane?.division ?? 1;
-  const slotsPerBeat = laneHasHit
-    ? Math.max(1, laneDiv)
-    : barResolution.slotsPerBeat;
-  // `custom` here means "this lane's grid deviates from the bar-level grid"
-  // — used by the ⚙ button to decide whether to look amber.
-  const custom =
-    laneHasHit && slotsPerBeat !== barResolution.slotsPerBeat;
+  // Un-split lane: its own division wins whenever it differs from the
+  // bar grid — hits are not required. An all-rest lane that the user
+  // explicitly sliced as /6 should render as /6 immediately.
+  const laneDiv = lane?.division ?? barResolution.slotsPerBeat;
+  const slotsPerBeat = Math.max(1, laneDiv);
+  const custom = slotsPerBeat !== barResolution.slotsPerBeat;
 
   const widthUnits = 1 / Math.max(1, slotsPerBeat);
   const columns: CellPlan[] = Array.from({ length: slotsPerBeat }, (_, i) => ({
