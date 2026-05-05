@@ -186,6 +186,7 @@ function AppInner() {
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
   );
+
   // Below lg the editor floats over the preview as a card (80% of the
   // short axis), so it never eats into the preview's visible score.
   const isOverlayEditor = !useMediaQuery("(min-width: 1024px)");
@@ -193,6 +194,7 @@ function AppInner() {
   const isLandscape = useMediaQuery(
     "(min-aspect-ratio: 1/1) and (max-height: 600px)",
   );
+
   const [viewMode, setViewMode] = useState<ViewMode>(
     () => loadInitialWorkspace().viewMode,
   );
@@ -1308,7 +1310,7 @@ function AppInner() {
           // mounted/unmounted as-is, so nothing gets stretched — you
           // see the box grow and the real content sitting at rest.
           className={cn(
-            "relative min-h-0 flex-col",
+            "min-h-0 flex-col",
             isOverlayEditor && "overflow-hidden rounded-3xl",
             !isOverlayEditor &&
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
