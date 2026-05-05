@@ -90,8 +90,17 @@ export function DocumentManager({
         const { importScoreFromMidi } = await import("../notation/midiImport");
         const { serializeScore } = await import("../notation/serialize");
         try {
-          const { score } = importScoreFromMidi(new Uint8Array(buf));
-          onImport(serializeScore(score));
+          const result = importScoreFromMidi(new Uint8Array(buf));
+          onImport(serializeScore(result.score));
+          if (result.source === "inferred") {
+            void dialog.alert({
+              title: t("import.midi_inferred_title"),
+              message: [t("import.midi_inferred_message"), ...result.warnings]
+                .filter(Boolean)
+                .join("\n"),
+              tone: "primary",
+            });
+          }
         } catch (err) {
           void dialog.alert({
             title: t("import.failed_title"),

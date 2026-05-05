@@ -35,6 +35,9 @@ const zh: Dict = {
   "export.empty_message": "这个文档是空的，没有可导出的内容。",
   "import.failed_title": "导入失败",
   "import.failed_message": "文件无法被识别为 .drumtab 文档。",
+  "import.midi_inferred_title": "MIDI 结构是推算的",
+  "import.midi_inferred_message":
+    "这个 MIDI 文件没有包含 drumit 源文本，drumit 已根据 note 事件推测了节奏结构。附点、空音、子组等细节可能丢失或不准确。",
 
   // Preview toolbar
   "preview.show_labels": "显示乐器名",
@@ -357,6 +360,9 @@ const en: Dict = {
   "export.empty_message": "This document is empty — nothing to export.",
   "import.failed_title": "Import failed",
   "import.failed_message": "The file was not recognized as a .drumtab document.",
+  "import.midi_inferred_title": "MIDI structure was inferred",
+  "import.midi_inferred_message":
+    "This MIDI file has no drumit source embedded. The rhythm structure was guessed from note events; dots, explicit rests, and grouping may be off.",
 
   "preview.show_labels": "Show instrument names",
   "preview.hide_labels": "Hide instrument names",
