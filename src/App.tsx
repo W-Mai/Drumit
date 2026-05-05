@@ -46,6 +46,7 @@ import {
 } from "./components/PlaybackBar";
 import type { PlaybackState } from "./playback/controller";
 import { useHotkeys } from "./lib/useHotkeys";
+import { useMediaQuery } from "./lib/useMediaQuery";
 import {
   clearWorkspace,
   loadWorkspace,
@@ -184,6 +185,13 @@ function AppInner() {
   const [docsOpen, setDocsOpen] = useState(false);
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
+  );
+  // Below lg the editor floats over the preview as a card (80% of the
+  // short axis), so it never eats into the preview's visible score.
+  const isOverlayEditor = !useMediaQuery("(min-width: 1024px)");
+  // Within overlay mode, pick which edge the card slides in from.
+  const isLandscape = useMediaQuery(
+    "(min-aspect-ratio: 1/1) and (max-height: 600px)",
   );
   const [viewMode, setViewMode] = useState<ViewMode>(
     () => loadInitialWorkspace().viewMode,
@@ -1268,10 +1276,75 @@ function AppInner() {
         >
           <span className="h-[2px] w-16 rounded-full bg-stone-200 group-hover:bg-stone-400" />
         </button>
-        <div
+        {/* Overlay-mode backdrop: clicking it collapses the editor.
+            Only rendered below lg when the editor is expanded. */}
+        {isOverlayEditor && !editorCollapsed ? (
+          <motion.button
+            type="button"
+            aria-label={t("editor.hide_editor")}
+            onClick={() => setEditorCollapsed(true)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-30 bg-black/10 lg:hidden"
+          />
+        ) : null}
+        {/* Edge handle — mobile-only entry point when editor is
+            collapsed. Sits above MobilePlaybackBar in portrait, on
+            the right edge in landscape. */}
+        {isOverlayEditor && editorCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setEditorCollapsed(false)}
+            aria-label={t("editor.show_editor")}
+            className={cn(
+              "fixed z-30 flex items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-xl shadow-stone-900/10 hover:bg-stone-50 lg:hidden",
+              isLandscape
+                ? "top-1/2 right-2 h-16 w-9 -translate-y-1/2"
+                : "bottom-[calc(3.25rem+max(0.5rem,env(safe-area-inset-bottom)))] left-1/2 h-9 w-28 -translate-x-1/2",
+            )}
+          >
+            <span className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide">
+              <span className="text-[10px]">{isLandscape ? "◂" : "▴"}</span>
+              <span>
+                {mode === "visual"
+                  ? t("editor.bar_editor")
+                  : t("editor.source")}
+              </span>
+            </span>
+          </button>
+        ) : null}
+        <motion.div
+          // Slide animation only on mount/unmount in overlay mode.
+          // Keying by mode makes AnimatePresence swap variants cleanly.
+          key={isOverlayEditor ? "overlay" : "inline"}
+          initial={
+            isOverlayEditor && !editorCollapsed
+              ? isLandscape
+                ? { x: "100%", opacity: 0 }
+                : { y: "100%", opacity: 0 }
+              : false
+          }
+          animate={
+            isOverlayEditor && !editorCollapsed
+              ? { x: 0, y: 0, opacity: 1 }
+              : {}
+          }
+          transition={{ type: "spring", stiffness: 320, damping: 32 }}
           className={cn(
-            "hidden min-h-0 flex-col lg:flex",
-            editorCollapsed ? "flex-none" : "flex-[45_45_0%]",
+            "min-h-0 flex-col",
+            !isOverlayEditor &&
+              (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
+            isOverlayEditor && editorCollapsed && "hidden",
+            isOverlayEditor &&
+              !editorCollapsed &&
+              cn(
+                "fixed z-40 flex drop-shadow-2xl",
+                isLandscape
+                  ? "top-2 right-2 bottom-2 w-[80vw] max-w-[640px]"
+                  : "inset-x-2 bottom-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[80vh]",
+              ),
           )}
         >
           <Panel className="flex min-h-0 flex-1 flex-col">
@@ -1533,7 +1606,7 @@ function AppInner() {
           )}
           </AnimatePresence>
           </Panel>
-        </div>
+        </motion.div>
       </section>
       </div>
       <AnimatePresence>
