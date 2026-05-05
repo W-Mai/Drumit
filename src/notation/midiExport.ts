@@ -1,6 +1,10 @@
 import type { Score } from "./types";
 import { gmDrumMap, hitVelocity } from "./midi";
 import { schedule } from "./scheduler";
+import { serializeScore } from "./serialize";
+
+/** Prefix identifying the embedded drumtab payload inside a text meta. */
+export const DRUMIT_META_PREFIX = "drumit/v1\n";
 
 /**
  * Export a `Score` as a Standard MIDI File (SMF Type 0). Channel 10 is
@@ -115,6 +119,16 @@ export function exportScoreToMidi(
   const denPow = Math.max(0, Math.round(Math.log2(den)));
   body.push(...vlq(0));
   body.push(0xff, 0x58, 0x04, num & 0xff, denPow & 0xff, 24, 8);
+
+  // Delta 0 — text meta FF 01 embedding the drumtab source so import
+  // is a perfect fixed point.
+  const payload = new TextEncoder().encode(
+    DRUMIT_META_PREFIX + serializeScore(score),
+  );
+  body.push(...vlq(0));
+  body.push(0xff, 0x01);
+  body.push(...vlq(payload.length));
+  for (let i = 0; i < payload.length; i += 1) body.push(payload[i]);
 
   // Channel events with delta-time differences.
   let prevTick = 0;
