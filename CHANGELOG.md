@@ -11,6 +11,69 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.06]
+
+### Added
+
+- **MIDI import** (both paths):
+  - **drumit-exported `.mid`** round-trips byte-for-byte. Export now
+    embeds the drumtab source as a `FF 01` text meta (`drumit/v1\n`
+    + payload); import picks it up and hands the text straight to
+    `parseDrumtab`.
+  - **Third-party `.mid`** (no drumit meta) falls back to
+    quantise-and-reconstruct: each beat picks the smallest division
+    from {1,2,3,4,6,8} that lands every onset on a distinct slot
+    within 1/8-slot tolerance; notes outside GM drum map snap to
+    the nearest mapped instrument; first tempo wins. A dialog warns
+    that dots / explicit rests / grouping may be lost.
+- **Explicit rest slot** (`∅`) — distinct from unfilled `null`.
+  Typed as `0` in drumtab source; parser/serializer round-trip;
+  scheduler skips it; renderer draws a muted crossed circle. Digit
+  `0` in editor inserts one at the cursor. Instrument hotkey map
+  shrank to 9 keys (`1`-`9`); `ride` drops out of the digit keymap
+  and is selected via the UI.
+- **Bar navigation hotkeys** — `[` / `]` jump prev/next bar;
+  `]` appends a fresh bar when already at the end so continuous
+  entry doesn't stall. `⌘⏎` / `Ctrl+⏎` inserts a bar after the
+  current one anywhere.
+- **Swipe gesture** on the lane nav strip (LanePager): left/right
+  changes lane, matching iOS/Material page-sliding.
+- **Undo / Redo buttons** in the mobile editor footer (`↶ ↷`)
+  alongside icon-only `＋ ⌫ ✕` bar actions. Overlay breakpoint now
+  drives the whole footer, so landscape phones get the same affordances.
+- **Chevron buttons around `Bar X / Y`** in the editor footer, plus
+  `‹ ›` on the LanePager nav strip (with a discreet dot progress
+  row folded in).
+
+### Changed
+
+- **Dotted-note timing** rewritten to use fixed nominal durations:
+  `o.` = dotted eighth (3/4 beat), `o..` = double-dotted eighth
+  (7/8 beat). Undotted slots share the remaining beat time evenly,
+  so `o.xx` = [3/4, 1/8, 1/8] and a tail dot like `xx.` gets
+  [1/4, 3/4]. Overflow (dotted sum ≥ 1 beat) normalises and warns.
+- **Split-group logic** preserves every existing hit when changing
+  group count or per-group division — empty positions become `-`,
+  nothing gets dropped. Split-into-groups is correctly recognised
+  as split (was silently treated as dot-expansion and ignored).
+- **Override grid takes effect on empty lanes** too. The UI no
+  longer waits for a hit before honouring `lane.division`.
+- **Hotkey scope follows the pointer**, not focus: hovering a panel
+  is enough to activate its shortcuts. Hover tracking uses
+  `pointermove` on `document` and ignores detached nodes mid-render.
+- **Delete / Backspace** on a slot now steps the cursor back a
+  column after clearing so repeated presses chew right-to-left.
+- **BPM input** no longer clamps on every keystroke — types a
+  draft, commits on Enter / blur; Esc cancels.
+
+### Fixed
+
+- Importing plain MIDI without the drumit meta no longer lands in
+  a "Fix parse errors…" stall. Inferred scores now emit a
+  non-empty section label (`A`).
+- Overlay editor `relative` / `fixed` class collision that silently
+  kept the card inline (earlier round of fixes).
+
 ## [2026.05.05]
 
 ### Added
