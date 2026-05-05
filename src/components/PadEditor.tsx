@@ -692,6 +692,8 @@ export function PadEditor({
         onSetNavigation={onSetNavigation}
         onInsertAfter={onInsertAfter}
         onDelete={onDelete}
+        onPrevBar={onPrevBar}
+        onNextBar={onNextBar}
       />
 
       {bar.repeatPrevious ? (
@@ -886,6 +888,8 @@ function BarHeader({
   onSetNavigation,
   onInsertAfter,
   onDelete,
+  onPrevBar,
+  onNextBar,
 }: {
   barIndex: number;
   totalBars: number;
@@ -900,20 +904,46 @@ function BarHeader({
   onSetNavigation: (nav: NavigationMarker | null) => void;
   onInsertAfter: () => void;
   onDelete: () => void;
+  onPrevBar?: () => void;
+  onNextBar?: () => void;
 }) {
   const { t } = useI18n();
+  const canPrev = barIndex > 0;
+  const canNext = barIndex < totalBars - 1;
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
-        <div>
-          <div className="text-[10px] font-bold tracking-[0.14em] text-stone-400 uppercase">
-            Bar {barIndex + 1} / {totalBars}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onPrevBar}
+            disabled={!canPrev || !onPrevBar}
+            aria-label={t("editor.prev_bar")}
+            title={t("editor.prev_bar")}
+            className="motion-press flex size-8 items-center justify-center rounded-full text-base text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+          >
+            ‹
+          </button>
+          <div className="min-w-[4.5rem] text-center">
+            <div className="text-[10px] font-bold tracking-[0.14em] text-stone-400 uppercase">
+              Bar {barIndex + 1} / {totalBars}
+            </div>
+            <div className="mt-0.5 font-mono text-xs text-stone-600">
+              {bar.repeatPrevious
+                ? `${t("editor.bar_repeat_label")}${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
+                : t("editor.bar_count_beats", { count: bar.beats.length })}
+            </div>
           </div>
-          <div className="mt-0.5 font-mono text-xs text-stone-600">
-            {bar.repeatPrevious
-              ? `${t("editor.bar_repeat_label")}${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
-              : t("editor.bar_count_beats", { count: bar.beats.length })}
-          </div>
+          <button
+            type="button"
+            onClick={onNextBar}
+            disabled={!canNext || !onNextBar}
+            aria-label={t("editor.next_bar")}
+            title={t("editor.next_bar")}
+            className="motion-press flex size-8 items-center justify-center rounded-full text-base text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+          >
+            ›
+          </button>
         </div>
 
         <ChipGroup>
