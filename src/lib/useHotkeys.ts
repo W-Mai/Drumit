@@ -13,13 +13,13 @@ if (typeof document !== "undefined") {
     },
     { passive: true, capture: true },
   );
-  document.addEventListener(
-    "pointerleave",
-    () => {
-      hoverTarget = null;
-    },
-    { passive: true, capture: true },
-  );
+  // Only clear when the pointer leaves the page entirely. A
+  // per-element pointerleave would fire as the mouse crosses between
+  // siblings during re-renders (capture phase sees every child's
+  // leave), yanking the hover scope mid-typing.
+  window.addEventListener("blur", () => {
+    hoverTarget = null;
+  });
 }
 
 export interface Hotkey {
@@ -59,8 +59,12 @@ export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
       if (target && isEditable(target)) return;
       // Scope resolution: pointer position wins, keydown target is a
       // fallback. Lets 'which panel is hot' match where the mouse is,
-      // without demanding a click/focus beforehand.
-      const scopeTarget = (hoverTarget as HTMLElement | null) ?? target;
+      // without demanding a click/focus beforehand. If the hover node
+      // got unmounted (common during React re-renders mid-keystroke),
+      // fall through to e.target so the hotkey still dispatches.
+      const hoverAlive =
+        hoverTarget && hoverTarget.isConnected ? hoverTarget : null;
+      const scopeTarget = (hoverAlive as HTMLElement | null) ?? target;
       for (const hk of hotkeys) {
         if (hk.key !== undefined && e.key !== hk.key) continue;
         if (hk.code !== undefined && e.code !== hk.code) continue;
