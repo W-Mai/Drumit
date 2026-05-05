@@ -1340,12 +1340,12 @@ function AppInner() {
               className="panel-hover-lift flex h-full w-full flex-col items-center justify-center gap-2 rounded-3xl border border-stone-200 bg-white text-stone-700 shadow-xl shadow-stone-900/5 hover:bg-stone-50"
             >
               <span className="text-xs text-stone-500">▸</span>
-              <span className="[writing-mode:vertical-rl] rotate-180 text-sm font-extrabold tracking-wide">
+              <span className="[writing-mode:vertical-rl] text-sm font-extrabold tracking-wide">
                 {mode === "visual"
                   ? t("editor.bar_editor")
                   : t("editor.source")}
               </span>
-              <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] font-medium text-stone-500">
+              <span className="[writing-mode:vertical-rl] text-[10px] font-medium text-stone-500">
                 {t("editor.readonly_tag")}
               </span>
             </button>
