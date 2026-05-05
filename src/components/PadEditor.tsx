@@ -1379,65 +1379,69 @@ function LanePager({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-2 py-2">
-        <button
-          type="button"
-          onClick={() => canPrev && onLaneChange(cursor.laneIdx - 1)}
-          disabled={!canPrev}
-          aria-label={t("editor.previous_lane")}
-          className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
-        >
-          ‹
-        </button>
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-          <InstrumentIcon
-            instrument={currentInstrument}
-            className="size-5 shrink-0 text-stone-700"
-          />
-          <span className="truncate text-sm font-bold text-stone-900">
-            {instrumentLabels[currentInstrument]}
-          </span>
-          <span className="truncate font-mono text-[10px] text-stone-500">
-            {canonicalAlias[currentInstrument]}
-          </span>
+      <div className="flex flex-col rounded-xl border border-stone-200 bg-white px-2 pt-2 pb-1.5">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => canPrev && onLaneChange(cursor.laneIdx - 1)}
+            disabled={!canPrev}
+            aria-label={t("editor.previous_lane")}
+            className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+          >
+            ‹
+          </button>
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+            <InstrumentIcon
+              instrument={currentInstrument}
+              className="size-5 shrink-0 text-stone-700"
+            />
+            <span className="truncate text-sm font-bold text-stone-900">
+              {instrumentLabels[currentInstrument]}
+            </span>
+            <span className="truncate font-mono text-[10px] text-stone-500">
+              {canonicalAlias[currentInstrument]}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => canNext && onLaneChange(cursor.laneIdx + 1)}
+            disabled={!canNext}
+            aria-label={t("editor.next_lane")}
+            className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+          >
+            ›
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => canNext && onLaneChange(cursor.laneIdx + 1)}
-          disabled={!canNext}
-          aria-label={t("editor.next_lane")}
-          className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
-        >
-          ›
-        </button>
-      </div>
 
-      {presentInstruments.length > 1 ? (
-        <div className="flex items-center justify-center gap-1">
-          {presentInstruments.map((ins, idx) => (
-            <button
-              key={ins}
-              type="button"
-              onClick={() => onLaneChange(idx)}
-              aria-label={t("editor.jump_to_lane", {
-                name: instrumentLabels[ins],
-              })}
-              // Big invisible hit area with a small visible dot —
-              // dots stay discreet, touch target hits 40x40.
-              className="group flex size-10 items-center justify-center"
-            >
-              <span
-                className={cn(
-                  "block size-2 rounded-full transition-colors",
-                  idx === cursor.laneIdx
-                    ? "bg-stone-900"
-                    : "bg-stone-300 group-hover:bg-stone-500",
-                )}
-              />
-            </button>
-          ))}
-        </div>
-      ) : null}
+        {/* Dot indicators as part of the lane nav strip — discrete
+            progress pips centered under the instrument name. Hit
+            target is padded around the dot via px/py so the visible
+            pip stays small but the click zone is finger-friendly. */}
+        {presentInstruments.length > 1 ? (
+          <div className="-mx-1 mt-1 flex items-center justify-center">
+            {presentInstruments.map((ins, idx) => (
+              <button
+                key={ins}
+                type="button"
+                onClick={() => onLaneChange(idx)}
+                aria-label={t("editor.jump_to_lane", {
+                  name: instrumentLabels[ins],
+                })}
+                className="group flex h-4 items-center justify-center px-1.5"
+              >
+                <span
+                  className={cn(
+                    "block size-1.5 rounded-full transition-colors",
+                    idx === cursor.laneIdx
+                      ? "bg-stone-900"
+                      : "bg-stone-300 group-hover:bg-stone-500",
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       <div
         className="grid rounded-xl border border-stone-200 bg-white"
