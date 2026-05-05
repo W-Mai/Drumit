@@ -186,7 +186,6 @@ function AppInner() {
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
   );
-
   // Below lg the editor floats over the preview as a card (80% of the
   // short axis), so it never eats into the preview's visible score.
   const isOverlayEditor = !useMediaQuery("(min-width: 1024px)");
@@ -194,6 +193,18 @@ function AppInner() {
   const isLandscape = useMediaQuery(
     "(min-aspect-ratio: 1/1) and (max-height: 600px)",
   );
+  // Escape closes the overlay editor (hardware keyboards on iPad, and
+  // keeps the dev experience consistent with other modals).
+  useEffect(() => {
+    if (!isOverlayEditor || editorCollapsed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setEditorCollapsed(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOverlayEditor, editorCollapsed]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(
     () => loadInitialWorkspace().viewMode,
@@ -1117,8 +1128,8 @@ function AppInner() {
           "flex min-h-0 min-w-0 flex-1 flex-col gap-3 lg:pb-0",
           isOverlayEditor
             ? isLandscape
-              ? "pr-11 pb-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
-              : "pb-[calc(8rem+max(0.5rem,env(safe-area-inset-bottom)))]"
+              ? "pr-[calc(3.5rem+max(0.5rem,env(safe-area-inset-right)))] pb-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))]"
+              : "pb-[calc(9rem+max(0.5rem,env(safe-area-inset-bottom)))]"
             : "pb-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))]",
         )}
       >
@@ -1294,12 +1305,13 @@ function AppInner() {
             <motion.button
               key="editor-scrim"
               type="button"
+              tabIndex={-1}
               aria-label={t("editor.hide_editor")}
               onClick={() => setEditorCollapsed(true)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className="fixed inset-0 z-30 bg-black/10 lg:hidden"
             />
           ) : null}
@@ -1316,15 +1328,15 @@ function AppInner() {
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
             isOverlayEditor &&
               cn(
-                "fixed z-40 flex transition-[width,height,inset,max-width] duration-300 ease-out",
+                "fixed z-40 flex transition-[width,height,top,right,bottom,left,max-width] duration-300 ease-out",
                 !editorCollapsed && "drop-shadow-2xl",
                 isLandscape
                   ? editorCollapsed
-                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14"
-                    : "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[88vw] max-w-[820px]"
+                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14"
+                    : "top-[calc(3.25rem+env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[88vw] max-w-[820px]"
                   : editorCollapsed
-                    ? "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-14"
-                    : "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[min(80vh,calc(100vh-8rem))]",
+                    ? "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-14"
+                    : "left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[min(80vh,calc(100vh-8rem))]",
               ),
           )}
         >
@@ -1380,59 +1392,95 @@ function AppInner() {
                     {t("editor.readonly_tag")}
                   </span>
                 ) : null}
+                {/* Collapsed-state dot mirroring Diagnostics —
+                    users still see at a glance that parsing failed
+                    when the full badge row is hidden. */}
+                {isOverlayEditor &&
+                editorCollapsed &&
+                diagnostics.some((d) => d.level === "error") ? (
+                  <span
+                    aria-label={t("editor.fix_errors")}
+                    title={t("editor.fix_errors")}
+                    className="size-2 flex-none rounded-full bg-rose-500"
+                  />
+                ) : null}
               </>
             }
           >
-            <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
-              <ModeTab
-                active={mode === "visual"}
-                onClick={() => {
-                  switchMode("visual");
-                  if (editorCollapsed) setEditorCollapsed(false);
-                }}
-              >
-                {t("editor.visual_mode")}
-              </ModeTab>
-              <ModeTab
-                active={mode === "source"}
-                onClick={() => {
-                  switchMode("source");
-                  if (editorCollapsed) setEditorCollapsed(false);
-                }}
-              >
-                {t("editor.source_mode")}
-              </ModeTab>
-            </div>
-            <Diagnostics diagnostics={diagnostics} />
-            <HoverClickPopover
-              placement="bottom"
-              className="max-w-[min(780px,calc(100vw-24px))]"
-              trigger={({ open }) => (
-                <span
-                  aria-expanded={open}
-                  title={t("hotkeys.title")}
-                  className={cn(
-                    "flex size-7 items-center justify-center rounded-full border text-sm font-bold select-none",
-                    open
-                      ? "border-amber-400 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
-                      : "border-stone-200 bg-white text-stone-600 hover:bg-stone-100",
+            {/* Secondary header actions (mode tabs, diagnostics,
+                hotkey popover) hide when the overlay editor is
+                collapsed — a 56px-tall strip can't host them without
+                wrapping ugly. They reappear when the card expands. */}
+            {isOverlayEditor && editorCollapsed ? null : (
+              <>
+                <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-0.5">
+                  <ModeTab
+                    active={mode === "visual"}
+                    onClick={() => {
+                      switchMode("visual");
+                      if (editorCollapsed) setEditorCollapsed(false);
+                    }}
+                  >
+                    {t("editor.visual_mode")}
+                  </ModeTab>
+                  <ModeTab
+                    active={mode === "source"}
+                    onClick={() => {
+                      switchMode("source");
+                      if (editorCollapsed) setEditorCollapsed(false);
+                    }}
+                  >
+                    {t("editor.source_mode")}
+                  </ModeTab>
+                </div>
+                <Diagnostics diagnostics={diagnostics} />
+                <HoverClickPopover
+                  placement="bottom"
+                  className="max-w-[min(780px,calc(100vw-24px))]"
+                  trigger={({ open }) => (
+                    <span
+                      aria-expanded={open}
+                      title={t("hotkeys.title")}
+                      className={cn(
+                        "flex size-7 items-center justify-center rounded-full border text-sm font-bold select-none",
+                        open
+                          ? "border-amber-400 bg-amber-100 text-stone-900 dark:bg-amber-500/30 dark:text-amber-50"
+                          : "border-stone-200 bg-white text-stone-600 hover:bg-stone-100",
+                      )}
+                    >
+                      ?
+                    </span>
                   )}
                 >
-                  ?
-                </span>
-              )}
-            >
-              <HotkeyPanel />
-            </HoverClickPopover>
+                  <HotkeyPanel />
+                </HoverClickPopover>
+              </>
+            )}
           </PanelHeader>
 
           <AnimatePresence initial={false}>
           {editorCollapsed ? null : (
           <motion.div
             key="editor-body"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            // In overlay mode the shell itself animates open (CSS
+            // transition on height), so the body only needs a fade.
+            // Running a height animation here too would double-up and
+            // look glitchy.
+            initial={
+              isOverlayEditor
+                ? { opacity: 0 }
+                : { opacity: 0, height: 0 }
+            }
+            animate={
+              isOverlayEditor
+                ? { opacity: 1 }
+                : { opacity: 1, height: "auto" }
+            }
+            exit={
+              isOverlayEditor
+                ? { opacity: 0 }
+                : { opacity: 0, height: 0 }
+            }
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
             className="min-h-0 flex-1 overflow-auto p-4"
           >
