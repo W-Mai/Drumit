@@ -964,12 +964,30 @@ function BarHeader({
         </ChipGroup>
 
         <div className="flex gap-1">
-          <Button onClick={onInsertAfter}>{t("editor.insert_after")}</Button>
-          <Button onClick={onClearBar} title={t("editor.clear_bar_tip")}>
-            {t("editor.clear_bar")}
+          <Button
+            onClick={onInsertAfter}
+            title={t("editor.insert_after")}
+            aria-label={t("editor.insert_after")}
+          >
+            <span className="sm:hidden text-base leading-none">＋</span>
+            <span className="hidden sm:inline">{t("editor.insert_after")}</span>
           </Button>
-          <Button variant="danger" onClick={onDelete}>
-            {t("editor.delete_bar")}
+          <Button
+            onClick={onClearBar}
+            title={t("editor.clear_bar_tip")}
+            aria-label={t("editor.clear_bar")}
+          >
+            <span className="sm:hidden text-base leading-none">⌫</span>
+            <span className="hidden sm:inline">{t("editor.clear_bar")}</span>
+          </Button>
+          <Button
+            variant="danger"
+            onClick={onDelete}
+            title={t("editor.delete_bar")}
+            aria-label={t("editor.delete_bar")}
+          >
+            <span className="sm:hidden text-base leading-none">✕</span>
+            <span className="hidden sm:inline">{t("editor.delete_bar")}</span>
           </Button>
         </div>
       </div>
