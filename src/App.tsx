@@ -1308,7 +1308,8 @@ function AppInner() {
           // mounted/unmounted as-is, so nothing gets stretched — you
           // see the box grow and the real content sitting at rest.
           className={cn(
-            "relative min-h-0 flex-col overflow-hidden",
+            "relative min-h-0 flex-col",
+            isOverlayEditor && "overflow-hidden rounded-3xl",
             !isOverlayEditor &&
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
             isOverlayEditor &&
@@ -1317,10 +1318,10 @@ function AppInner() {
                 !editorCollapsed && "drop-shadow-2xl",
                 isLandscape
                   ? editorCollapsed
-                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-10 max-w-10"
+                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14"
                     : "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[88vw] max-w-[820px]"
                   : editorCollapsed
-                    ? "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-11"
+                    ? "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-14"
                     : "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[min(80vh,calc(100vh-8rem))]",
               ),
           )}
@@ -1334,7 +1335,7 @@ function AppInner() {
               onClick={() => setEditorCollapsed(false)}
               aria-label={t("editor.show_editor")}
               className={cn(
-                "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-3xl bg-white text-stone-700 transition-opacity duration-200",
+                "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white text-stone-700 transition-opacity duration-200",
                 editorCollapsed
                   ? "opacity-100"
                   : "pointer-events-none opacity-0",
