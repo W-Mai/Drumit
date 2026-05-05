@@ -959,8 +959,12 @@ function BarHeader({
         />
       </div>
 
-      <div className="flex items-center gap-3">
-        <ChipGroup>
+      {/* Below sm, give resolution chips and the action buttons their
+          own rows so the 6-chip group doesn't have to choose between
+          wrapping asymmetrically or sharing space with 3 buttons.
+          sm+ keeps the original inline layout. */}
+      <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+        <ChipGroup className="!flex w-full justify-center sm:!inline-flex sm:w-auto sm:justify-start">
           {RESOLUTIONS.map((r) => (
             <Chip
               key={r.label}
@@ -983,7 +987,7 @@ function BarHeader({
           ))}
         </ChipGroup>
 
-        <div className="flex gap-1">
+        <div className="flex justify-center gap-1 sm:justify-start">
           <Button
             onClick={onInsertAfter}
             title={t("editor.insert_after")}
