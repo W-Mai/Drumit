@@ -36,6 +36,7 @@ import {
   splitBeatIntoGroups,
   toggleArticulation,
   toggleSlot,
+  setSlotRest,
 } from "./notation/edit";
 import { PadEditor } from "./components/PadEditor";
 import { PerformView } from "./components/PerformView";
@@ -1613,6 +1614,11 @@ function AppInner() {
                 onToggleSlot={(bi, inst, si, gi) =>
                   applyScoreUpdate((s) =>
                     toggleSlot(s, clampedSelectedBar, bi, inst, si, gi),
+                  )
+                }
+                onSetSlotRest={(bi, inst, si, gi) =>
+                  applyScoreUpdate((s) =>
+                    setSlotRest(s, clampedSelectedBar, bi, inst, si, gi),
                   )
                 }
                 onToggleArticulation={(bi, inst, si, art, gi) =>

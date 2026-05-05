@@ -191,6 +191,8 @@ function headToken(hit: Hit): string {
   switch (hit.head) {
     case "x":
       return "x";
+    case "rest":
+      return "0";
     default:
       return "o";
   }

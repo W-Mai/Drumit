@@ -411,6 +411,38 @@ function deriveAutoTuplet(division: number): number | undefined {
   return undefined;
 }
 
+export function setSlotRest(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  slotIndex: number,
+  groupIndex = 0,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex] ?? emptyBeat();
+    if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
+    const lane = findOrCreateLane(beat, instrument);
+    const rest = { instrument, head: "rest" as const, articulations: [] };
+    if (isDotExpanded(lane) && (groupIndex === 0 || groupIndex === undefined)) {
+      const g = lane.groups![slotIndex];
+      if (!g) return;
+      g.slots[0] = rest;
+      return;
+    }
+    if (lane.groups && lane.groups[groupIndex]) {
+      const g = lane.groups[groupIndex];
+      if (slotIndex >= g.division) growGroup(g, slotIndex + 1);
+      g.slots[slotIndex] = rest;
+      return;
+    }
+    if (!lane.groups && groupIndex === 0) {
+      if (slotIndex >= lane.division) growLane(lane, slotIndex + 1);
+      lane.slots[slotIndex] = rest;
+    }
+  });
+}
+
 export function toggleSlot(
   score: Score,
   globalIndex: number,

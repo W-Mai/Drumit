@@ -76,6 +76,12 @@ interface Props {
     slotIndex: number,
     groupIndex?: number,
   ) => void;
+  onSetSlotRest: (
+    beatIndex: number,
+    instrument: Instrument,
+    slotIndex: number,
+    groupIndex?: number,
+  ) => void;
   onToggleArticulation: (
     beatIndex: number,
     instrument: Instrument,
@@ -295,6 +301,7 @@ export function PadEditor({
   onSetGroupDivision,
   onSplitBeat,
   onToggleSlot,
+  onSetSlotRest,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -445,6 +452,35 @@ export function PadEditor({
       onToggleSlot(clampedCursor.beatIndex, inst, col.slotIndex);
     } else {
       onToggleSlot(
+        clampedCursor.beatIndex,
+        inst,
+        col.slotIndex,
+        col.groupIndex,
+      );
+    }
+    advanceCursor();
+  }
+
+  function restAtCursor() {
+    const inst = currentInstrument;
+    if (!inst) return;
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    if (col.kind === "beat-slot") {
+      if (
+        !laneBeat ||
+        laneBeat.groups ||
+        laneBeat.division !== col.slotsPerBeat
+      ) {
+        onSetDivision(clampedCursor.beatIndex, inst, col.slotsPerBeat);
+      }
+      onSetSlotRest(clampedCursor.beatIndex, inst, col.slotIndex);
+    } else {
+      onSetSlotRest(
         clampedCursor.beatIndex,
         inst,
         col.slotIndex,
@@ -634,6 +670,15 @@ export function PadEditor({
       key: digit,
       handler: () => toggleAtCursor(instrument),
     })),
+    ...(currentInstrument
+      ? [
+          {
+            key: "0",
+            description: "Insert explicit rest",
+            handler: () => restAtCursor(),
+          },
+        ]
+      : []),
     // These all operate on the current lane, so skip registration on
     // an empty bar — their helpers take Instrument, not undefined.
     ...(currentInstrument

@@ -87,7 +87,7 @@ export function schedule(
             const groupDuration = secondsPerBeat * group.ratio;
             const slotDuration = groupDuration / Math.max(1, group.division);
             group.slots.forEach((hit, slotIndex) => {
-              if (!hit) return;
+              if (!hit || hit.head === "rest") return;
               const slotTime = groupStart + slotIndex * slotDuration;
               expandHit(hit, slotTime, slotDuration, barIndex, beatIndex).forEach((e) =>
                 events.push(e),

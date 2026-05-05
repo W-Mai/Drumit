@@ -5,8 +5,9 @@ import {
 } from "../src/notation/hotkeyMap";
 
 describe("hotkey map", () => {
-  it("maps 10 digit keys", () => {
-    expect(Object.keys(INSTRUMENT_BY_DIGIT)).toHaveLength(10);
+  it("maps 9 digit keys (0 is reserved for explicit rest)", () => {
+    expect(Object.keys(INSTRUMENT_BY_DIGIT)).toHaveLength(9);
+    expect(INSTRUMENT_BY_DIGIT["0"]).toBeUndefined();
   });
 
   it("each instrument appears exactly once", () => {

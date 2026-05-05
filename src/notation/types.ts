@@ -29,7 +29,8 @@ export type Head =
   | "partial"     // ∂  hi-hat (closed / half-open)
   | "open"        // ○  ride, hi-hat open, (unused) tom variants
   | "slash"       // \\ floor tom
-  | "stickX";     // |  above, × below — crash / splash
+  | "stickX"      // |  above, × below — crash / splash
+  | "rest";       // ∅  explicit silence (distinct from an unfilled null slot)
 
 export interface Hit {
   instrument: Instrument;

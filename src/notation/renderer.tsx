@@ -925,6 +925,29 @@ function HitHead({
 }) {
   const sw = strokeForSize(size);
 
+  if (hit.head === "rest") {
+    const r = size * 0.85;
+    return (
+      <g>
+        <circle
+          cx={x}
+          cy={y}
+          r={r}
+          className="fill-none stroke-stone-400"
+          strokeWidth={sw}
+        />
+        <line
+          x1={x - r * 0.72}
+          y1={y + r * 0.72}
+          x2={x + r * 0.72}
+          y2={y - r * 0.72}
+          className="stroke-stone-400"
+          strokeWidth={sw}
+          strokeLinecap="round"
+        />
+      </g>
+    );
+  }
   if (hit.head === "x") {
     return (
       <path

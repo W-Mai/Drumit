@@ -569,6 +569,15 @@ function parseToken(
     return null;
   }
 
+  if (value === "0") {
+    return {
+      instrument,
+      head: "rest",
+      articulations,
+      ...(dots > 0 ? { dots } : {}),
+    };
+  }
+
   // Standalone sticking markers: `R` / `L` act as the note head itself.
   if (/^[rl]$/i.test(value)) {
     return {

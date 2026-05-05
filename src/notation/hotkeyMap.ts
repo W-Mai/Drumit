@@ -10,12 +10,11 @@ export const INSTRUMENT_BY_DIGIT: Record<string, Instrument> = {
   "2": "snare",
   "3": "hihatClosed",
   "4": "hihatOpen",
-  "5": "ride",
-  "6": "crashLeft",
-  "7": "crashRight",
-  "8": "tomHigh",
-  "9": "tomMid",
-  "0": "floorTom",
+  "5": "crashLeft",
+  "6": "crashRight",
+  "7": "tomHigh",
+  "8": "tomMid",
+  "9": "floorTom",
 };
 
 /** Reverse map for O(1) lookup from instrument → digit. */

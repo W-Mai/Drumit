@@ -52,6 +52,7 @@ export function HotkeyPanel() {
         },
         { keys: ["⌘⏎"], label: t("hotkeys.insert_bar_after") },
         { keys: ["Tab"], label: t("hotkeys.autoadvance") },
+        { keys: ["0"], label: t("hotkeys.rest") },
         { keys: ["Del"], label: t("hotkeys.clear_slot") },
       ],
     },
