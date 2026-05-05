@@ -679,8 +679,6 @@ export function PadEditor({
         onDelete={onDeleteSection}
       />
       <BarHeader
-        barIndex={barIndex}
-        totalBars={totalBars}
         bar={bar}
         barResolution={barResolution}
         onChangeResolution={setBarResolution}
@@ -692,8 +690,6 @@ export function PadEditor({
         onSetNavigation={onSetNavigation}
         onInsertAfter={onInsertAfter}
         onDelete={onDelete}
-        onPrevBar={onPrevBar}
-        onNextBar={onNextBar}
       />
 
       {bar.repeatPrevious ? (
@@ -763,6 +759,51 @@ export function PadEditor({
         )}
         </>
       )}
+
+      {/* Footer nav: prev / Bar X-of-Y / next + ⋯ overflow. Sits at
+          the bottom of the editor body so the user can thumb through
+          bars without scrolling back up to the header. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onPrevBar}
+            disabled={barIndex === 0 || !onPrevBar}
+            aria-label={t("editor.prev_bar")}
+            title={t("editor.prev_bar")}
+            className="motion-press flex size-8 items-center justify-center rounded-full text-base text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+          >
+            ‹
+          </button>
+          <div className="min-w-[4.5rem] text-center">
+            <div className="text-[10px] font-bold tracking-[0.14em] text-stone-400 uppercase">
+              Bar {barIndex + 1} / {totalBars}
+            </div>
+            <div className="mt-0.5 font-mono text-xs text-stone-600">
+              {bar.repeatPrevious
+                ? `${t("editor.bar_repeat_label")}${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
+                : t("editor.bar_count_beats", { count: bar.beats.length })}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onNextBar}
+            disabled={barIndex >= totalBars - 1 || !onNextBar}
+            aria-label={t("editor.next_bar")}
+            title={t("editor.next_bar")}
+            className="motion-press flex size-8 items-center justify-center rounded-full text-base text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+          >
+            ›
+          </button>
+        </div>
+        <div className="sm:hidden">
+          <BarActionsOverflow
+            onInsertAfter={onInsertAfter}
+            onClearBar={onClearBar}
+            onDelete={onDelete}
+          />
+        </div>
+      </div>
 
       <details className="text-xs text-stone-500">
         <summary className="cursor-pointer font-extrabold text-stone-700">
@@ -875,8 +916,6 @@ function SectionStrip({
 }
 
 function BarHeader({
-  barIndex,
-  totalBars,
   bar,
   barResolution,
   onChangeResolution,
@@ -888,11 +927,7 @@ function BarHeader({
   onSetNavigation,
   onInsertAfter,
   onDelete,
-  onPrevBar,
-  onNextBar,
 }: {
-  barIndex: number;
-  totalBars: number;
   bar: Bar;
   barResolution: Resolution;
   onChangeResolution: (r: Resolution) => void;
@@ -904,64 +939,11 @@ function BarHeader({
   onSetNavigation: (nav: NavigationMarker | null) => void;
   onInsertAfter: () => void;
   onDelete: () => void;
-  onPrevBar?: () => void;
-  onNextBar?: () => void;
 }) {
   const { t } = useI18n();
-  const canPrev = barIndex > 0;
-  const canNext = barIndex < totalBars - 1;
-  const barNav = (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={onPrevBar}
-        disabled={!canPrev || !onPrevBar}
-        aria-label={t("editor.prev_bar")}
-        title={t("editor.prev_bar")}
-        className="motion-press flex size-8 items-center justify-center rounded-full text-base text-stone-600 hover:bg-stone-100 disabled:opacity-30"
-      >
-        ‹
-      </button>
-      <div className="min-w-[4.5rem] text-center">
-        <div className="text-[10px] font-bold tracking-[0.14em] text-stone-400 uppercase">
-          Bar {barIndex + 1} / {totalBars}
-        </div>
-        <div className="mt-0.5 font-mono text-xs text-stone-600">
-          {bar.repeatPrevious
-            ? `${t("editor.bar_repeat_label")}${bar.repeatHint && bar.repeatHint !== "plain" ? ` · ${bar.repeatHint}` : ""}`
-            : t("editor.bar_count_beats", { count: bar.beats.length })}
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onNextBar}
-        disabled={!canNext || !onNextBar}
-        aria-label={t("editor.next_bar")}
-        title={t("editor.next_bar")}
-        className="motion-press flex size-8 items-center justify-center rounded-full text-base text-stone-600 hover:bg-stone-100 disabled:opacity-30"
-      >
-        ›
-      </button>
-    </div>
-  );
-
   return (
     <header className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-      {/* Row 1 on narrow viewports: bar nav on the left, overflow ⋯
-          on the right. sm+ lets the two halves float as flex-wrap
-          chooses. */}
-      <div className="flex items-center justify-between gap-3 sm:w-auto sm:justify-start">
-        {barNav}
-        <div className="sm:hidden">
-          <BarActionsOverflow
-            onInsertAfter={onInsertAfter}
-            onClearBar={onClearBar}
-            onDelete={onDelete}
-          />
-        </div>
-      </div>
-
-      {/* Row 2: bar attributes — pattern / repeats / endings / nav. */}
+      {/* Row 1: bar attributes — pattern / repeats / endings / nav. */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <ChipGroup>
           <Chip
