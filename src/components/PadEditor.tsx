@@ -593,6 +593,17 @@ export function PadEditor({
     { key: "Tab", handler: () => setAutoAdvance((v) => !v) },
     { key: "Delete", handler: () => clearCursorSlot() },
     { key: "Backspace", handler: () => clearCursorSlot() },
+    // Bar navigation: '[' jumps to the previous bar, ']' to the next.
+    {
+      key: "[",
+      description: "Previous bar",
+      handler: () => onPrevBar?.(),
+    },
+    {
+      key: "]",
+      description: "Next bar",
+      handler: () => onNextBar?.(),
+    },
     // Instrument digits
     ...Object.entries(INSTRUMENT_BY_DIGIT).map(([digit, instrument]) => ({
       key: digit,
