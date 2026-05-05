@@ -1335,11 +1335,14 @@ function AppInner() {
                 !editorCollapsed && "drop-shadow-2xl",
                 isLandscape
                   ? editorCollapsed
-                    ? // collapsed landscape: a vertical strip. height
-                      // fills top→bottom naturally via top/bottom
-                      // anchors; width is the animated axis.
-                      "top-[calc(3.25rem+env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14"
-                    : "top-[calc(3.25rem+env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[88vw] max-w-[820px]"
+                    ? // Collapsed landscape: a compact tab anchored to
+                      // the right + bottom. Height wraps the vertical
+                      // label. Expansion then grows both up (toward
+                      // the app header via max-height) and left (via
+                      // width). Bottom stays pinned so the growth
+                      // reads as 'unfolding from this corner'.
+                      "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14 max-h-56"
+                    : "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[92vw] max-w-[960px] max-h-[calc(100vh-3.75rem-env(safe-area-inset-top))]"
                   : editorCollapsed
                     ? // collapsed portrait: height follows the actual
                       // PanelHeader content (no dead strip under it),
@@ -1349,20 +1352,16 @@ function AppInner() {
               ),
           )}
         >
-          {/* Landscape collapsed overlay: covers the cramped Panel peek
-              with a clean vertical label, fades out as the card opens
-              so the real PanelHeader takes over. */}
-          {isOverlayEditor && isLandscape ? (
+          {/* Landscape collapsed view: the card is a tall-narrow tab
+              with a vertical label. Rendered instead of Panel (not
+              on top of it) so the card's own height wraps the label
+              naturally. Expansion swaps it back to the full editor. */}
+          {isOverlayEditor && isLandscape && editorCollapsed ? (
             <button
               type="button"
               onClick={() => setEditorCollapsed(false)}
               aria-label={t("editor.show_editor")}
-              className={cn(
-                "absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white text-stone-700 transition-opacity duration-200",
-                editorCollapsed
-                  ? "opacity-100"
-                  : "pointer-events-none opacity-0",
-              )}
+              className="flex flex-1 flex-col items-center justify-center gap-2 bg-white px-1 py-4 text-stone-700"
             >
               <span className="text-xs text-stone-500">▸</span>
               <span className="[writing-mode:vertical-rl] text-sm font-extrabold tracking-wide">
@@ -1374,7 +1373,7 @@ function AppInner() {
                 {t("editor.readonly_tag")}
               </span>
             </button>
-          ) : null}
+          ) : (
           <Panel className="flex min-h-0 w-full flex-1 flex-col">
           <PanelHeader
             onTitleClick={() => setEditorCollapsed((v) => !v)}
@@ -1670,6 +1669,7 @@ function AppInner() {
           )}
           </AnimatePresence>
           </Panel>
+          )}
         </div>
       </section>
       </div>
