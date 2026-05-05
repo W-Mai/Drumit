@@ -164,6 +164,9 @@ const zh: Dict = {
   "editor.readonly_tag": "· 只读",
   "editor.show_editor": "展开编辑器",
   "editor.hide_editor": "折叠编辑器",
+  "editor.previous_lane": "上一条声部",
+  "editor.next_lane": "下一条声部",
+  "editor.jump_to_lane": "跳到声部：{name}",
   "editor.fix_errors": "修复解析错误后预览才会更新。",
   "editor.switch_to_compact":
     "切回折叠视图以编辑小节。",
@@ -473,6 +476,9 @@ const en: Dict = {
   "editor.readonly_tag": "· read-only",
   "editor.show_editor": "Show editor",
   "editor.hide_editor": "Hide editor",
+  "editor.previous_lane": "Previous lane",
+  "editor.next_lane": "Next lane",
+  "editor.jump_to_lane": "Jump to lane: {name}",
   "editor.fix_errors": "Fix parse errors to update the preview.",
   "editor.switch_to_compact":
     "Switch back to the compact view to edit bars.",

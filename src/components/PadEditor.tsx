@@ -1210,6 +1210,7 @@ function LanePager({
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
 }) {
+  const { t } = useI18n();
   const currentInstrument = presentInstruments[cursor.laneIdx];
 
   if (!currentInstrument) {
@@ -1234,7 +1235,7 @@ function LanePager({
           type="button"
           onClick={() => canPrev && onLaneChange(cursor.laneIdx - 1)}
           disabled={!canPrev}
-          aria-label="Previous lane"
+          aria-label={t("editor.previous_lane")}
           className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
         >
           ‹
@@ -1255,7 +1256,7 @@ function LanePager({
           type="button"
           onClick={() => canNext && onLaneChange(cursor.laneIdx + 1)}
           disabled={!canNext}
-          aria-label="Next lane"
+          aria-label={t("editor.next_lane")}
           className="motion-press flex size-9 items-center justify-center rounded-full text-lg text-stone-600 hover:bg-stone-100 disabled:opacity-30"
         >
           ›
@@ -1263,20 +1264,28 @@ function LanePager({
       </div>
 
       {presentInstruments.length > 1 ? (
-        <div className="flex items-center justify-center gap-1.5">
+        <div className="flex items-center justify-center gap-1">
           {presentInstruments.map((ins, idx) => (
             <button
               key={ins}
               type="button"
               onClick={() => onLaneChange(idx)}
-              aria-label={instrumentLabels[ins]}
-              className={cn(
-                "size-2 rounded-full transition-colors",
-                idx === cursor.laneIdx
-                  ? "bg-stone-900"
-                  : "bg-stone-300 hover:bg-stone-500",
-              )}
-            />
+              aria-label={t("editor.jump_to_lane", {
+                name: instrumentLabels[ins],
+              })}
+              // Big invisible hit area with a small visible dot —
+              // dots stay discreet, touch target hits 40x40.
+              className="group flex size-10 items-center justify-center"
+            >
+              <span
+                className={cn(
+                  "block size-2 rounded-full transition-colors",
+                  idx === cursor.laneIdx
+                    ? "bg-stone-900"
+                    : "bg-stone-300 group-hover:bg-stone-500",
+                )}
+              />
+            </button>
           ))}
         </div>
       ) : null}
