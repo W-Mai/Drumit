@@ -410,13 +410,6 @@ function extractTuplet(raw: string): { tuplet?: number; body: string } {
   return { tuplet: n, body: match[2] };
 }
 
-/**
- * Convert a flat slot list with dotted hits into one sub-group per
- * slot. A dotted slot "borrows" time from the slot immediately after
- * it: 1 dot = +1/2 of next slot's own time, 2 dots = +1/2 + 1/4 = 3/4.
- * So `o. -` splits a beat 3:1; `o.. -` splits 7:1. Returns null when
- * no dots exist so the caller keeps the flat shape.
- */
 export function maybeExpandDotted(
   slots: Array<Hit | null>,
 ): LaneGroup[] | null {
@@ -428,12 +421,26 @@ export function maybeExpandDotted(
   for (let i = 0; i < N; i += 1) {
     const d = dots[i];
     if (d === 0) continue;
-    // Prefer borrowing forward; fall back to backward when at the tail.
-    const src = i + 1 < N ? i + 1 : i - 1;
-    if (src < 0) continue;
-    const take = d === 1 ? share[src] / 2 : (share[src] * 3) / 4;
-    share[i] += take;
-    share[src] -= take;
+    const augment = d === 1 ? 0.5 : 0.75;
+    if (i < N - 1) {
+      // Mid-group dot: steal `augment * share[i]` from every following
+      // slot, spread evenly. `o.xx` → [1/2, 1/4, 1/4].
+      const K = N - 1 - i;
+      const take = (share[i] * augment) / K;
+      let pool = 0;
+      for (let j = i + 1; j < N; j += 1) {
+        share[j] -= take;
+        pool += take;
+      }
+      share[i] += pool;
+    } else {
+      // Tail dot: borrow half of the previous slot so the dotted tail
+      // still lands inside the group.
+      if (i === 0) continue;
+      const take = share[i - 1] * (d === 1 ? 0.5 : 0.75);
+      share[i] += take;
+      share[i - 1] -= take;
+    }
     anyBorrow = true;
   }
   if (!anyBorrow) return null;
