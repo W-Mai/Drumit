@@ -317,6 +317,14 @@ function buildBeat(
         });
         return;
       }
+      if (slots.some((s) => s?.dots)) {
+        diagnostics.push(
+          warn(
+            lineNumber,
+            `Dot on the last slot of a beat has no timing effect — use a tie across bars or shorten the dotted note to borrow within the beat.`,
+          ),
+        );
+      }
       laneBeats.push({
         instrument: lane.instrument,
         division,
@@ -340,8 +348,15 @@ function buildBeat(
         const division = slots.length;
         const expanded = maybeExpandDotted(slots);
         if (expanded) {
-          // scale each sub-group's ratio by the outer ratio
           return expanded.map((g) => ({ ...g, ratio: g.ratio * outerRatio }));
+        }
+        if (slots.some((s) => s?.dots)) {
+          diagnostics.push(
+            warn(
+              lineNumber,
+              `Dot on the last slot of a group has no timing effect — use a tie across bars or shorten the dotted note to borrow within the group.`,
+            ),
+          );
         }
         return [
           {
