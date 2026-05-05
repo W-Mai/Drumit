@@ -593,7 +593,10 @@ export function PadEditor({
     { key: "Tab", handler: () => setAutoAdvance((v) => !v) },
     { key: "Delete", handler: () => clearCursorSlot() },
     { key: "Backspace", handler: () => clearCursorSlot() },
-    // Bar navigation: '[' jumps to the previous bar, ']' to the next.
+    // Bar navigation: '[' jumps to the previous bar; ']' to the next,
+    // appending a fresh empty bar when there's nowhere else to go so
+    // continuous-entry editing doesn't stall at the last bar. ⌘⏎
+    // always appends regardless of position.
     {
       key: "[",
       description: "Previous bar",
@@ -601,8 +604,23 @@ export function PadEditor({
     },
     {
       key: "]",
-      description: "Next bar",
-      handler: () => onNextBar?.(),
+      description: "Next bar (append when at the end)",
+      handler: () => {
+        if (barIndex >= totalBars - 1) onInsertAfter?.();
+        else onNextBar?.();
+      },
+    },
+    {
+      key: "Enter",
+      meta: true,
+      description: "Insert bar after",
+      handler: () => onInsertAfter?.(),
+    },
+    {
+      key: "Enter",
+      ctrl: true,
+      description: "Insert bar after",
+      handler: () => onInsertAfter?.(),
     },
     // Instrument digits
     ...Object.entries(INSTRUMENT_BY_DIGIT).map(([digit, instrument]) => ({

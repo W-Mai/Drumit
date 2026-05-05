@@ -50,6 +50,7 @@ export function HotkeyPanel() {
           keys: ["⌘←", "⌘→", "[", "]"],
           label: t("hotkeys.prev_next_bar"),
         },
+        { keys: ["⌘⏎"], label: t("hotkeys.insert_bar_after") },
         { keys: ["Tab"], label: t("hotkeys.autoadvance") },
         { keys: ["Del"], label: t("hotkeys.clear_slot") },
       ],
