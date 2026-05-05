@@ -1278,65 +1278,33 @@ function AppInner() {
         </button>
         {/* Overlay-mode backdrop: clicking it collapses the editor.
             Only rendered below lg when the editor is expanded. */}
-        {isOverlayEditor && !editorCollapsed ? (
-          <motion.button
-            type="button"
-            aria-label={t("editor.hide_editor")}
-            onClick={() => setEditorCollapsed(true)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-30 bg-black/10 lg:hidden"
-          />
-        ) : null}
-        {/* Edge handle — mobile-only entry point when editor is
-            collapsed. Sits above MobilePlaybackBar in portrait, on
-            the right edge in landscape. */}
-        {isOverlayEditor && editorCollapsed ? (
-          <button
-            type="button"
-            onClick={() => setEditorCollapsed(false)}
-            aria-label={t("editor.show_editor")}
-            className={cn(
-              "fixed z-30 flex items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-xl shadow-stone-900/10 hover:bg-stone-50 lg:hidden",
-              isLandscape
-                ? "top-1/2 right-2 h-16 w-9 -translate-y-1/2"
-                : "bottom-[calc(3.25rem+max(0.5rem,env(safe-area-inset-bottom)))] left-1/2 h-9 w-28 -translate-x-1/2",
-            )}
-          >
-            <span className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide">
-              <span className="text-[10px]">{isLandscape ? "◂" : "▴"}</span>
-              <span>
-                {mode === "visual"
-                  ? t("editor.bar_editor")
-                  : t("editor.source")}
-              </span>
-            </span>
-          </button>
-        ) : null}
+        <AnimatePresence>
+          {isOverlayEditor && !editorCollapsed ? (
+            <motion.button
+              key="editor-scrim"
+              type="button"
+              aria-label={t("editor.hide_editor")}
+              onClick={() => setEditorCollapsed(true)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-30 bg-black/10 lg:hidden"
+            />
+          ) : null}
+        </AnimatePresence>
         <motion.div
-          // Slide animation only on mount/unmount in overlay mode.
-          // Keying by mode makes AnimatePresence swap variants cleanly.
-          key={isOverlayEditor ? "overlay" : "inline"}
-          initial={
-            isOverlayEditor && !editorCollapsed
-              ? isLandscape
-                ? { x: "100%", opacity: 0 }
-                : { y: "100%", opacity: 0 }
-              : false
-          }
-          animate={
-            isOverlayEditor && !editorCollapsed
-              ? { x: 0, y: 0, opacity: 1 }
-              : {}
-          }
-          transition={{ type: "spring", stiffness: 320, damping: 32 }}
+          // Same DOM node grows from the inline header strip (collapsed)
+          // to the fixed overlay card (expanded). motion's `layout` prop
+          // interpolates the size/position change FLIP-style — that's the
+          // Material card-expansion feel.
+          layout
+          transition={{ type: "spring", stiffness: 360, damping: 36 }}
           className={cn(
             "min-h-0 flex-col",
             !isOverlayEditor &&
               (editorCollapsed ? "flex flex-none" : "flex flex-[45_45_0%]"),
-            isOverlayEditor && editorCollapsed && "hidden",
+            isOverlayEditor && editorCollapsed && "flex flex-none",
             isOverlayEditor &&
               !editorCollapsed &&
               cn(
