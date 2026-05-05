@@ -11,6 +11,60 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.05]
+
+### Added
+
+- **Mobile editor overlay** — below `lg` the editor now floats over the
+  preview as a card instead of squashing it into a ~200 px strip.
+  Collapsed in portrait it's a thin header strip along the bottom;
+  collapsed in landscape it tucks into the right edge as a tall
+  vertical tab. Tapping the strip expands the card; expand pushes
+  toward the screen top (landscape) or grows upward via max-height
+  (portrait). Scrim click / ESC / PanelHeader title closes it.
+- **LanePager** for per-lane beat editing on narrow screens — one
+  lane at a time, with `‹ / ›` chevrons, a dot progress row folded
+  into the nav strip, and **horizontal swipe** on the nav bar to
+  move between lanes.
+- **Bar navigation footer** below the beat grid: `‹ Bar X / Y ›` plus
+  `insert / clear / delete` buttons inline on mobile (desktop keeps
+  them in the BarHeader row). Lets you flow bar-by-bar without
+  scrolling back up.
+- **Chevron buttons around Bar X/Y** wired to the existing onPrevBar /
+  onNextBar callbacks, so you get a visible way to walk through bars
+  on devices without arrow keys.
+- i18n: `editor.previous_lane`, `editor.next_lane`, `editor.jump_to_lane`,
+  `editor.prev_bar`, `editor.next_bar` (zh + en).
+
+### Changed
+
+- BarHeader compacts into multiple rows below `sm`: a row of bar
+  attributes (pattern/repeats/nav), then resolution chips. Triplet
+  / Sextuplet chips shorten to `3× / 6×` on narrow viewports; the
+  section pill's `rename / split / delete` buttons reduce to
+  `✎ / + / ×` icons. Keeps each row legible without overflow.
+- Mobile PlaybackBar raised to `z-50` so the editor overlay (`z-40`)
+  sits beneath it — the playback transport is always reachable and
+  the stack reads as layered panels.
+- Lane dot indicators moved from their own 40-px tall row into the
+  lane nav strip (compact dots at the bottom of the chevron bar).
+- `safe-area-inset-right` now reserved in landscape so overlay and
+  preview clear the Dynamic Island notch.
+
+### Fixed
+
+- Editor panel was `hidden lg:flex`, so the new mobile layout was
+  invisible below lg. Dropped the gate.
+- `relative` and `fixed` both ended up on the overlay shell, and
+  Tailwind's cascade picked `relative`, collapsing the fixed overlay
+  into an in-flow block ("all positions were wrong"). Removed the
+  rogue `relative`; `absolute inset-0` children anchor to the shell's
+  `fixed` directly.
+- Collapsed overlay card in portrait was `h-14` with a `rounded-3xl`
+  Panel inside — the 24 px corner radius ate the content. Outer shell
+  now owns the rounded clip, and the inner Panel ditches its own
+  corners in overlay mode.
+
 ## [2026.05.04.3]
 
 ### Added
