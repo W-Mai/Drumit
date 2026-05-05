@@ -1334,14 +1334,17 @@ function AppInner() {
                 "fixed z-40 flex transition-[width,max-height,top,right,bottom,left,max-width] duration-300 ease-out",
                 editorCollapsed ? "drop-shadow-lg" : "drop-shadow-2xl",
                 isLandscape
-                  ? // Landscape overlay: top pinned below the app
-                    // header, bottom pinned above the playback bar,
-                    // right anchored to the edge. Only the width
-                    // animates — collapsed is a vertical tab,
-                    // expanded fills 92vw toward the left.
+                  ? // Landscape overlay. Right + bottom always pinned
+                    // (above playback bar). Top: collapsed tab sits
+                    // below the app header; expanded card pushes all
+                    // the way up to the viewport top (just past the
+                    // safe-area inset) to claim as much height as
+                    // possible. Width is also animated.
                     cn(
-                      "top-[calc(3.25rem+max(0.5rem,env(safe-area-inset-top)))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))]",
-                      editorCollapsed ? "w-14" : "w-[92vw] max-w-[960px]",
+                      "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))]",
+                      editorCollapsed
+                        ? "top-[calc(3.25rem+max(0.5rem,env(safe-area-inset-top)))] w-14"
+                        : "top-[max(0.5rem,env(safe-area-inset-top))] w-[92vw] max-w-[960px]",
                     )
                   : editorCollapsed
                     ? // collapsed portrait: height follows the actual
