@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { serializeBar } from "../notation/serialize";
 import { cn } from "../lib/utils";
 import {
@@ -796,12 +795,26 @@ export function PadEditor({
             ›
           </button>
         </div>
-        <div className="sm:hidden">
-          <BarActionsOverflow
-            onInsertAfter={onInsertAfter}
-            onClearBar={onClearBar}
-            onDelete={onDelete}
-          />
+        {/* sm+ already has these inline in BarHeader's resolution row,
+            so only surface them here on narrow viewports where the
+            BarHeader row hides them. */}
+        <div className="flex gap-1 sm:hidden">
+          <Button
+            onClick={onInsertAfter}
+            title={t("editor.insert_after")}
+          >
+            {t("editor.insert_after")}
+          </Button>
+          <Button onClick={onClearBar} title={t("editor.clear_bar_tip")}>
+            {t("editor.clear_bar")}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={onDelete}
+            title={t("editor.delete_bar")}
+          >
+            {t("editor.delete_bar")}
+          </Button>
         </div>
       </div>
 
@@ -1039,112 +1052,6 @@ function BarHeader({
 
       </div>
     </header>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* BarActionsOverflow — ⋯ bottom sheet with bar-level actions           */
-/* Shown only below sm, where the three inline buttons crowd BarHeader. */
-/* ------------------------------------------------------------------ */
-
-function BarActionsOverflow({
-  onInsertAfter,
-  onClearBar,
-  onDelete,
-}: {
-  onInsertAfter: () => void;
-  onClearBar: () => void;
-  onDelete: () => void;
-}) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-
-  const close = () => setOpen(false);
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={t("editor.bar_actions_more")}
-        title={t("editor.bar_actions_more")}
-        className="motion-press flex size-8 flex-none items-center justify-center rounded-full border border-stone-200 text-stone-700 hover:bg-stone-50"
-      >
-        <span className="text-base leading-none">⋯</span>
-      </button>
-
-      {typeof document !== "undefined"
-        ? createPortal(
-            <AnimatePresence>
-              {open ? (
-                <motion.div
-                  key="bar-actions-sheet"
-                  role="dialog"
-                  aria-modal="true"
-                  className="fixed inset-0 z-[70] flex items-end sm:hidden"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <button
-                    type="button"
-                    aria-label={t("common.close")}
-                    onClick={close}
-                    className="bg-overlay-backdrop absolute inset-0"
-                  />
-                  <motion.div
-                    className="
-                      relative w-full rounded-t-2xl border-t border-stone-200 bg-white
-                      px-4 pt-4
-                      pb-[max(1rem,env(safe-area-inset-bottom))]
-                      shadow-2xl
-                    "
-                    initial={{ y: "100%" }}
-                    animate={{ y: 0 }}
-                    exit={{ y: "100%" }}
-                    transition={{ type: "spring", stiffness: 320, damping: 32 }}
-                  >
-                    <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-stone-300" />
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        size="md"
-                        onClick={() => {
-                          close();
-                          onInsertAfter();
-                        }}
-                      >
-                        {t("editor.insert_after")}
-                      </Button>
-                      <Button
-                        size="md"
-                        onClick={() => {
-                          close();
-                          onClearBar();
-                        }}
-                        title={t("editor.clear_bar_tip")}
-                      >
-                        {t("editor.clear_bar")}
-                      </Button>
-                      <Button
-                        size="md"
-                        variant="danger"
-                        onClick={() => {
-                          close();
-                          onDelete();
-                        }}
-                      >
-                        {t("editor.delete_bar")}
-                      </Button>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>,
-            document.body,
-          )
-        : null}
-    </>
   );
 }
 
