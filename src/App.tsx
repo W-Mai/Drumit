@@ -1324,8 +1324,8 @@ function AppInner() {
                 !editorCollapsed && "drop-shadow-2xl",
                 isLandscape
                   ? editorCollapsed
-                    ? "top-2 right-2 bottom-2 w-10"
-                    : "top-2 right-2 bottom-2 w-[80vw] max-w-[640px]"
+                    ? "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-2 w-10"
+                    : "top-[calc(3.25rem+env(safe-area-inset-top))] right-2 bottom-2 w-[80vw] max-w-[640px]"
                   : editorCollapsed
                     ? "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-11"
                     : "inset-x-2 bottom-[calc(5rem+max(0.5rem,env(safe-area-inset-bottom)))] h-[min(80vh,calc(100vh-8rem))]",
