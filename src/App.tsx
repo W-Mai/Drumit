@@ -1334,19 +1334,15 @@ function AppInner() {
                 "fixed z-40 flex transition-[width,max-height,top,right,bottom,left,max-width] duration-300 ease-out",
                 editorCollapsed ? "drop-shadow-lg" : "drop-shadow-2xl",
                 isLandscape
-                  ? editorCollapsed
-                    ? // Collapsed landscape: a compact tab anchored to
-                      // the right + bottom. Height wraps the vertical
-                      // label. Expansion then grows both up (toward
-                      // the app header via max-height) and left (via
-                      // width). Bottom stays pinned so the growth
-                      // reads as 'unfolding from this corner'.
-                      "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-14 max-h-56"
-                    : // expanded max-h = viewport - bottom anchor
-                      // (playback bar + safe) - top clearance
-                      // (app header + safe-top + 0.5rem breathing).
-                      // Keeps the card off the header and off-screen.
-                      "right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))] w-[92vw] max-w-[960px] max-h-[calc(100vh-9.25rem-max(0.5rem,env(safe-area-inset-top))-max(0.5rem,env(safe-area-inset-bottom)))]"
+                  ? // Landscape overlay: top pinned below the app
+                    // header, bottom pinned above the playback bar,
+                    // right anchored to the edge. Only the width
+                    // animates — collapsed is a vertical tab,
+                    // expanded fills 92vw toward the left.
+                    cn(
+                      "top-[calc(3.25rem+max(0.5rem,env(safe-area-inset-top)))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(5.5rem+max(0.5rem,env(safe-area-inset-bottom)))]",
+                      editorCollapsed ? "w-14" : "w-[92vw] max-w-[960px]",
+                    )
                   : editorCollapsed
                     ? // collapsed portrait: height follows the actual
                       // PanelHeader content (no dead strip under it),
