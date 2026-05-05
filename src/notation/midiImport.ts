@@ -195,7 +195,7 @@ function inferScoreFromNotes(
     title: "Imported",
     tempo: { bpm, note: "quarter" },
     meter,
-    sections: [{ label: "", bars } satisfies Section],
+    sections: [{ label: "A", bars } satisfies Section],
   };
 }
 
@@ -323,7 +323,7 @@ function emptyScore(
     title,
     tempo: { bpm, note: "quarter" },
     meter,
-    sections: [{ label: "", bars: [] } satisfies Section],
+    sections: [{ label: "A", bars: [] } satisfies Section],
   };
 }
 
