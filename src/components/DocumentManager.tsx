@@ -62,6 +62,7 @@ export function DocumentManager({
   onLoadSample,
 }: Props) {
   const { t } = useI18n();
+  const dialog = useDialog();
   const [view, setView] = useState<ViewMode>(loadInitialView);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -81,12 +82,30 @@ export function DocumentManager({
   }, [open, onClose]);
 
   function handleImport(file: File) {
+    const isMidi = /\.mid(i)?$/i.test(file.name);
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
+      if (isMidi) {
+        const buf = reader.result as ArrayBuffer;
+        const { importScoreFromMidi } = await import("../notation/midiImport");
+        const { serializeScore } = await import("../notation/serialize");
+        try {
+          const { score } = importScoreFromMidi(new Uint8Array(buf));
+          onImport(serializeScore(score));
+        } catch (err) {
+          void dialog.alert({
+            title: t("import.failed_title"),
+            message: err instanceof Error ? err.message : String(err),
+            tone: "danger",
+          });
+        }
+        return;
+      }
       const text = typeof reader.result === "string" ? reader.result : "";
       if (text) onImport(text);
     };
-    reader.readAsText(file);
+    if (isMidi) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
   }
 
   return createPortal(
@@ -128,7 +147,7 @@ export function DocumentManager({
             <input
               ref={fileInput}
               type="file"
-              accept=".drumtab,text/plain"
+              accept=".drumtab,.mid,.midi,text/plain,audio/midi"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
