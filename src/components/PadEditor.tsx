@@ -87,7 +87,6 @@ interface Props {
   onNextBar?: () => void;
   /** Navigate to the previous bar while preserving the cursor lane. */
   onPrevBar?: () => void;
-  /** Document-level undo / redo exposed for the in-editor footer. */
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -309,6 +308,7 @@ export function PadEditor({
   const { t } = useI18n();
   // sm breakpoint — matches Tailwind's `sm:` everywhere else in the app.
   const isDesktop = useMediaQuery("(min-width: 640px)");
+  const isOverlay = !useMediaQuery("(min-width: 1024px)");
   const [barResolution, setBarResolution] = useState<Resolution>(
     () => inferBarResolution(bar) ?? DEFAULT_RESOLUTION,
   );
@@ -602,10 +602,6 @@ export function PadEditor({
     { key: "Tab", handler: () => setAutoAdvance((v) => !v) },
     { key: "Delete", handler: () => clearCursorSlot() },
     { key: "Backspace", handler: () => clearCursorSlot() },
-    // Bar navigation: '[' jumps to the previous bar; ']' to the next,
-    // appending a fresh empty bar when there's nowhere else to go so
-    // continuous-entry editing doesn't stall at the last bar. ⌘⏎
-    // always appends regardless of position.
     {
       key: "[",
       description: "Previous bar",
@@ -614,6 +610,7 @@ export function PadEditor({
     {
       key: "]",
       description: "Next bar (append when at the end)",
+      // On the last bar ']' appends so continuous entry doesn't stall.
       handler: () => {
         if (barIndex >= totalBars - 1) onInsertAfter?.();
         else onNextBar?.();
@@ -636,9 +633,8 @@ export function PadEditor({
       key: digit,
       handler: () => toggleAtCursor(instrument),
     })),
-    // Articulation / sticking / dots — every entry below works on the
-    // current lane, so they're no-ops when the bar is empty. The guard
-    // is up here rather than inside each helper so the intent is clear.
+    // These all operate on the current lane, so skip registration on
+    // an empty bar — their helpers take Instrument, not undefined.
     ...(currentInstrument
       ? [
           {
@@ -711,10 +707,7 @@ export function PadEditor({
     })),
   ].map((hk) => ({ ...hk, scope: "editor" }));
 
-  // Keep editor hotkeys live even when no instrument is present —
-  // the digit keys (1234…) need to work from an empty bar to bring
-  // their instrument into the lane. Handlers that genuinely require
-  // a current instrument guard themselves.
+  // Digit keys need to fire on an empty bar to add the instrument.
   useHotkeys(editorHotkeys);
 
   return (
@@ -808,15 +801,8 @@ export function PadEditor({
         </>
       )}
 
-      {/* Footer nav: prev / Bar X-of-Y / next + ⋯ overflow. Sits at
-          the bottom of the editor body so the user can thumb through
-          bars without scrolling back up to the header. */}
       <div className="flex items-center justify-between gap-3">
-        {/* Mobile-only: undo/redo + the same bar-level actions that
-            live as text pills in BarHeader on sm+. All reduced to
-            icons so three categories (history, insert, destructive)
-            fit the footer without wrapping. */}
-        <div className="flex gap-1 sm:hidden">
+        <div className={cn("flex gap-1", isOverlay ? "" : "hidden")}>
           <IconButton
             onClick={onUndo}
             disabled={!canUndo || !onUndo}
@@ -1099,11 +1085,7 @@ function BarHeader({
           ))}
         </ChipGroup>
 
-        {/* Desktop / sm+: the three bar-level actions sit inline next
-            to the resolution chips. Below sm they're hidden here and
-            surface from the ⋯ overflow menu (see below) so BarHeader
-            stays uncluttered on portrait phones. */}
-        <div className="hidden gap-1 sm:flex">
+        <div className="hidden gap-1 lg:flex">
           <Button
             onClick={onInsertAfter}
             title={t("editor.insert_after")}
@@ -2481,10 +2463,6 @@ function CursorStatusBar({
     </div>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* IconButton — footer-sized round icon button; danger tone in red.    */
-/* ------------------------------------------------------------------ */
 
 function IconButton({
   onClick,

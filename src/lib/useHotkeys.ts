@@ -1,9 +1,7 @@
 import { useEffect } from "react";
 
-// Tracks the element the pointer is currently over, globally. Hotkey
-// scope resolution uses this in addition to keydown's e.target, so the
-// active panel can be picked just by hovering — no click / focus
-// needed.
+// Hover target drives scope resolution — lets the active panel be
+// picked without a prior click/focus.
 let hoverTarget: Element | null = null;
 if (typeof document !== "undefined") {
   document.addEventListener(
@@ -13,10 +11,8 @@ if (typeof document !== "undefined") {
     },
     { passive: true, capture: true },
   );
-  // Only clear when the pointer leaves the page entirely. A
-  // per-element pointerleave would fire as the mouse crosses between
-  // siblings during re-renders (capture phase sees every child's
-  // leave), yanking the hover scope mid-typing.
+  // blur (not pointerleave): capture-phase pointerleave would also
+  // fire as the mouse crosses between siblings.
   window.addEventListener("blur", () => {
     hoverTarget = null;
   });
@@ -57,11 +53,8 @@ export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
       if (target && isEditable(target)) return;
-      // Scope resolution: pointer position wins, keydown target is a
-      // fallback. Lets 'which panel is hot' match where the mouse is,
-      // without demanding a click/focus beforehand. If the hover node
-      // got unmounted (common during React re-renders mid-keystroke),
-      // fall through to e.target so the hotkey still dispatches.
+      // isConnected: detached hover nodes from re-renders fall back
+      // to target so hotkey still dispatches.
       const hoverAlive =
         hoverTarget && hoverTarget.isConnected ? hoverTarget : null;
       const scopeTarget = (hoverAlive as HTMLElement | null) ?? target;
