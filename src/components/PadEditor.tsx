@@ -21,6 +21,7 @@ import { InstrumentIcon } from "./InstrumentIcon";
 import { Button, Chip, ChipGroup, useDialog } from "./ui";
 import { useHotkeys, type Hotkey } from "../lib/useHotkeys";
 import { useMediaQuery } from "../lib/useMediaQuery";
+import { useSwipeLane } from "../lib/useSwipeLane";
 import { useI18n } from "../i18n/useI18n";
 import {
   DIGIT_BY_INSTRUMENT,
@@ -1361,6 +1362,16 @@ function LanePager({
 }) {
   const { t } = useI18n();
   const currentInstrument = presentInstruments[cursor.laneIdx];
+  const canPrev = cursor.laneIdx > 0;
+  const canNext = cursor.laneIdx < presentInstruments.length - 1;
+
+  // Horizontal swipe on the nav strip → previous / next lane. Stays
+  // off vertical gestures so page-scroll still works, and drops any
+  // drag that uses a button (scroll-wheel presses, context-menus).
+  const swipeRef = useSwipeLane({
+    onPrev: () => canPrev && onLaneChange(cursor.laneIdx - 1),
+    onNext: () => canNext && onLaneChange(cursor.laneIdx + 1),
+  });
 
   if (!currentInstrument) {
     // No instruments in this bar yet. Surface the add menu directly.
@@ -1374,12 +1385,12 @@ function LanePager({
     );
   }
 
-  const canPrev = cursor.laneIdx > 0;
-  const canNext = cursor.laneIdx < presentInstruments.length - 1;
-
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col rounded-xl border border-stone-200 bg-white px-2 pt-2 pb-1.5">
+      <div
+        ref={swipeRef}
+        className="flex touch-pan-y flex-col rounded-xl border border-stone-200 bg-white px-2 pt-2 pb-1.5"
+      >
         <div className="flex items-center justify-between">
           <button
             type="button"
