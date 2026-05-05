@@ -478,6 +478,7 @@ export function PadEditor({
           );
       }
     }
+    moveCursor(-1, 0);
   }
 
   function applyModifierAtCursor(
