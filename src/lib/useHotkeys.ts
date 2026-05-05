@@ -1,5 +1,27 @@
 import { useEffect } from "react";
 
+// Tracks the element the pointer is currently over, globally. Hotkey
+// scope resolution uses this in addition to keydown's e.target, so the
+// active panel can be picked just by hovering — no click / focus
+// needed.
+let hoverTarget: Element | null = null;
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "pointermove",
+    (e) => {
+      hoverTarget = e.target as Element | null;
+    },
+    { passive: true, capture: true },
+  );
+  document.addEventListener(
+    "pointerleave",
+    () => {
+      hoverTarget = null;
+    },
+    { passive: true, capture: true },
+  );
+}
+
 export interface Hotkey {
   /** `e.key` value — e.g. " " for Space, "ArrowLeft", "l". Omit to match by `code` only. */
   key?: string;
@@ -35,6 +57,10 @@ export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
       if (target && isEditable(target)) return;
+      // Scope resolution: pointer position wins, keydown target is a
+      // fallback. Lets 'which panel is hot' match where the mouse is,
+      // without demanding a click/focus beforehand.
+      const scopeTarget = (hoverTarget as HTMLElement | null) ?? target;
       for (const hk of hotkeys) {
         if (hk.key !== undefined && e.key !== hk.key) continue;
         if (hk.code !== undefined && e.code !== hk.code) continue;
@@ -43,7 +69,7 @@ export function useHotkeys(hotkeys: Hotkey[], enabled = true): void {
         if (!!hk.shift !== e.shiftKey) continue;
         if (!!hk.alt !== e.altKey) continue;
         if (!!hk.ctrl !== e.ctrlKey) continue;
-        if (hk.scope && !isWithinScope(target, hk.scope)) continue;
+        if (hk.scope && !isWithinScope(scopeTarget, hk.scope)) continue;
         e.preventDefault();
         hk.handler(e);
         break;
