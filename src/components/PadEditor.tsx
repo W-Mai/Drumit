@@ -763,6 +763,27 @@ export function PadEditor({
           the bottom of the editor body so the user can thumb through
           bars without scrolling back up to the header. */}
       <div className="flex items-center justify-between gap-3">
+        {/* sm+ already has these inline in BarHeader's resolution row,
+            so only surface them here on narrow viewports where the
+            BarHeader row hides them. */}
+        <div className="flex gap-1 sm:hidden">
+          <Button
+            onClick={onInsertAfter}
+            title={t("editor.insert_after")}
+          >
+            {t("editor.insert_after")}
+          </Button>
+          <Button onClick={onClearBar} title={t("editor.clear_bar_tip")}>
+            {t("editor.clear_bar")}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={onDelete}
+            title={t("editor.delete_bar")}
+          >
+            {t("editor.delete_bar")}
+          </Button>
+        </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -794,27 +815,6 @@ export function PadEditor({
           >
             ›
           </button>
-        </div>
-        {/* sm+ already has these inline in BarHeader's resolution row,
-            so only surface them here on narrow viewports where the
-            BarHeader row hides them. */}
-        <div className="flex gap-1 sm:hidden">
-          <Button
-            onClick={onInsertAfter}
-            title={t("editor.insert_after")}
-          >
-            {t("editor.insert_after")}
-          </Button>
-          <Button onClick={onClearBar} title={t("editor.clear_bar_tip")}>
-            {t("editor.clear_bar")}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={onDelete}
-            title={t("editor.delete_bar")}
-          >
-            {t("editor.delete_bar")}
-          </Button>
         </div>
       </div>
 
