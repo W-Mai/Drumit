@@ -201,14 +201,17 @@ function planLaneBeat(
   barResolution: Resolution,
 ): LaneBeatPlan {
   if (lane?.groups && lane.groups.length > 1) {
-    // Dot-expanded lanes — every sub-group is a single slot with a
-    // ratio driven by the hit's dots. Treat them as a flat beat-slot
-    // list so the cell UI (right-click Dots toggle, hotkeys) keeps
-    // working uniformly.
+    // Dot-expanded lanes — every sub-group is a single slot driven by
+    // a slot's own dots. Detect via any slot carrying `dots`; a user
+    // split into equal-ratio single-slot groups has no dots and must
+    // take the regular `split: true` branch below.
     const allSingle = lane.groups.every(
       (g) => g.division === 1 && g.slots.length === 1,
     );
-    if (allSingle) {
+    const anyDotted =
+      allSingle &&
+      lane.groups.some((g) => (g.slots[0]?.dots ?? 0) > 0);
+    if (allSingle && anyDotted) {
       const columns: CellPlan[] = lane.groups.map((g, idx) => ({
         kind: "beat-slot",
         slotIndex: idx,
