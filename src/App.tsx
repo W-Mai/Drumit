@@ -1656,6 +1656,10 @@ function AppInner() {
                     i === null ? 0 : Math.min(totalBars - 1, i + 1),
                   )
                 }
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={history.canUndo(activeId)}
+                canRedo={history.canRedo(activeId)}
               />
             ) : (
               <div className="grid min-h-[280px] place-items-center text-sm text-stone-500">

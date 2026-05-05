@@ -85,8 +85,13 @@ interface Props {
   ) => void;
   /** Called when cursor crosses past the end of this bar. */
   onNextBar?: () => void;
-  /** Called when cursor crosses before the start of this bar. */
+  /** Navigate to the previous bar while preserving the cursor lane. */
   onPrevBar?: () => void;
+  /** Document-level undo / redo exposed for the in-editor footer. */
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   onSetSticking: (
     beatIndex: number,
     instrument: Instrument,
@@ -296,6 +301,10 @@ export function PadEditor({
   onCycleDots,
   onNextBar,
   onPrevBar,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: Props) {
   const { t } = useI18n();
   // sm breakpoint — matches Tailwind's `sm:` everywhere else in the app.
@@ -803,26 +812,49 @@ export function PadEditor({
           the bottom of the editor body so the user can thumb through
           bars without scrolling back up to the header. */}
       <div className="flex items-center justify-between gap-3">
-        {/* sm+ already has these inline in BarHeader's resolution row,
-            so only surface them here on narrow viewports where the
-            BarHeader row hides them. */}
+        {/* Mobile-only: undo/redo + the same bar-level actions that
+            live as text pills in BarHeader on sm+. All reduced to
+            icons so three categories (history, insert, destructive)
+            fit the footer without wrapping. */}
         <div className="flex gap-1 sm:hidden">
-          <Button
+          <IconButton
+            onClick={onUndo}
+            disabled={!canUndo || !onUndo}
+            title={t("editor.undo")}
+            aria-label={t("editor.undo")}
+          >
+            ↶
+          </IconButton>
+          <IconButton
+            onClick={onRedo}
+            disabled={!canRedo || !onRedo}
+            title={t("editor.redo")}
+            aria-label={t("editor.redo")}
+          >
+            ↷
+          </IconButton>
+          <IconButton
             onClick={onInsertAfter}
             title={t("editor.insert_after")}
+            aria-label={t("editor.insert_after")}
           >
-            {t("editor.insert_after")}
-          </Button>
-          <Button onClick={onClearBar} title={t("editor.clear_bar_tip")}>
-            {t("editor.clear_bar")}
-          </Button>
-          <Button
-            variant="danger"
+            ＋
+          </IconButton>
+          <IconButton
+            onClick={onClearBar}
+            title={t("editor.clear_bar_tip")}
+            aria-label={t("editor.clear_bar")}
+          >
+            ⌫
+          </IconButton>
+          <IconButton
+            tone="danger"
             onClick={onDelete}
             title={t("editor.delete_bar")}
+            aria-label={t("editor.delete_bar")}
           >
-            {t("editor.delete_bar")}
-          </Button>
+            ✕
+          </IconButton>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -2447,5 +2479,43 @@ function CursorStatusBar({
         {autoAdvance ? t("editor.autoadvance_on") : t("editor.autoadvance_off")}
       </button>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* IconButton — footer-sized round icon button; danger tone in red.    */
+/* ------------------------------------------------------------------ */
+
+function IconButton({
+  onClick,
+  disabled,
+  title,
+  tone = "neutral",
+  children,
+  ...rest
+}: {
+  onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
+  tone?: "neutral" | "danger";
+  children: React.ReactNode;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick">) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={cn(
+        "motion-press flex size-9 flex-none items-center justify-center rounded-full border text-base leading-none transition",
+        "disabled:cursor-not-allowed disabled:opacity-30",
+        tone === "danger"
+          ? "border-red-200 bg-white text-red-600 hover:border-red-600 hover:bg-red-600 hover:text-white"
+          : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
+      )}
+      {...rest}
+    >
+      {children}
+    </button>
   );
 }
