@@ -317,14 +317,6 @@ function buildBeat(
         });
         return;
       }
-      if (slots.some((s) => s?.dots)) {
-        diagnostics.push(
-          warn(
-            lineNumber,
-            `Dot on the last slot of a beat has no timing effect — use a tie across bars or shorten the dotted note to borrow within the beat.`,
-          ),
-        );
-      }
       laneBeats.push({
         instrument: lane.instrument,
         division,
@@ -349,14 +341,6 @@ function buildBeat(
         const expanded = maybeExpandDotted(slots);
         if (expanded) {
           return expanded.map((g) => ({ ...g, ratio: g.ratio * outerRatio }));
-        }
-        if (slots.some((s) => s?.dots)) {
-          diagnostics.push(
-            warn(
-              lineNumber,
-              `Dot on the last slot of a group has no timing effect — use a tie across bars or shorten the dotted note to borrow within the group.`,
-            ),
-          );
         }
         return [
           {
@@ -443,19 +427,16 @@ export function maybeExpandDotted(
   let anyBorrow = false;
   for (let i = 0; i < N; i += 1) {
     const d = dots[i];
-    if (d === 0 || i + 1 >= N) continue;
-    const take = d === 1 ? share[i + 1] / 2 : (share[i + 1] * 3) / 4;
+    if (d === 0) continue;
+    // Prefer borrowing forward; fall back to backward when at the tail.
+    const src = i + 1 < N ? i + 1 : i - 1;
+    if (src < 0) continue;
+    const take = d === 1 ? share[src] / 2 : (share[src] * 3) / 4;
     share[i] += take;
-    share[i + 1] -= take;
+    share[src] -= take;
     anyBorrow = true;
   }
-  if (!anyBorrow) {
-    // All dots are on slots with nothing after them to borrow from —
-    // they can't change the timing. Keep them on the hit so the
-    // rendering still shows the augmentation dot, but don't expand
-    // the lane into a one-slot-per-group structure.
-    return null;
-  }
+  if (!anyBorrow) return null;
   return slots.map((slot, idx) => ({
     ratio: share[idx],
     division: 1,
