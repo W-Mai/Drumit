@@ -598,55 +598,60 @@ export function PadEditor({
       key: digit,
       handler: () => toggleAtCursor(instrument),
     })),
-    // Articulation modifiers — apply to each present instrument's hit at
-    // this slot if any. In practice the common case is the current lane.
-    {
-      key: ">",
-      shift: true,
-      handler: () => applyModifierAtCursor(currentInstrument, "accent"),
-    },
-    {
-      key: "g",
-      handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
-    },
-    {
-      key: "(",
-      shift: true,
-      handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
-    },
-    {
-      key: "f",
-      handler: () => applyModifierAtCursor(currentInstrument, "flam"),
-    },
-    {
-      key: "r",
-      handler: () => applyModifierAtCursor(currentInstrument, "roll"),
-    },
-    {
-      key: "~",
-      shift: true,
-      handler: () => applyModifierAtCursor(currentInstrument, "roll"),
-    },
-    {
-      key: "!",
-      shift: true,
-      handler: () => applyModifierAtCursor(currentInstrument, "choke"),
-    },
-    {
-      key: "R",
-      shift: true,
-      handler: () => setStickingAtCursor(currentInstrument, "R"),
-    },
-    {
-      key: "L",
-      shift: true,
-      handler: () => setStickingAtCursor(currentInstrument, "L"),
-    },
-    {
-      key: ".",
-      description: "Cycle dotted value (0 → 1 → 2 → 0)",
-      handler: () => cycleDotsAtCursor(currentInstrument),
-    },
+    // Articulation / sticking / dots — every entry below works on the
+    // current lane, so they're no-ops when the bar is empty. The guard
+    // is up here rather than inside each helper so the intent is clear.
+    ...(currentInstrument
+      ? [
+          {
+            key: ">",
+            shift: true,
+            handler: () => applyModifierAtCursor(currentInstrument, "accent"),
+          },
+          {
+            key: "g",
+            handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
+          },
+          {
+            key: "(",
+            shift: true,
+            handler: () => applyModifierAtCursor(currentInstrument, "ghost"),
+          },
+          {
+            key: "f",
+            handler: () => applyModifierAtCursor(currentInstrument, "flam"),
+          },
+          {
+            key: "r",
+            handler: () => applyModifierAtCursor(currentInstrument, "roll"),
+          },
+          {
+            key: "~",
+            shift: true,
+            handler: () => applyModifierAtCursor(currentInstrument, "roll"),
+          },
+          {
+            key: "!",
+            shift: true,
+            handler: () => applyModifierAtCursor(currentInstrument, "choke"),
+          },
+          {
+            key: "R",
+            shift: true,
+            handler: () => setStickingAtCursor(currentInstrument, "R"),
+          },
+          {
+            key: "L",
+            shift: true,
+            handler: () => setStickingAtCursor(currentInstrument, "L"),
+          },
+          {
+            key: ".",
+            description: "Cycle dotted value (0 → 1 → 2 → 0)",
+            handler: () => cycleDotsAtCursor(currentInstrument),
+          },
+        ]
+      : []),
     // Division: Alt/Option + digit sets the current beat's lane division.
     // Alt is chosen over Shift because Shift+1 collides with `!` (choke).
     ...(
@@ -661,8 +666,10 @@ export function PadEditor({
     ).map(([code, d]) => ({
       code,
       alt: true,
-      handler: () =>
-        onSetDivision(clampedCursor.beatIndex, currentInstrument, d),
+      handler: () => {
+        if (!currentInstrument) return;
+        onSetDivision(clampedCursor.beatIndex, currentInstrument, d);
+      },
     })),
   ].map((hk) => ({ ...hk, scope: "editor" }));
 
