@@ -2013,9 +2013,6 @@ function StepCell({
           "relative flex h-full items-center justify-center text-[13px] transition select-none",
           columnIndex > 0 && "border-l border-stone-100",
           isBeatStart && !isGroupStart && "border-l border-stone-300",
-          isGroupStart &&
-            !isBeatStart &&
-            "border-l-[3px] border-dashed border-amber-500/80 shadow-[inset_3px_0_0_rgb(254_243_199_/_0.6)]",
           hit
             ? hitBgClass(hit)
             : "bg-white text-stone-200 hover:bg-amber-50/60 hover:text-stone-400",
@@ -2025,6 +2022,12 @@ function StepCell({
             "outline outline-2 outline-sky-500 outline-offset-[-2px] z-10",
         )}
       >
+        {isGroupStart && !isBeatStart ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1 bottom-1 -left-px w-[3px] rounded-full bg-amber-400"
+          />
+        ) : null}
         <AnimatePresence mode="popLayout">
           {hit ? (
             <motion.span
