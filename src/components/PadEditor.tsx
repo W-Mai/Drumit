@@ -2019,13 +2019,13 @@ function StepCell({
           cursorState === "lane" && !hit && "bg-sky-50",
           cursorState === "beat" && !hit && "bg-sky-50/60",
           cursorState === "cell" &&
-            "outline outline-2 outline-sky-500 outline-offset-[-2px] z-10",
+            "outline outline-2 outline-sky-500 outline-offset-[-2px]",
         )}
       >
         {isGroupStart && !isBeatStart ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-1 bottom-1 left-0 w-[3px] -translate-x-1/2 rounded-full bg-amber-400"
+            className="pointer-events-none absolute top-1 bottom-1 left-0 z-20 w-[3px] -translate-x-1/2 rounded-full bg-amber-400"
           />
         ) : null}
         <AnimatePresence mode="popLayout">
