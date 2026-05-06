@@ -2015,7 +2015,7 @@ function StepCell({
           isBeatStart && !isGroupStart && "border-l border-stone-300",
           isGroupStart &&
             !isBeatStart &&
-            "border-l border-dashed border-amber-400",
+            "border-l-[3px] border-dashed border-amber-500/80 shadow-[inset_3px_0_0_rgb(254_243_199_/_0.6)]",
           hit
             ? hitBgClass(hit)
             : "bg-white text-stone-200 hover:bg-amber-50/60 hover:text-stone-400",
