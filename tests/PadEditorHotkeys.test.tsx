@@ -255,6 +255,19 @@ describe("PadEditor hotkeys: , and | end-to-end", () => {
     const args = handlers.onMultiplyGroupDivision.mock.calls[0];
     expect(args[3]).toBe(0.5);
   });
+
+  it("'?' (shift+/) at the first beat fires onPrevBar exactly once", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |",
+    });
+    render(<PadEditor {...props} />);
+
+    fireEvent.click(getSlotButtons()[0]);
+    dispatchKeyOnEditor("?", { shiftKey: true });
+
+    expect(handlers.onPrevBar).toHaveBeenCalledTimes(1);
+    expect(handlers.onNextBar).not.toHaveBeenCalled();
+  });
 });
 
 describe("PadEditor arrow navigation across bar boundaries", () => {

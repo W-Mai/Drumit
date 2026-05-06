@@ -53,6 +53,7 @@ export function HotkeyPanel() {
         { keys: ["⌘⏎"], label: t("hotkeys.insert_bar_after") },
         { keys: ["Tab"], label: t("hotkeys.autoadvance") },
         { keys: ["/"], label: t("hotkeys.next_beat") },
+        { keys: ["?"], label: t("hotkeys.prev_beat") },
         { keys: ["o"], label: t("hotkeys.set_hit") },
         { keys: ["0"], label: t("hotkeys.rest") },
         { keys: ["-"], label: t("hotkeys.skip_null") },

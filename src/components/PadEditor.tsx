@@ -665,12 +665,35 @@ export function PadEditor({
   function nextBeatCursor() {
     const last = beatsPerBar - 1;
     if (clampedCursor.beatIndex < last) {
-      setCursor((c) => ({ ...c, beatIndex: c.beatIndex + 1, slotIndex: 0 }));
+      setCursor({
+        ...clampedCursor,
+        beatIndex: clampedCursor.beatIndex + 1,
+        slotIndex: 0,
+      });
       return;
     }
     if (barIndex >= totalBars - 1) onInsertAfter?.();
     else onNextBar?.();
-    setCursor((c) => ({ ...c, beatIndex: 0, slotIndex: 0 }));
+    setCursor({ ...clampedCursor, beatIndex: 0, slotIndex: 0 });
+  }
+
+  function prevBeatCursor() {
+    if (clampedCursor.beatIndex > 0) {
+      setCursor({
+        ...clampedCursor,
+        beatIndex: clampedCursor.beatIndex - 1,
+        slotIndex: 0,
+      });
+      return;
+    }
+    onPrevBar?.();
+    // The previous bar's lane division isn't readable here yet; fall
+    // back to the bar-level resolution for the slot count.
+    setCursor({
+      ...clampedCursor,
+      beatIndex: beatsPerBar - 1,
+      slotIndex: Math.max(0, barResolution.slotsPerBeat - 1),
+    });
   }
 
   function clearCursorSlot() {
@@ -783,6 +806,12 @@ export function PadEditor({
     { key: "ArrowUp", handler: () => moveCursor(0, -1) },
     { key: "ArrowDown", handler: () => moveCursor(0, 1) },
     { key: "/", description: "Next beat", handler: () => nextBeatCursor() },
+    {
+      key: "?",
+      shift: true,
+      description: "Previous beat",
+      handler: () => prevBeatCursor(),
+    },
     {
       key: "Home",
       handler: () =>
