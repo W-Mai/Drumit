@@ -2025,7 +2025,7 @@ function StepCell({
         {isGroupStart && !isBeatStart ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-1 bottom-1 -left-px w-[3px] rounded-full bg-amber-400"
+            className="pointer-events-none absolute top-1 bottom-1 left-0 w-[3px] -translate-x-1/2 rounded-full bg-amber-400"
           />
         ) : null}
         <AnimatePresence mode="popLayout">
