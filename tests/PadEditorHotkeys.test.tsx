@@ -4,7 +4,6 @@ import {
   cleanup,
   fireEvent,
   render as rtlRender,
-  screen,
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { parseDrumtab } from "../src/notation/parser";
@@ -49,6 +48,8 @@ interface MockedHandlers {
   onSetSlotHit: ReturnType<typeof vi.fn>;
   onSetSlotNull: ReturnType<typeof vi.fn>;
   onSetSlotRest: ReturnType<typeof vi.fn>;
+  onNextBar: ReturnType<typeof vi.fn>;
+  onPrevBar: ReturnType<typeof vi.fn>;
 }
 
 function makeProps(opts: { drumtab: string }) {
@@ -62,6 +63,8 @@ function makeProps(opts: { drumtab: string }) {
     onSetSlotHit: vi.fn(),
     onSetSlotNull: vi.fn(),
     onSetSlotRest: vi.fn(),
+    onNextBar: vi.fn(),
+    onPrevBar: vi.fn(),
   };
   const noop = () => {};
   const props = {
@@ -95,6 +98,8 @@ function makeProps(opts: { drumtab: string }) {
     onToggleArticulation: noop,
     onSetSticking: noop,
     onCycleDots: noop,
+    onNextBar: handlers.onNextBar,
+    onPrevBar: handlers.onPrevBar,
   } as React.ComponentProps<typeof PadEditor>;
   return { props, handlers };
 }
@@ -111,6 +116,24 @@ function dispatchKeyOnEditor(
   fireEvent.keyDown(document, { key, ...options });
 }
 
+function getSlotButtons(): HTMLButtonElement[] {
+  return Array.from(
+    document.querySelectorAll<HTMLButtonElement>(
+      "[data-drumit-scope=\"editor\"] button",
+    ),
+  ).filter((b) => {
+    const t = b.title || "";
+    return (
+      t.toLowerCase().includes("toggle") ||
+      // Buttons that already carry a hit have title=describeHit(hit) — they
+      // start with the lane's instrument label (e.g. "Kick"). Keep them.
+      /^(Kick|Snare|Hi-Hat|Ride|Crash|Tom|Floor|Foot|Bell|Open|Closed|Half)/i.test(
+        t,
+      )
+    );
+  });
+}
+
 describe("PadEditor hotkeys: , and | end-to-end", () => {
   it("',' fires onSplitGroupAtSlot at the focused slot", async () => {
     const { props, handlers } = makeProps({
@@ -118,21 +141,15 @@ describe("PadEditor hotkeys: , and | end-to-end", () => {
     });
     render(<PadEditor {...props} />);
 
-    // Click the first kick slot to place cursor on (beat 0, slot 0, lane bd).
-    const cells = screen.getAllByRole("button");
-    const slotButton = cells.find((b) =>
-      b.title?.toLowerCase().includes("toggle"),
-    );
-    expect(slotButton).toBeDefined();
-    fireEvent.click(slotButton!);
-
+    const slots = getSlotButtons();
+    fireEvent.click(slots[0]);
     dispatchKeyOnEditor(",");
 
     expect(handlers.onSplitGroupAtSlot).toHaveBeenCalled();
     const args = handlers.onSplitGroupAtSlot.mock.calls[0];
-    expect(args[0]).toBe(0); // beatIndex
-    expect(args[1]).toBe("kick"); // instrument
-    expect(args[2]).toBe(0); // slotIndex
+    expect(args[0]).toBe(0);
+    expect(args[1]).toBe("kick");
+    expect(args[2]).toBe(0);
   });
 
   it("'|' (shift+\\) fires onMultiplyGroupDivision with factor 2", () => {
@@ -141,19 +158,14 @@ describe("PadEditor hotkeys: , and | end-to-end", () => {
     });
     render(<PadEditor {...props} />);
 
-    const cells = screen.getAllByRole("button");
-    const slotButton = cells.find((b) =>
-      b.title?.toLowerCase().includes("toggle"),
-    );
-    fireEvent.click(slotButton!);
-
+    fireEvent.click(getSlotButtons()[0]);
     dispatchKeyOnEditor("|", { shiftKey: true });
 
     expect(handlers.onMultiplyGroupDivision).toHaveBeenCalled();
     const args = handlers.onMultiplyGroupDivision.mock.calls[0];
-    expect(args[0]).toBe(0); // beatIndex
+    expect(args[0]).toBe(0);
     expect(args[1]).toBe("kick");
-    expect(args[3]).toBe(2); // factor
+    expect(args[3]).toBe(2);
   });
 
   it("'+' (shift+=) fires onIncrementGroupDivision with delta 1", () => {
@@ -162,17 +174,12 @@ describe("PadEditor hotkeys: , and | end-to-end", () => {
     });
     render(<PadEditor {...props} />);
 
-    const cells = screen.getAllByRole("button");
-    const slotButton = cells.find((b) =>
-      b.title?.toLowerCase().includes("toggle"),
-    );
-    fireEvent.click(slotButton!);
-
+    fireEvent.click(getSlotButtons()[0]);
     dispatchKeyOnEditor("+", { shiftKey: true });
 
     expect(handlers.onIncrementGroupDivision).toHaveBeenCalled();
     const args = handlers.onIncrementGroupDivision.mock.calls[0];
-    expect(args[3]).toBe(1); // delta
+    expect(args[3]).toBe(1);
   });
 
   it("'o' fires onSetSlotHit at the focused slot", () => {
@@ -181,12 +188,7 @@ describe("PadEditor hotkeys: , and | end-to-end", () => {
     });
     render(<PadEditor {...props} />);
 
-    const cells = screen.getAllByRole("button");
-    const slotButton = cells.find((b) =>
-      b.title?.toLowerCase().includes("toggle"),
-    );
-    fireEvent.click(slotButton!);
-
+    fireEvent.click(getSlotButtons()[0]);
     dispatchKeyOnEditor("o");
 
     expect(handlers.onSetSlotHit).toHaveBeenCalled();
@@ -201,14 +203,79 @@ describe("PadEditor hotkeys: , and | end-to-end", () => {
     });
     render(<PadEditor {...props} />);
 
-    const cells = screen.getAllByRole("button");
-    const slotButton = cells.find((b) =>
-      b.title?.toLowerCase().includes("toggle"),
-    );
-    fireEvent.click(slotButton!);
-
+    fireEvent.click(getSlotButtons()[0]);
     dispatchKeyOnEditor("-");
 
     expect(handlers.onSetSlotNull).toHaveBeenCalled();
+  });
+});
+
+describe("PadEditor arrow navigation across bar boundaries", () => {
+  it("ArrowRight at the very last slot fires onNextBar exactly once", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |",
+    });
+    render(<PadEditor {...props} />);
+
+    const slots = getSlotButtons();
+    fireEvent.click(slots[slots.length - 1]);
+    dispatchKeyOnEditor("ArrowRight");
+
+    expect(handlers.onNextBar).toHaveBeenCalledTimes(1);
+    expect(handlers.onPrevBar).not.toHaveBeenCalled();
+  });
+
+  it("ArrowLeft at the very first slot fires onPrevBar exactly once", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |",
+    });
+    render(<PadEditor {...props} />);
+
+    const slots = getSlotButtons();
+    fireEvent.click(slots[0]);
+    dispatchKeyOnEditor("ArrowLeft");
+
+    expect(handlers.onPrevBar).toHaveBeenCalledTimes(1);
+    expect(handlers.onNextBar).not.toHaveBeenCalled();
+  });
+
+  it("ArrowRight in the middle does not cross bars", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: oo / o / o / o |",
+    });
+    render(<PadEditor {...props} />);
+
+    const slots = getSlotButtons();
+    fireEvent.click(slots[0]);
+    dispatchKeyOnEditor("ArrowRight");
+    dispatchKeyOnEditor("ArrowRight");
+
+    expect(handlers.onNextBar).not.toHaveBeenCalled();
+    expect(handlers.onPrevBar).not.toHaveBeenCalled();
+  });
+
+  it("Five ArrowRights from start of a 4-beat / 1-slot bar crosses once", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |",
+    });
+    render(<PadEditor {...props} />);
+
+    fireEvent.click(getSlotButtons()[0]);
+    for (let i = 0; i < 5; i += 1) dispatchKeyOnEditor("ArrowRight");
+
+    expect(handlers.onNextBar).toHaveBeenCalledTimes(1);
+  });
+
+  it("Five ArrowLefts from end of a 4-beat / 1-slot bar crosses once", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: o / o / o / o |",
+    });
+    render(<PadEditor {...props} />);
+
+    const slots = getSlotButtons();
+    fireEvent.click(slots[slots.length - 1]);
+    for (let i = 0; i < 5; i += 1) dispatchKeyOnEditor("ArrowLeft");
+
+    expect(handlers.onPrevBar).toHaveBeenCalledTimes(1);
   });
 });

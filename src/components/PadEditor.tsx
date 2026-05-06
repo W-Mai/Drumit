@@ -406,9 +406,6 @@ export function PadEditor({
 
   // --- Keyboard navigation helpers ---
   function moveCursor(dx: number, dy: number) {
-    // Compute next cursor + cross-bar intent up front (pure read of
-    // current state). Avoids invoking onNextBar / onPrevBar inside the
-    // setCursor updater, which strict-mode runs twice.
     let { beatIndex, slotIndex, laneIdx } = cursor;
     if (dy !== 0) {
       laneIdx = Math.max(
@@ -416,48 +413,62 @@ export function PadEditor({
         Math.min(presentInstruments.length - 1, laneIdx + dy),
       );
     }
-    let crossNext = false;
-    let crossPrev = false;
-    if (dx !== 0) {
-      const lane = bar.beats[beatIndex]?.lanes.find(
+    if (dx === 0) {
+      setCursor({ beatIndex, slotIndex, laneIdx });
+      return;
+    }
+    const slotCountAt = (bi: number) => {
+      const lane = bar.beats[bi]?.lanes.find(
         (l) => l.instrument === presentInstruments[laneIdx],
       );
-      const plan = planLaneBeat(lane, beatIndex, barResolution);
-      const slotCount = plan.columns.length;
-      slotIndex += dx;
-      while (slotIndex >= slotCount && beatIndex < beatsPerBar - 1) {
-        slotIndex -= slotCount;
-        beatIndex += 1;
+      return planLaneBeat(lane, bi, barResolution).columns.length;
+    };
+    let steps = Math.abs(dx);
+    const dir = Math.sign(dx);
+    let crossed: "next" | "prev" | null = null;
+    while (steps > 0) {
+      slotIndex += dir;
+      if (dir > 0 && slotIndex >= slotCountAt(beatIndex)) {
+        if (beatIndex < beatsPerBar - 1) {
+          beatIndex += 1;
+          slotIndex = 0;
+        } else {
+          crossed = "next";
+          break;
+        }
+      } else if (dir < 0 && slotIndex < 0) {
+        if (beatIndex > 0) {
+          beatIndex -= 1;
+          slotIndex = slotCountAt(beatIndex) - 1;
+        } else {
+          crossed = "prev";
+          break;
+        }
       }
-      while (slotIndex < 0 && beatIndex > 0) {
-        beatIndex -= 1;
-        const prevLane = bar.beats[beatIndex]?.lanes.find(
-          (l) => l.instrument === presentInstruments[laneIdx],
-        );
-        const prevPlan = planLaneBeat(prevLane, beatIndex, barResolution);
-        slotIndex += prevPlan.columns.length;
-      }
-      if (slotIndex >= slotCount && beatIndex === beatsPerBar - 1) {
-        crossNext = true;
-      } else if (slotIndex < 0 && beatIndex === 0) {
-        crossPrev = true;
-      }
-      slotIndex = Math.max(0, Math.min(slotCount - 1, slotIndex));
+      steps -= 1;
     }
-    if (crossNext && onNextBar) {
+    if (crossed === "next" && onNextBar) {
       onNextBar();
       setCursor({ beatIndex: 0, slotIndex: 0, laneIdx });
       return;
     }
-    if (crossPrev && onPrevBar) {
+    if (crossed === "prev" && onPrevBar) {
       onPrevBar();
-      // Land on the previous bar's tail so left-arrow feels continuous.
-      // Use the bar-level grid as the slot count guess; the new bar's
-      // own lane division isn't readable here yet.
-      const lastBeat = beatsPerBar - 1;
-      const lastSlot = Math.max(0, barResolution.slotsPerBeat - 1);
-      setCursor({ beatIndex: lastBeat, slotIndex: lastSlot, laneIdx });
+      // Land on the new bar's tail so left-arrow feels continuous.
+      // The new bar's lane division isn't readable here yet, so fall
+      // back to the bar-level resolution.
+      setCursor({
+        beatIndex: beatsPerBar - 1,
+        slotIndex: Math.max(0, barResolution.slotsPerBeat - 1),
+        laneIdx,
+      });
       return;
+    }
+    // No bar boundary crossed but ran out of room — clamp.
+    if (crossed === "next") {
+      slotIndex = slotCountAt(beatIndex) - 1;
+    } else if (crossed === "prev") {
+      slotIndex = 0;
     }
     setCursor({ beatIndex, slotIndex, laneIdx });
   }
