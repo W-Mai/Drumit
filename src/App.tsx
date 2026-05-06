@@ -37,6 +37,11 @@ import {
   toggleArticulation,
   toggleSlot,
   setSlotRest,
+  setSlotHit,
+  setSlotNull,
+  splitGroupAtSlot,
+  incrementGroupDivision,
+  multiplyGroupDivision,
 } from "./notation/edit";
 import { PadEditor } from "./components/PadEditor";
 import { PerformView } from "./components/PerformView";
@@ -1621,6 +1626,52 @@ function AppInner() {
                     setSlotRest(s, clampedSelectedBar, bi, inst, si, gi),
                   )
                 }
+                onSetSlotHit={(bi, inst, si, gi) =>
+                  applyScoreUpdate((s) =>
+                    setSlotHit(s, clampedSelectedBar, bi, inst, si, gi),
+                  )
+                }
+                onSetSlotNull={(bi, inst, si, gi) =>
+                  applyScoreUpdate((s) =>
+                    setSlotNull(s, clampedSelectedBar, bi, inst, si, gi),
+                  )
+                }
+                onSplitGroupAtSlot={(bi, inst, si, gi) =>
+                  applyScoreUpdate((s) =>
+                    splitGroupAtSlot(
+                      s,
+                      clampedSelectedBar,
+                      bi,
+                      inst,
+                      si,
+                      gi,
+                    ),
+                  )
+                }
+                onIncrementGroupDivision={(bi, inst, gi, delta) =>
+                  applyScoreUpdate((s) =>
+                    incrementGroupDivision(
+                      s,
+                      clampedSelectedBar,
+                      bi,
+                      inst,
+                      gi,
+                      delta,
+                    ),
+                  )
+                }
+                onMultiplyGroupDivision={(bi, inst, gi, factor) =>
+                  applyScoreUpdate((s) =>
+                    multiplyGroupDivision(
+                      s,
+                      clampedSelectedBar,
+                      bi,
+                      inst,
+                      gi,
+                      factor,
+                    ),
+                  )
+                }
                 onToggleArticulation={(bi, inst, si, art, gi) =>
                   applyScoreUpdate((s) =>
                     toggleArticulation(
@@ -1647,9 +1698,9 @@ function AppInner() {
                     ),
                   )
                 }
-                onCycleDots={(bi, inst, si) =>
+                onCycleDots={(bi, inst, si, gi) =>
                   applyScoreUpdate((s) =>
-                    cycleDots(s, clampedSelectedBar, bi, inst, si),
+                    cycleDots(s, clampedSelectedBar, bi, inst, si, gi),
                   )
                 }
                 onPrevBar={() =>

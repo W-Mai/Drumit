@@ -363,6 +363,151 @@ export function setGroupDivision(
   });
 }
 
+export function incrementGroupDivision(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  groupIndex: number,
+  delta: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex];
+    if (!beat) return;
+    const lane = beat.lanes.find((l) => l.instrument === instrument);
+    if (!lane) return;
+    if (lane.groups) {
+      const group = lane.groups[groupIndex];
+      if (!group) return;
+      const next = Math.max(1, group.division + delta);
+      group.division = next;
+      group.tuplet = deriveAutoTuplet(next);
+      group.slots = Array.from({ length: next }, (_, i) => group.slots[i] ?? null);
+      if (groupIndex === 0) {
+        lane.division = group.division;
+        lane.slots = group.slots;
+        lane.tuplet = group.tuplet;
+      }
+      return;
+    }
+    if (groupIndex !== 0) return;
+    const next = Math.max(1, lane.division + delta);
+    lane.division = next;
+    lane.tuplet = deriveAutoTuplet(next);
+    lane.slots = Array.from({ length: next }, (_, i) => lane.slots[i] ?? null);
+  });
+}
+
+export function multiplyGroupDivision(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  groupIndex: number,
+  factor: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex];
+    if (!beat) return;
+    const lane = beat.lanes.find((l) => l.instrument === instrument);
+    if (!lane) return;
+    const target = lane.groups ? lane.groups[groupIndex] : null;
+    const sourceSlots = target ? target.slots : lane.slots;
+    const sourceDiv = target ? target.division : lane.division;
+    const next = Math.max(1, sourceDiv * factor);
+    // Stretch existing hits onto the new grid: original slot i lands at i*factor.
+    const stretched: Array<Hit | null> = Array.from({ length: next }, () => null);
+    for (let i = 0; i < sourceSlots.length; i += 1) {
+      stretched[i * factor] = sourceSlots[i] ?? null;
+    }
+    if (target) {
+      target.division = next;
+      target.slots = stretched;
+      target.tuplet = deriveAutoTuplet(next);
+      if (groupIndex === 0) {
+        lane.division = next;
+        lane.slots = stretched;
+        lane.tuplet = target.tuplet;
+      }
+      return;
+    }
+    if (groupIndex !== 0) return;
+    lane.division = next;
+    lane.slots = stretched;
+    lane.tuplet = deriveAutoTuplet(next);
+  });
+}
+
+export function splitGroupAtSlot(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  slotIndex: number,
+  groupIndex = 0,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex];
+    if (!beat) return;
+    const lane = beat.lanes.find((l) => l.instrument === instrument);
+    if (!lane) return;
+    if (!lane.groups) {
+      // Flat lane → split into two groups at slotIndex+1.
+      const slots = lane.slots;
+      const cut = Math.min(slots.length, slotIndex + 1);
+      const left = slots.slice(0, cut);
+      const right = slots.slice(cut);
+      if (left.length === 0 || right.length === 0) return;
+      const groups: LaneGroup[] = [
+        {
+          ratio: 0.5,
+          division: left.length,
+          tuplet: deriveAutoTuplet(left.length),
+          slots: left,
+        },
+        {
+          ratio: 0.5,
+          division: right.length,
+          tuplet: deriveAutoTuplet(right.length),
+          slots: right,
+        },
+      ];
+      lane.groups = groups;
+      lane.division = groups[0].division;
+      lane.slots = groups[0].slots;
+      lane.tuplet = groups[0].tuplet;
+      return;
+    }
+    const target = lane.groups[groupIndex];
+    if (!target) return;
+    const cut = Math.min(target.slots.length, slotIndex + 1);
+    const left = target.slots.slice(0, cut);
+    const right = target.slots.slice(cut);
+    if (left.length === 0 || right.length === 0) return;
+    const half = target.ratio / 2;
+    const newGroups: LaneGroup[] = [
+      ...lane.groups.slice(0, groupIndex),
+      {
+        ratio: half,
+        division: left.length,
+        tuplet: deriveAutoTuplet(left.length),
+        slots: left,
+      },
+      {
+        ratio: half,
+        division: right.length,
+        tuplet: deriveAutoTuplet(right.length),
+        slots: right,
+      },
+      ...lane.groups.slice(groupIndex + 1),
+    ];
+    lane.groups = newGroups;
+    lane.division = newGroups[0].division;
+    lane.slots = newGroups[0].slots;
+    lane.tuplet = newGroups[0].tuplet;
+  });
+}
+
 /** Split the lane's beat into `count` equal-ratio groups (replaces existing). */
 export function splitBeatIntoGroups(
   score: Score,
@@ -449,26 +594,79 @@ export function setSlotRest(
   slotIndex: number,
   groupIndex = 0,
 ): Score {
+  return writeSlot(score, globalIndex, beatIndex, instrument, slotIndex, groupIndex, () => ({
+    instrument,
+    head: "rest" as const,
+    articulations: [],
+  }));
+}
+
+export function setSlotHit(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  slotIndex: number,
+  groupIndex = 0,
+): Score {
+  return writeSlot(
+    score,
+    globalIndex,
+    beatIndex,
+    instrument,
+    slotIndex,
+    groupIndex,
+    () => createHit(instrument),
+  );
+}
+
+export function setSlotNull(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  slotIndex: number,
+  groupIndex = 0,
+): Score {
+  return writeSlot(
+    score,
+    globalIndex,
+    beatIndex,
+    instrument,
+    slotIndex,
+    groupIndex,
+    () => null,
+  );
+}
+
+function writeSlot(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  slotIndex: number,
+  groupIndex: number,
+  produce: () => Hit | null,
+): Score {
   return updateBar(score, globalIndex, (bar) => {
     const beat = bar.beats[beatIndex] ?? emptyBeat();
     if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
     const lane = findOrCreateLane(beat, instrument);
-    const rest = { instrument, head: "rest" as const, articulations: [] };
     if (isDotExpanded(lane) && (groupIndex === 0 || groupIndex === undefined)) {
       const g = lane.groups![slotIndex];
       if (!g) return;
-      g.slots[0] = rest;
+      g.slots[0] = produce();
       return;
     }
     if (lane.groups && lane.groups[groupIndex]) {
       const g = lane.groups[groupIndex];
       if (slotIndex >= g.division) growGroup(g, slotIndex + 1);
-      g.slots[slotIndex] = rest;
+      g.slots[slotIndex] = produce();
       return;
     }
     if (!lane.groups && groupIndex === 0) {
       if (slotIndex >= lane.division) growLane(lane, slotIndex + 1);
-      lane.slots[slotIndex] = rest;
+      lane.slots[slotIndex] = produce();
     }
   });
 }
@@ -572,6 +770,7 @@ export function cycleDots(
   beatIndex: number,
   instrument: Instrument,
   slotIndex: number,
+  groupIndex = 0,
 ): Score {
   return updateBar(score, globalIndex, (bar) => {
     const beat = bar.beats[beatIndex];
@@ -580,15 +779,29 @@ export function cycleDots(
     if (laneIdx < 0) return;
     const lane = beat.lanes[laneIdx];
 
-    // Flatten to a plain slot list if the lane was previously dot-expanded.
-    const isDotExpanded =
+    const dotExpanded =
       !!lane.groups &&
       lane.groups.length > 1 &&
       lane.groups.every((g) => g.division === 1 && g.slots.length === 1);
-    const flat: Array<Hit | null> = isDotExpanded
+
+    // Explicit `,`-split lane: cycle the dot in-place inside that group.
+    if (lane.groups && !dotExpanded && groupIndex > 0) {
+      const group = lane.groups[groupIndex];
+      if (!group) return;
+      const hit = group.slots[slotIndex];
+      if (!hit) return;
+      const nextDots = ((hit.dots ?? 0) + 1) % 3;
+      const newHit: Hit = { ...hit };
+      if (nextDots === 0) delete newHit.dots;
+      else newHit.dots = nextDots;
+      group.slots[slotIndex] = newHit;
+      return;
+    }
+
+    const flat: Array<Hit | null> = dotExpanded
       ? lane.groups!.flatMap((g) => g.slots)
       : lane.groups && lane.groups.length > 1
-        ? [] // explicit `,`-split lane: not supported in this release
+        ? [...lane.groups[0].slots]
         : [...lane.slots];
     if (flat.length === 0) return;
     if (slotIndex < 0 || slotIndex >= flat.length) return;

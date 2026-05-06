@@ -82,6 +82,36 @@ interface Props {
     slotIndex: number,
     groupIndex?: number,
   ) => void;
+  onSetSlotHit: (
+    beatIndex: number,
+    instrument: Instrument,
+    slotIndex: number,
+    groupIndex?: number,
+  ) => void;
+  onSetSlotNull: (
+    beatIndex: number,
+    instrument: Instrument,
+    slotIndex: number,
+    groupIndex?: number,
+  ) => void;
+  onSplitGroupAtSlot: (
+    beatIndex: number,
+    instrument: Instrument,
+    slotIndex: number,
+    groupIndex?: number,
+  ) => void;
+  onIncrementGroupDivision: (
+    beatIndex: number,
+    instrument: Instrument,
+    groupIndex: number,
+    delta: number,
+  ) => void;
+  onMultiplyGroupDivision: (
+    beatIndex: number,
+    instrument: Instrument,
+    groupIndex: number,
+    factor: number,
+  ) => void;
   onToggleArticulation: (
     beatIndex: number,
     instrument: Instrument,
@@ -108,6 +138,7 @@ interface Props {
     beatIndex: number,
     instrument: Instrument,
     slotIndex: number,
+    groupIndex?: number,
   ) => void;
 }
 
@@ -297,6 +328,11 @@ export function PadEditor({
   onSplitBeat,
   onToggleSlot,
   onSetSlotRest,
+  onSetSlotHit,
+  onSetSlotNull,
+  onSplitGroupAtSlot,
+  onIncrementGroupDivision,
+  onMultiplyGroupDivision,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -421,6 +457,16 @@ export function PadEditor({
     moveCursor(1, 0);
   }
 
+  function focusSlotByClick(
+    beatIndex: number,
+    slotIndex: number,
+    instrument: Instrument,
+  ) {
+    const laneIdx = presentInstruments.indexOf(instrument);
+    if (laneIdx < 0) return;
+    setCursor({ beatIndex, slotIndex, laneIdx });
+  }
+
   // Toggle hit at cursor + advance.
   function toggleAtCursor(instrument?: Instrument) {
     const inst = instrument ?? currentInstrument;
@@ -456,7 +502,14 @@ export function PadEditor({
     advanceCursor();
   }
 
-  function restAtCursor() {
+  type SlotWriter = (
+    beatIndex: number,
+    instrument: Instrument,
+    slotIndex: number,
+    groupIndex?: number,
+  ) => void;
+
+  function writeAtCursorWith(write: SlotWriter, advance: boolean) {
     const inst = currentInstrument;
     if (!inst) return;
     const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
@@ -473,16 +526,82 @@ export function PadEditor({
       ) {
         onSetDivision(clampedCursor.beatIndex, inst, col.slotsPerBeat);
       }
-      onSetSlotRest(clampedCursor.beatIndex, inst, col.slotIndex);
+      write(clampedCursor.beatIndex, inst, col.slotIndex);
     } else {
-      onSetSlotRest(
+      write(clampedCursor.beatIndex, inst, col.slotIndex, col.groupIndex);
+    }
+    if (advance) advanceCursor();
+  }
+
+  function restAtCursor() {
+    writeAtCursorWith(onSetSlotRest, true);
+  }
+  function setHitAtCursor() {
+    writeAtCursorWith(onSetSlotHit, true);
+  }
+  function setNullAtCursor() {
+    writeAtCursorWith(onSetSlotNull, true);
+  }
+
+  function splitGroupAtCursor() {
+    const inst = currentInstrument;
+    if (!inst) return;
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    if (col.kind === "beat-slot") {
+      onSplitGroupAtSlot(clampedCursor.beatIndex, inst, col.slotIndex);
+    } else {
+      onSplitGroupAtSlot(
         clampedCursor.beatIndex,
         inst,
         col.slotIndex,
         col.groupIndex,
       );
     }
-    advanceCursor();
+  }
+
+  function addSlotAtCursor() {
+    const inst = currentInstrument;
+    if (!inst) return;
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    const groupIndex = col.kind === "beat-slot" ? 0 : col.groupIndex;
+    onIncrementGroupDivision(clampedCursor.beatIndex, inst, groupIndex, 1);
+  }
+
+  function doubleGroupAtCursor() {
+    const inst = currentInstrument;
+    if (!inst) return;
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    const groupIndex = col.kind === "beat-slot" ? 0 : col.groupIndex;
+    onMultiplyGroupDivision(clampedCursor.beatIndex, inst, groupIndex, 2);
+  }
+
+  function nextBeatCursor() {
+    const last = beatsPerBar - 1;
+    if (clampedCursor.beatIndex < last) {
+      setCursor((c) => ({ ...c, beatIndex: c.beatIndex + 1, slotIndex: 0 }));
+      return;
+    }
+    if (barIndex >= totalBars - 1) onInsertAfter?.();
+    else onNextBar?.();
+    setCursor((c) => ({ ...c, beatIndex: 0, slotIndex: 0 }));
   }
 
   function clearCursorSlot() {
@@ -558,8 +677,6 @@ export function PadEditor({
   }
 
   function cycleDotsAtCursor(instrument: Instrument) {
-    // cycleDots only supports simple (non-`,`-split) lanes for now; it
-    // addresses the slot by its flat position within the beat.
     const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
       (l) => l.instrument === instrument,
     );
@@ -567,14 +684,16 @@ export function PadEditor({
     const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
     const col = plan.columns[clampedCursor.slotIndex];
     if (!col) return;
-    // `,`-split lanes expose slots via `beat-group-slot` columns with a
-    // groupIndex > 0. Those aren't supported for dot cycling yet.
-    if (col.kind !== "beat-slot") return;
-    onCycleDots(
-      clampedCursor.beatIndex,
-      instrument,
-      col.slotIndex,
-    );
+    if (col.kind === "beat-slot") {
+      onCycleDots(clampedCursor.beatIndex, instrument, col.slotIndex);
+    } else {
+      onCycleDots(
+        clampedCursor.beatIndex,
+        instrument,
+        col.slotIndex,
+        col.groupIndex,
+      );
+    }
   }
 
   async function copyBarSourceToClipboard() {
@@ -594,6 +713,7 @@ export function PadEditor({
     { key: "ArrowRight", handler: () => moveCursor(1, 0) },
     { key: "ArrowUp", handler: () => moveCursor(0, -1) },
     { key: "ArrowDown", handler: () => moveCursor(0, 1) },
+    { key: "/", description: "Next beat", handler: () => nextBeatCursor() },
     {
       key: "Home",
       handler: () =>
@@ -671,6 +791,36 @@ export function PadEditor({
             key: "0",
             description: "Insert explicit rest",
             handler: () => restAtCursor(),
+          },
+          {
+            key: "o",
+            description: "Set hit at cursor",
+            handler: () => setHitAtCursor(),
+          },
+          {
+            key: "-",
+            description: "Skip slot (clear)",
+            handler: () => setNullAtCursor(),
+          },
+          {
+            key: ",",
+            description: "Split group at cursor",
+            handler: () => splitGroupAtCursor(),
+          },
+          {
+            key: "+",
+            description: "Add a slot to current group",
+            handler: () => addSlotAtCursor(),
+          },
+          {
+            key: "=",
+            description: "Add a slot to current group",
+            handler: () => addSlotAtCursor(),
+          },
+          {
+            key: "|",
+            description: "Double the current group's slots",
+            handler: () => doubleGroupAtCursor(),
           },
         ]
       : []),
@@ -811,6 +961,7 @@ export function PadEditor({
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
+            onFocusSlot={focusSlotByClick}
           />
         ) : (
           <LanePager
@@ -837,6 +988,7 @@ export function PadEditor({
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
+            onFocusSlot={focusSlotByClick}
           />
         )}
         </>
@@ -1169,6 +1321,7 @@ function StepGrid({
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
+  onFocusSlot,
 }: {
   bar: Bar;
   beatsPerBar: number;
@@ -1184,6 +1337,11 @@ function StepGrid({
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
+  onFocusSlot?: (
+    beatIndex: number,
+    slotIndex: number,
+    instrument: Instrument,
+  ) => void;
 }) {
   const { t } = useI18n();
   return (
@@ -1229,6 +1387,7 @@ function StepGrid({
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
+            onFocusSlot={onFocusSlot}
           />
         ))}
 
@@ -1267,6 +1426,7 @@ function InstrumentRow({
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
+  onFocusSlot,
 }: {
   bar: Bar;
   beatsPerBar: number;
@@ -1282,6 +1442,11 @@ function InstrumentRow({
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
+  onFocusSlot?: (
+    beatIndex: number,
+    slotIndex: number,
+    instrument: Instrument,
+  ) => void;
 }) {
   return (
     <>
@@ -1338,6 +1503,7 @@ function InstrumentRow({
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
+            onFocusSlot={onFocusSlot}
             barResolution={barResolution}
           />
         );
@@ -1366,6 +1532,7 @@ function LanePager({
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
+  onFocusSlot,
 }: {
   bar: Bar;
   beatsPerBar: number;
@@ -1382,6 +1549,11 @@ function LanePager({
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
+  onFocusSlot?: (
+    beatIndex: number,
+    slotIndex: number,
+    instrument: Instrument,
+  ) => void;
 }) {
   const { t } = useI18n();
   const currentInstrument = presentInstruments[cursor.laneIdx];
@@ -1518,6 +1690,7 @@ function LanePager({
               onToggleArticulation={onToggleArticulation}
               onSetSticking={onSetSticking}
               onCycleDots={onCycleDots}
+              onFocusSlot={onFocusSlot}
               barResolution={barResolution}
             />
           );
@@ -1552,17 +1725,15 @@ function LaneBeatCell({
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
+  onFocusSlot,
 }: {
   plan: LaneBeatPlan;
   bar: Bar;
   instrument: Instrument;
   isFirstBeat: boolean;
   barResolution: Resolution;
-  /** True if the edit cursor is in this beat. */
   cursorBeatMatch?: boolean;
-  /** True if the edit cursor is on this lane. */
   cursorLaneMatch?: boolean;
-  /** Slot index the cursor is on, only when both cursorBeatMatch and cursorLaneMatch are true. */
   cursorSlotIndex?: number;
   onSetDivision: Props["onSetDivision"];
   onSetGroupDivision: Props["onSetGroupDivision"];
@@ -1571,6 +1742,11 @@ function LaneBeatCell({
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
+  onFocusSlot?: (
+    beatIndex: number,
+    slotIndex: number,
+    instrument: Instrument,
+  ) => void;
 }) {
   return (
     <div
@@ -1611,6 +1787,7 @@ function LaneBeatCell({
               onToggleArticulation={onToggleArticulation}
               onSetSticking={onSetSticking}
               onCycleDots={onCycleDots}
+              onFocusSlot={onFocusSlot}
             />
           );
         })}
@@ -1645,6 +1822,7 @@ function StepCell({
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
+  onFocusSlot,
 }: {
   bar: Bar;
   instrument: Instrument;
@@ -1657,6 +1835,11 @@ function StepCell({
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
   cursorState?: "cell" | "beat" | "lane" | null;
+  onFocusSlot?: (
+    beatIndex: number,
+    slotIndex: number,
+    instrument: Instrument,
+  ) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cellAnchor, setCellAnchor] = useState<HTMLButtonElement | null>(null);
@@ -1686,6 +1869,7 @@ function StepCell({
       address.slotIndex,
       address.groupIndex,
     );
+    onFocusSlot?.(plan.beatIndex, columnIndex, instrument);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
