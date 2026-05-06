@@ -406,50 +406,55 @@ export function PadEditor({
 
   // --- Keyboard navigation helpers ---
   function moveCursor(dx: number, dy: number) {
-    setCursor((c) => {
-      let { beatIndex, slotIndex, laneIdx } = c;
-      if (dy !== 0) {
-        laneIdx = Math.max(
-          0,
-          Math.min(presentInstruments.length - 1, laneIdx + dy),
-        );
+    // Compute next cursor + cross-bar intent up front (pure read of
+    // current state). Avoids invoking onNextBar / onPrevBar inside the
+    // setCursor updater, which strict-mode runs twice.
+    let { beatIndex, slotIndex, laneIdx } = cursor;
+    if (dy !== 0) {
+      laneIdx = Math.max(
+        0,
+        Math.min(presentInstruments.length - 1, laneIdx + dy),
+      );
+    }
+    let crossNext = false;
+    let crossPrev = false;
+    if (dx !== 0) {
+      const lane = bar.beats[beatIndex]?.lanes.find(
+        (l) => l.instrument === presentInstruments[laneIdx],
+      );
+      const plan = planLaneBeat(lane, beatIndex, barResolution);
+      const slotCount = plan.columns.length;
+      slotIndex += dx;
+      while (slotIndex >= slotCount && beatIndex < beatsPerBar - 1) {
+        slotIndex -= slotCount;
+        beatIndex += 1;
       }
-      if (dx !== 0) {
-        const lane = bar.beats[beatIndex]?.lanes.find(
+      while (slotIndex < 0 && beatIndex > 0) {
+        beatIndex -= 1;
+        const prevLane = bar.beats[beatIndex]?.lanes.find(
           (l) => l.instrument === presentInstruments[laneIdx],
         );
-        const plan = planLaneBeat(lane, beatIndex, barResolution);
-        const slotCount = plan.columns.length;
-        slotIndex += dx;
-        while (slotIndex >= slotCount && beatIndex < beatsPerBar - 1) {
-          slotIndex -= slotCount;
-          beatIndex += 1;
-        }
-        while (slotIndex < 0 && beatIndex > 0) {
-          beatIndex -= 1;
-          const prevLane = bar.beats[beatIndex]?.lanes.find(
-            (l) => l.instrument === presentInstruments[laneIdx],
-          );
-          const prevPlan = planLaneBeat(prevLane, beatIndex, barResolution);
-          slotIndex += prevPlan.columns.length;
-        }
-        // Cross-bar: past last slot of last beat → next bar; before 0 of beat 0 → prev bar.
-        if (slotIndex >= slotCount && beatIndex === beatsPerBar - 1) {
-          if (onNextBar) {
-            onNextBar();
-            return { beatIndex: 0, slotIndex: 0, laneIdx };
-          }
-        }
-        if (slotIndex < 0 && beatIndex === 0) {
-          if (onPrevBar) {
-            onPrevBar();
-            return { beatIndex: 0, slotIndex: 0, laneIdx };
-          }
-        }
-        slotIndex = Math.max(0, Math.min(slotCount - 1, slotIndex));
+        const prevPlan = planLaneBeat(prevLane, beatIndex, barResolution);
+        slotIndex += prevPlan.columns.length;
       }
-      return { beatIndex, slotIndex, laneIdx };
-    });
+      if (slotIndex >= slotCount && beatIndex === beatsPerBar - 1) {
+        crossNext = true;
+      } else if (slotIndex < 0 && beatIndex === 0) {
+        crossPrev = true;
+      }
+      slotIndex = Math.max(0, Math.min(slotCount - 1, slotIndex));
+    }
+    if (crossNext && onNextBar) {
+      onNextBar();
+      setCursor({ beatIndex: 0, slotIndex: 0, laneIdx });
+      return;
+    }
+    if (crossPrev && onPrevBar) {
+      onPrevBar();
+      setCursor({ beatIndex: 0, slotIndex: 0, laneIdx });
+      return;
+    }
+    setCursor({ beatIndex, slotIndex, laneIdx });
   }
 
   function advanceCursor() {
