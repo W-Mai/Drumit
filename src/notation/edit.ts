@@ -414,11 +414,30 @@ export function multiplyGroupDivision(
     const target = lane.groups ? lane.groups[groupIndex] : null;
     const sourceSlots = target ? target.slots : lane.slots;
     const sourceDiv = target ? target.division : lane.division;
-    const next = Math.max(1, sourceDiv * factor);
-    // Stretch existing hits onto the new grid: original slot i lands at i*factor.
-    const stretched: Array<Hit | null> = Array.from({ length: next }, () => null);
-    for (let i = 0; i < sourceSlots.length; i += 1) {
-      stretched[i * factor] = sourceSlots[i] ?? null;
+    let next: number;
+    let stretched: Array<Hit | null>;
+    if (factor >= 1) {
+      next = Math.max(1, Math.round(sourceDiv * factor));
+      // Original slot i lands at i*factor on the wider grid.
+      stretched = Array.from({ length: next }, () => null);
+      for (let i = 0; i < sourceSlots.length; i += 1) {
+        const dst = i * Math.round(factor);
+        if (dst < next) stretched[dst] = sourceSlots[i] ?? null;
+      }
+    } else {
+      // Shrinking: keep one hit per output slot, prefer the first
+      // non-null in each chunk so down→up→down is mostly idempotent.
+      const inv = Math.max(1, Math.round(1 / factor));
+      next = Math.max(1, Math.ceil(sourceDiv / inv));
+      stretched = Array.from({ length: next }, (_, j) => {
+        for (let k = 0; k < inv; k += 1) {
+          const src = j * inv + k;
+          if (src < sourceSlots.length && sourceSlots[src]) {
+            return sourceSlots[src];
+          }
+        }
+        return null;
+      });
     }
     if (target) {
       target.division = next;
@@ -508,6 +527,47 @@ export function splitGroupAtSlot(
     lane.division = newGroups[0].division;
     lane.slots = newGroups[0].slots;
     lane.tuplet = newGroups[0].tuplet;
+  });
+}
+
+export function mergeGroupAt(
+  score: Score,
+  globalIndex: number,
+  beatIndex: number,
+  instrument: Instrument,
+  groupIndex: number,
+): Score {
+  return updateBar(score, globalIndex, (bar) => {
+    const beat = bar.beats[beatIndex];
+    if (!beat) return;
+    const lane = beat.lanes.find((l) => l.instrument === instrument);
+    if (!lane || !lane.groups || lane.groups.length < 2) return;
+    const target = lane.groups[groupIndex];
+    const next = lane.groups[groupIndex + 1];
+    if (!target || !next) return;
+    const merged: LaneGroup = {
+      ratio: target.ratio + next.ratio,
+      division: target.division + next.division,
+      tuplet: deriveAutoTuplet(target.division + next.division),
+      slots: [...target.slots, ...next.slots],
+    };
+    const groups = [
+      ...lane.groups.slice(0, groupIndex),
+      merged,
+      ...lane.groups.slice(groupIndex + 2),
+    ];
+    if (groups.length === 1) {
+      // Only one group left after merge → flatten back to a non-grouped lane.
+      lane.groups = undefined;
+      lane.division = merged.division;
+      lane.slots = merged.slots;
+      lane.tuplet = merged.tuplet;
+      return;
+    }
+    lane.groups = groups;
+    lane.division = groups[0].division;
+    lane.slots = groups[0].slots;
+    lane.tuplet = groups[0].tuplet;
   });
 }
 

@@ -21,6 +21,7 @@ import {
   setSticking,
   splitBeatIntoGroups,
   splitGroupAtSlot,
+  mergeGroupAt,
   incrementGroupDivision,
   multiplyGroupDivision,
   setSlotHit,
@@ -792,6 +793,119 @@ describe("setSlotHit / setSlotNull", () => {
       (l) => l.instrument === "kick",
     )!;
     expect(lane.slots[0]).toBeNull();
+    expect(lane.slots[1]).not.toBeNull();
+  });
+});
+
+describe("mergeGroupAt", () => {
+  it("merges two adjacent groups, concatenating slots and ratios", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oo , xx / - / - / - |`,
+    );
+    const next = mergeGroupAt(score, 0, 0, "kick", 0);
+    const lane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    // Two single-content groups → flat lane (groups undefined).
+    expect(lane.groups).toBeUndefined();
+    expect(lane.slots).toHaveLength(4);
+    expect(lane.slots.filter((s) => s !== null)).toHaveLength(4);
+  });
+
+  it("merges only the targeted pair when there are 3 groups", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o , x , o / - / - / - |`,
+    );
+    const next = mergeGroupAt(score, 0, 0, "kick", 0);
+    const lane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.groups).toHaveLength(2);
+    expect(lane.groups![0].slots).toHaveLength(2);
+    expect(lane.groups![1].slots).toHaveLength(1);
+  });
+
+  it("is a no-op on a flat lane (no groups to merge)", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oo / - / - / - |`,
+    );
+    const next = mergeGroupAt(score, 0, 0, "kick", 0);
+    const lane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.groups).toBeUndefined();
+    expect(lane.slots).toHaveLength(2);
+  });
+
+  it("split then merge round-trips back to the original lane", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oxox / - / - / - |`,
+    );
+    const split = splitGroupAtSlot(score, 0, 0, "kick", 1);
+    const merged = mergeGroupAt(split, 0, 0, "kick", 0);
+    const lane = merged.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.groups).toBeUndefined();
+    expect(lane.slots).toHaveLength(4);
+  });
+});
+
+describe("incrementGroupDivision with negative delta (remove slot)", () => {
+  it("removes a slot from the end of a flat lane", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oxox / - / - / - |`,
+    );
+    const next = incrementGroupDivision(score, 0, 0, "kick", 0, -1);
+    const lane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.division).toBe(3);
+    expect(lane.slots).toHaveLength(3);
+    // Tail slot was a hit; it gets dropped along with the position.
+    expect(lane.slots[0]).not.toBeNull();
+    expect(lane.slots[2]).not.toBeNull();
+  });
+
+  it("clamps division at 1 even with extra negative deltas", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: o / - / - / - |`,
+    );
+    const next = incrementGroupDivision(score, 0, 0, "kick", 0, -5);
+    const lane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.division).toBe(1);
+  });
+});
+
+describe("multiplyGroupDivision with factor < 1 (halve)", () => {
+  it("halves a flat lane and keeps one hit per output slot", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oxox / - / - / - |`,
+    );
+    const next = multiplyGroupDivision(score, 0, 0, "kick", 0, 0.5);
+    const lane = next.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.division).toBe(2);
+    expect(lane.slots).toHaveLength(2);
+    // Each output slot picks the first non-null in its 2-wide source chunk.
+    expect(lane.slots[0]).not.toBeNull();
+    expect(lane.slots[1]).not.toBeNull();
+  });
+
+  it("doubling then halving restores the original division", () => {
+    const { score } = parseDrumtab(
+      `title: T\nmeter: 4/4\n[A]\n| bd: oo / - / - / - |`,
+    );
+    const doubled = multiplyGroupDivision(score, 0, 0, "kick", 0, 2);
+    const halved = multiplyGroupDivision(doubled, 0, 0, "kick", 0, 0.5);
+    const lane = halved.sections[0].bars[0].beats[0].lanes.find(
+      (l) => l.instrument === "kick",
+    )!;
+    expect(lane.division).toBe(2);
+    expect(lane.slots[0]).not.toBeNull();
     expect(lane.slots[1]).not.toBeNull();
   });
 });

@@ -43,6 +43,7 @@ afterEach(() => cleanup());
 
 interface MockedHandlers {
   onSplitGroupAtSlot: ReturnType<typeof vi.fn>;
+  onMergeGroupAt: ReturnType<typeof vi.fn>;
   onMultiplyGroupDivision: ReturnType<typeof vi.fn>;
   onIncrementGroupDivision: ReturnType<typeof vi.fn>;
   onSetSlotHit: ReturnType<typeof vi.fn>;
@@ -58,6 +59,7 @@ function makeProps(opts: { drumtab: string }) {
   const beatsPerBar = score.meter.beats;
   const handlers: MockedHandlers = {
     onSplitGroupAtSlot: vi.fn(),
+    onMergeGroupAt: vi.fn(),
     onMultiplyGroupDivision: vi.fn(),
     onIncrementGroupDivision: vi.fn(),
     onSetSlotHit: vi.fn(),
@@ -93,6 +95,7 @@ function makeProps(opts: { drumtab: string }) {
     onSetSlotHit: handlers.onSetSlotHit,
     onSetSlotNull: handlers.onSetSlotNull,
     onSplitGroupAtSlot: handlers.onSplitGroupAtSlot,
+    onMergeGroupAt: handlers.onMergeGroupAt,
     onIncrementGroupDivision: handlers.onIncrementGroupDivision,
     onMultiplyGroupDivision: handlers.onMultiplyGroupDivision,
     onToggleArticulation: noop,
@@ -207,6 +210,50 @@ describe("PadEditor hotkeys: , and | end-to-end", () => {
     dispatchKeyOnEditor("-");
 
     expect(handlers.onSetSlotNull).toHaveBeenCalled();
+  });
+
+  it("'<' (shift+,) fires onMergeGroupAt for the current group", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: oo / - / - / - |",
+    });
+    render(<PadEditor {...props} />);
+
+    fireEvent.click(getSlotButtons()[0]);
+    dispatchKeyOnEditor("<", { shiftKey: true });
+
+    expect(handlers.onMergeGroupAt).toHaveBeenCalled();
+    const args = handlers.onMergeGroupAt.mock.calls[0];
+    expect(args[0]).toBe(0);
+    expect(args[1]).toBe("kick");
+    expect(args[2]).toBe(0);
+  });
+
+  it("'_' (shift+-) fires onIncrementGroupDivision with delta -1", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: oo / - / - / - |",
+    });
+    render(<PadEditor {...props} />);
+
+    fireEvent.click(getSlotButtons()[0]);
+    dispatchKeyOnEditor("_", { shiftKey: true });
+
+    expect(handlers.onIncrementGroupDivision).toHaveBeenCalled();
+    const args = handlers.onIncrementGroupDivision.mock.calls[0];
+    expect(args[3]).toBe(-1);
+  });
+
+  it("'\\\\' fires onMultiplyGroupDivision with factor 0.5", () => {
+    const { props, handlers } = makeProps({
+      drumtab: "title: T\nmeter: 4/4\n[A]\n| bd: oo / - / - / - |",
+    });
+    render(<PadEditor {...props} />);
+
+    fireEvent.click(getSlotButtons()[0]);
+    dispatchKeyOnEditor("\\");
+
+    expect(handlers.onMultiplyGroupDivision).toHaveBeenCalled();
+    const args = handlers.onMultiplyGroupDivision.mock.calls[0];
+    expect(args[3]).toBe(0.5);
   });
 });
 

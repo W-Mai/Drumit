@@ -100,6 +100,11 @@ interface Props {
     slotIndex: number,
     groupIndex?: number,
   ) => void;
+  onMergeGroupAt: (
+    beatIndex: number,
+    instrument: Instrument,
+    groupIndex: number,
+  ) => void;
   onIncrementGroupDivision: (
     beatIndex: number,
     instrument: Instrument,
@@ -331,6 +336,7 @@ export function PadEditor({
   onSetSlotHit,
   onSetSlotNull,
   onSplitGroupAtSlot,
+  onMergeGroupAt,
   onIncrementGroupDivision,
   onMultiplyGroupDivision,
   onToggleArticulation,
@@ -586,6 +592,20 @@ export function PadEditor({
     }
   }
 
+  function mergeGroupAtCursor() {
+    const inst = currentInstrument;
+    if (!inst) return;
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    const groupIndex = col.kind === "beat-slot" ? 0 : col.groupIndex;
+    onMergeGroupAt(clampedCursor.beatIndex, inst, groupIndex);
+  }
+
   function addSlotAtCursor() {
     const inst = currentInstrument;
     if (!inst) return;
@@ -612,6 +632,34 @@ export function PadEditor({
     if (!col) return;
     const groupIndex = col.kind === "beat-slot" ? 0 : col.groupIndex;
     onMultiplyGroupDivision(clampedCursor.beatIndex, inst, groupIndex, 2);
+  }
+
+  function removeSlotAtCursor() {
+    const inst = currentInstrument;
+    if (!inst) return;
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    const groupIndex = col.kind === "beat-slot" ? 0 : col.groupIndex;
+    onIncrementGroupDivision(clampedCursor.beatIndex, inst, groupIndex, -1);
+  }
+
+  function halveGroupAtCursor() {
+    const inst = currentInstrument;
+    if (!inst) return;
+    const laneBeat = bar.beats[clampedCursor.beatIndex]?.lanes.find(
+      (l) => l.instrument === inst,
+    );
+    if (!laneBeat) return;
+    const plan = planLaneBeat(laneBeat, clampedCursor.beatIndex, barResolution);
+    const col = plan.columns[clampedCursor.slotIndex];
+    if (!col) return;
+    const groupIndex = col.kind === "beat-slot" ? 0 : col.groupIndex;
+    onMultiplyGroupDivision(clampedCursor.beatIndex, inst, groupIndex, 0.5);
   }
 
   function nextBeatCursor() {
@@ -829,6 +877,12 @@ export function PadEditor({
             handler: () => splitGroupAtCursor(),
           },
           {
+            key: "<",
+            shift: true,
+            description: "Merge group with the next one",
+            handler: () => mergeGroupAtCursor(),
+          },
+          {
             key: "+",
             shift: true,
             description: "Add a slot to current group",
@@ -840,10 +894,21 @@ export function PadEditor({
             handler: () => addSlotAtCursor(),
           },
           {
+            key: "_",
+            shift: true,
+            description: "Remove a slot from current group",
+            handler: () => removeSlotAtCursor(),
+          },
+          {
             key: "|",
             shift: true,
             description: "Double the current group's slots",
             handler: () => doubleGroupAtCursor(),
+          },
+          {
+            key: "\\",
+            description: "Halve the current group's slots",
+            handler: () => halveGroupAtCursor(),
           },
         ]
       : []),

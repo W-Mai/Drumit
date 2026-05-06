@@ -40,6 +40,7 @@ import {
   setSlotHit,
   setSlotNull,
   splitGroupAtSlot,
+  mergeGroupAt,
   incrementGroupDivision,
   multiplyGroupDivision,
 } from "./notation/edit";
@@ -1646,6 +1647,11 @@ function AppInner() {
                       si,
                       gi,
                     ),
+                  )
+                }
+                onMergeGroupAt={(bi, inst, gi) =>
+                  applyScoreUpdate((s) =>
+                    mergeGroupAt(s, clampedSelectedBar, bi, inst, gi),
                   )
                 }
                 onIncrementGroupDivision={(bi, inst, gi, delta) =>
