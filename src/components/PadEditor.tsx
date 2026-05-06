@@ -451,7 +451,12 @@ export function PadEditor({
     }
     if (crossPrev && onPrevBar) {
       onPrevBar();
-      setCursor({ beatIndex: 0, slotIndex: 0, laneIdx });
+      // Land on the previous bar's tail so left-arrow feels continuous.
+      // Use the bar-level grid as the slot count guess; the new bar's
+      // own lane division isn't readable here yet.
+      const lastBeat = beatsPerBar - 1;
+      const lastSlot = Math.max(0, barResolution.slotsPerBeat - 1);
+      setCursor({ beatIndex: lastBeat, slotIndex: lastSlot, laneIdx });
       return;
     }
     setCursor({ beatIndex, slotIndex, laneIdx });
