@@ -11,6 +11,65 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.06.1]
+
+### Added
+
+- **Single-line input commands at the focus cell.** Click a slot and
+  the cursor moves there; from then on a small drumtab-flavoured
+  vocabulary edits in place:
+  - `o` set hit · `0` rest · `-` skip (null) · `.` cycle dot
+  - `,` split group at cursor · `<` merge with the next group
+  - `+` / `=` add a slot · `_` remove a slot
+  - `|` double slot count · `\` halve slot count
+  - `/` next beat · `?` previous beat (cross-bar; `/` at the end
+    of the last bar appends a fresh one)
+- New edit ops backing those commands: `setSlotHit`, `setSlotNull`,
+  `splitGroupAtSlot`, `mergeGroupAt`, `incrementGroupDivision` (now
+  also takes negative deltas), `multiplyGroupDivision` (now also
+  accepts factors < 1).
+- `cycleDots` accepts `groupIndex` so dots inside `,`-split groups
+  cycle in place too.
+- HotkeyPanel + i18n list every new key under Slot input.
+
+### Changed
+
+- Clicking a slot now moves the focus cursor to that slot in
+  addition to toggling the hit. Click is positioning, keyboard is
+  composition; click does **not** trigger autoAdvance.
+- `,` divider redrawn as a centred amber pill that sits on the cell
+  boundary itself, not as an overlapping dashed border. Stays above
+  the focus outline so the cursor can't cover it.
+
+### Fixed
+
+- ArrowLeft / ArrowRight crossing a bar boundary jumped two bars
+  under React 19 StrictMode because `setCursor`'s functional updater
+  invoked `onNextBar` / `onPrevBar` and StrictMode runs updaters
+  twice. Cross-bar callbacks now fire exactly once.
+  `nextBeatCursor` / `prevBeatCursor` were updated for the same
+  reason.
+- Multi-step arrow moves recompute slotCount per beat instead of
+  reusing the starting beat's value, so cursors land in the right
+  slot when adjacent beats have different divisions.
+- Left-arrow into the previous bar now lands on its tail slot
+  instead of `(0, 0)`.
+- `splitGroupAtSlot` (`,`) creates the lane if missing and pads
+  empty halves with a `null`, so pressing `,` on an empty lane or
+  at the tail of a short lane is no longer a no-op.
+- `|` and `+` need `shift: true` in their hotkey registration
+  (they're shift glyphs on US layouts); without it the keys were
+  silently dropped.
+
+### Tests
+
+- 25 new cases across `tests/edit.test.ts`,
+  `tests/useHotkeysMatch.test.tsx`, and a new
+  `tests/PadEditorHotkeys.test.tsx` that mounts PadEditor, clicks a
+  slot to focus, and asserts each new key dispatches the right edit
+  op with the right arguments — including arrow cross-bar
+  exactness.
+
 ## [2026.05.06]
 
 ### Added
