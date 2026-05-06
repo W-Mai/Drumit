@@ -809,6 +809,7 @@ export function PadEditor({
           },
           {
             key: "+",
+            shift: true,
             description: "Add a slot to current group",
             handler: () => addSlotAtCursor(),
           },
@@ -819,6 +820,7 @@ export function PadEditor({
           },
           {
             key: "|",
+            shift: true,
             description: "Double the current group's slots",
             handler: () => doubleGroupAtCursor(),
           },

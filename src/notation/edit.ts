@@ -447,17 +447,19 @@ export function splitGroupAtSlot(
   groupIndex = 0,
 ): Score {
   return updateBar(score, globalIndex, (bar) => {
-    const beat = bar.beats[beatIndex];
-    if (!beat) return;
-    const lane = beat.lanes.find((l) => l.instrument === instrument);
-    if (!lane) return;
+    const beat = bar.beats[beatIndex] ?? emptyBeat();
+    if (!bar.beats[beatIndex]) bar.beats[beatIndex] = beat;
+    const lane = findOrCreateLane(beat, instrument);
+    const padTo = (arr: Array<Hit | null>, n: number) =>
+      arr.length >= n ? arr : [...arr, ...Array(n - arr.length).fill(null)];
     if (!lane.groups) {
-      // Flat lane → split into two groups at slotIndex+1.
-      const slots = lane.slots;
+      // Flat lane → split into two groups around slotIndex. Empty
+      // halves get a single null slot so the new group still renders.
+      const slots = padTo(lane.slots, slotIndex + 1);
       const cut = Math.min(slots.length, slotIndex + 1);
       const left = slots.slice(0, cut);
-      const right = slots.slice(cut);
-      if (left.length === 0 || right.length === 0) return;
+      const rightRaw = slots.slice(cut);
+      const right = rightRaw.length > 0 ? rightRaw : [null];
       const groups: LaneGroup[] = [
         {
           ratio: 0.5,
@@ -480,10 +482,11 @@ export function splitGroupAtSlot(
     }
     const target = lane.groups[groupIndex];
     if (!target) return;
-    const cut = Math.min(target.slots.length, slotIndex + 1);
-    const left = target.slots.slice(0, cut);
-    const right = target.slots.slice(cut);
-    if (left.length === 0 || right.length === 0) return;
+    const padded = padTo(target.slots, slotIndex + 1);
+    const cut = Math.min(padded.length, slotIndex + 1);
+    const left = padded.slice(0, cut);
+    const rightRaw = padded.slice(cut);
+    const right = rightRaw.length > 0 ? rightRaw : [null];
     const half = target.ratio / 2;
     const newGroups: LaneGroup[] = [
       ...lane.groups.slice(0, groupIndex),
