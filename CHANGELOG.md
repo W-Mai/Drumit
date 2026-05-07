@@ -11,6 +11,49 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.07]
+
+> **Major release — Drumit goes social.** Drumit can now browse drum
+> scores from any GitHub repo and open them locally for editing.
+> The default source ships pre-wired to **drumit-community/scores**, a
+> public, CI-managed score bank. Every `.drumtab` file can also carry
+> distribution metadata (composer, license, difficulty, style…) so
+> tracks come with the credit and provenance they deserve.
+
+### Added
+
+- **Community browse.** Header → **社区 / Community** opens a full-screen
+  modal that lists scores from one or more git remotes. Each entry shows
+  composer / difficulty / style chips. Picking a score fetches its raw
+  `.drumtab` and routes it through the existing import path, so every
+  download becomes an independent local copy you can edit freely. Read-only
+  for v1; OAuth-based upload arrives in v2.
+- **Default source pre-wired.** First launch already points at
+  `drumit-community/scores` and the example score loads with no setup.
+  Add your own GitHub repos via **+ 添加 / + Add** and they persist in
+  localStorage.
+- **Score-info modal.** Header → **谱信息 / Score info** edits a brand-new
+  set of `.drumtab` header fields:
+  - `slug` (URL-safe id; auto-generated from title when empty)
+  - `composer`, `arranger`, `transcriber`, `album`
+  - `source` (original score / video URL)
+  - `license` (SPDX names + Public Domain + Unknown via combobox)
+  - `difficulty` (1–5)
+  - `style`, `techniques` (multi-value, comma-separated)
+  - `changelog` (free text; semicolons separate items)
+  All fields are optional, round-trip through the parser/serializer, and
+  show up untouched in `index.json` for the community view to surface.
+- **Score-bank starter template** at `docs/community-starter/` — README +
+  GitHub Actions workflow + slim header parser + buildIndex script. Fork
+  it, drop `.drumtab` files into `scores/`, push to `main`, and CI
+  rebuilds `index.json` on every commit.
+
+### Changed
+
+- Parser registers each new meta header explicitly. Unknown headers still
+  warn — the new fields are part of the recognised vocabulary, not silent
+  passthrough.
+
 ## [2026.05.06.1]
 
 ### Added
