@@ -402,6 +402,7 @@ const zh: Dict = {
   "community.score.style": "风格",
   "community.score.techniques": "技巧",
   "community.score.updated_at": "更新时间",
+  "community.back_to_list": "← 返回列表",
 };
 
 const en: Dict = {
@@ -784,6 +785,7 @@ const en: Dict = {
   "community.score.style": "Style",
   "community.score.techniques": "Techniques",
   "community.score.updated_at": "Updated",
+  "community.back_to_list": "← Back to list",
 };
 
 export const dict: Record<Locale, Dict> = { zh, en };

@@ -132,6 +132,35 @@ describe("CommunityBrowse", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("renders a back-to-list button after a score is selected", async () => {
+    mockFetchOnce({
+      generatedAt: "x",
+      scores: [
+        { slug: "demo", path: "scores/demo.drumtab", title: "Demo Track" },
+      ],
+    });
+    render(
+      <CommunityBrowse open onClose={() => {}} onImport={() => {}} />,
+    );
+    await waitFor(() => {
+      expect(dialog()?.textContent).toMatch(/Demo Track/);
+    });
+    const buttons = Array.from(
+      dialog()!.querySelectorAll<HTMLButtonElement>("button"),
+    );
+    const row = buttons.find((b) => b.textContent?.includes("Demo Track"));
+    fireEvent.click(row!);
+    await waitFor(() => {
+      expect(dialog()?.textContent).toMatch(/Back to list/);
+    });
+    const back = Array.from(
+      dialog()!.querySelectorAll<HTMLButtonElement>("button"),
+    ).find((b) => b.textContent?.includes("Back to list"));
+    fireEvent.click(back!);
+    // After clicking back the open-in-editor cta disappears (no detail).
+    expect(dialog()?.textContent).not.toMatch(/Open in editor/);
+  });
+
   it("shows an error and a retry button when index fetch fails", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       (async () => {

@@ -196,7 +196,14 @@ export function CommunityBrowse({ open, onClose, onImport }: Props) {
             </div>
 
             <div className="flex min-h-0 flex-1">
-              <div className="min-h-0 flex-1 overflow-y-auto border-r border-stone-200 px-6 py-4">
+              {/* Below sm: list and detail are mutually exclusive — picking
+                  a score swaps the list for its detail with a back button.
+                  At sm and above the two share the modal as before. */}
+              <div
+                className={`min-h-0 flex-1 overflow-y-auto px-6 py-4 sm:border-r sm:border-stone-200 ${
+                  selected ? "hidden sm:block" : "block"
+                }`}
+              >
                 <ScoreList
                   load={load}
                   onSelect={(s) => setSelected(s)}
@@ -215,15 +222,28 @@ export function CommunityBrowse({ open, onClose, onImport }: Props) {
                   }}
                 />
               </div>
-              <aside className="hidden w-[320px] min-h-0 overflow-y-auto px-6 py-4 sm:block">
+              <aside
+                className={`min-h-0 overflow-y-auto px-6 py-4 sm:block sm:w-[320px] ${
+                  selected ? "flex-1 sm:flex-none" : "hidden"
+                }`}
+              >
                 {selected ? (
-                  <ScoreDetail
-                    entry={selected}
-                    onOpen={() => handleOpenScore(selected)}
-                    busy={openingPath === selected.path}
-                  />
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(null)}
+                      className="motion-press mb-3 -ml-1 inline-flex items-center rounded-md px-1 py-1 text-[12px] font-semibold text-stone-600 hover:bg-stone-100 hover:text-stone-900 sm:hidden"
+                    >
+                      {t("community.back_to_list")}
+                    </button>
+                    <ScoreDetail
+                      entry={selected}
+                      onOpen={() => handleOpenScore(selected)}
+                      busy={openingPath === selected.path}
+                    />
+                  </>
                 ) : (
-                  <p className="text-sm text-stone-500">
+                  <p className="hidden text-sm text-stone-500 sm:block">
                     {t("community.score.no_selection")}
                   </p>
                 )}
