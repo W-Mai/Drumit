@@ -68,6 +68,7 @@ import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
+import { MetaForm, type ScoreMetaPatch } from "./components/MetaForm";
 import { CommunityBrowse } from "./components/CommunityBrowse";
 import { ThemeToggle, LocaleToggle } from "./components/ThemeLocaleToggles";
 import { SavedIndicator } from "./components/SavedIndicator";
@@ -191,6 +192,7 @@ function AppInner() {
   const [showLabels, setShowLabels] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [metaOpen, setMetaOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
@@ -992,6 +994,24 @@ function AppInner() {
     });
   }
 
+  function handleMetaSave(patch: ScoreMetaPatch) {
+    const next: Score = {
+      ...score,
+      slug: patch.slug,
+      composer: patch.composer,
+      arranger: patch.arranger,
+      transcriber: patch.transcriber,
+      album: patch.album,
+      sourceUrl: patch.sourceUrl,
+      license: patch.license,
+      difficulty: patch.difficulty,
+      style: patch.style,
+      techniques: patch.techniques,
+      changelog: patch.changelog,
+    };
+    writeActiveDocSource(serializeScore(next));
+  }
+
   return (
     <HotkeyContextProvider>
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-stone-50">
@@ -1065,6 +1085,27 @@ function AppInner() {
           </a>
           {/* key forces a remount so "just now" state resets without setState-in-effect */}
           <SavedIndicator key={savedAt ?? 0} savedAt={savedAt} />
+          <button
+            type="button"
+            onClick={() => setMetaOpen(true)}
+            title={t("header.score_info")}
+            aria-label={t("header.score_info")}
+            className="motion-press flex size-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="size-[14px]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L3 13V3h10l7.59 7.59a2 2 0 0 1 0 2.82Z" />
+              <circle cx="7.5" cy="7.5" r=".75" fill="currentColor" />
+            </svg>
+          </button>
           <LocaleToggle />
           <ThemeToggle />
           <button
@@ -1078,6 +1119,12 @@ function AppInner() {
           </button>
         </div>
       </header>
+      <MetaForm
+        open={metaOpen}
+        score={score}
+        onClose={() => setMetaOpen(false)}
+        onSave={handleMetaSave}
+      />
       <CommunityBrowse
         open={communityOpen}
         onClose={() => setCommunityOpen(false)}
