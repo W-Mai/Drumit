@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-05-07T03:10:19.574Z",
+  "scores": [
+    {
+      "slug": "example-funk-groove",
+      "path": "scores/example.drumtab",
+      "title": "Example Funk Groove",
+      "composer": [
+        "J. Doe"
+      ],
+      "arranger": "A. Smith",
+      "album": "Drumit Starter Pack",
+      "license": "CC-BY-4.0",
+      "difficulty": 2,
+      "style": [
+        "funk",
+        "rock"
+      ],
+      "techniques": [
+        "ghost",
+        "accent"
+      ],
+      "tempo": 110,
+      "meter": "4/4"
+    }
+  ]
+}

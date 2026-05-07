@@ -154,6 +154,22 @@ export interface Score {
   tempo?: { bpm: number; note: "quarter" };
   meter: Meter;
   sections: Section[];
+  /** url-safe id, falls back to slugify(title) if empty */
+  slug?: string;
+  composer?: string[];
+  arranger?: string;
+  transcriber?: string;
+  album?: string;
+  /** Stored under header key `source:`; renamed to avoid clashing with Bar.source */
+  sourceUrl?: string;
+  /** SPDX id, "Public Domain", "Unknown", or free text */
+  license?: string;
+  style?: string[];
+  /** 1..5 */
+  difficulty?: number;
+  techniques?: string[];
+  /** Single line; segments joined with "; " */
+  changelog?: string;
 }
 
 export interface Diagnostic {

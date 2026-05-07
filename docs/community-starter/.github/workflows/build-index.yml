@@ -1,0 +1,42 @@
+name: Build score index
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scores/**'
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/build-index.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build index
+        run: bun scripts/buildIndex.ts
+
+      - name: Commit if changed
+        run: |
+          git config user.name "drumit-bot"
+          git config user.email "bot@drumit.local"
+          if ! git diff --quiet index.json; then
+            git add index.json
+            git commit -m "🥁(index): rebuild"
+            git push
+          else
+            echo "index.json already up to date"
+          fi

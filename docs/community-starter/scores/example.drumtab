@@ -1,0 +1,17 @@
+title: Example Funk Groove
+artist: Drumit Demo
+composer: J. Doe
+arranger: A. Smith
+album: Drumit Starter Pack
+tempo: 110
+meter: 4/4
+license: CC-BY-4.0
+difficulty: 2
+style: funk, rock
+techniques: ghost, accent
+slug: example-funk-groove
+changelog: v1 initial
+
+[A]
+| hh: x x x x  bd: o - o -  sn: - o - o |
+| hh: x x x x  bd: o - o -  sn: - o - o |

@@ -1,0 +1,9 @@
+{
+  "name": "drumit-score-bank-starter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:index": "bun scripts/buildIndex.ts"
+  }
+}

@@ -13,8 +13,27 @@ export function serializeScore(score: Score): string {
 
   lines.push(`title: ${score.title}`);
   if (score.artist) lines.push(`artist: ${score.artist}`);
+  if (score.composer && score.composer.length > 0) {
+    lines.push(`composer: ${score.composer.join(", ")}`);
+  }
+  if (score.arranger) lines.push(`arranger: ${score.arranger}`);
+  if (score.transcriber) lines.push(`transcriber: ${score.transcriber}`);
+  if (score.album) lines.push(`album: ${score.album}`);
   if (score.tempo) lines.push(`tempo: ${score.tempo.bpm}`);
   lines.push(`meter: ${score.meter.beats}/${score.meter.beatUnit}`);
+  if (score.license) lines.push(`license: ${score.license}`);
+  if (score.difficulty !== undefined) {
+    lines.push(`difficulty: ${score.difficulty}`);
+  }
+  if (score.style && score.style.length > 0) {
+    lines.push(`style: ${score.style.join(", ")}`);
+  }
+  if (score.techniques && score.techniques.length > 0) {
+    lines.push(`techniques: ${score.techniques.join(", ")}`);
+  }
+  if (score.sourceUrl) lines.push(`source: ${score.sourceUrl}`);
+  if (score.slug) lines.push(`slug: ${score.slug}`);
+  if (score.changelog) lines.push(`changelog: ${score.changelog}`);
   lines.push("");
 
   score.sections.forEach((section, sectionIndex) => {

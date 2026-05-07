@@ -2,6 +2,7 @@ import {
   defaultHeadFor,
   instrumentAliases,
 } from "./instruments";
+import { isValidSlug } from "./slug";
 import type {
   Articulation,
   Bar,
@@ -147,7 +148,90 @@ function applyHeader(
     }
     return;
   }
+  if (applyMetaHeader(score, normalized, value, lineNumber, diagnostics)) {
+    return;
+  }
   diagnostics.push(warn(lineNumber, `Unknown header '${key}' ignored.`));
+}
+
+function applyMetaHeader(
+  score: Score,
+  key: string,
+  value: string,
+  lineNumber: number,
+  diagnostics: Diagnostic[],
+): boolean {
+  const trimmed = value.trim();
+  switch (key) {
+    case "composer": {
+      const parts = splitMultiValue(trimmed);
+      if (parts.length === 0) return true;
+      score.composer = [...(score.composer ?? []), ...parts];
+      return true;
+    }
+    case "arranger":
+      score.arranger = trimmed;
+      return true;
+    case "transcriber":
+      score.transcriber = trimmed;
+      return true;
+    case "album":
+      score.album = trimmed;
+      return true;
+    case "license":
+      score.license = trimmed;
+      return true;
+    case "source":
+      score.sourceUrl = trimmed;
+      return true;
+    case "style": {
+      const parts = splitMultiValue(trimmed);
+      if (parts.length === 0) return true;
+      score.style = [...(score.style ?? []), ...parts];
+      return true;
+    }
+    case "techniques": {
+      const parts = splitMultiValue(trimmed);
+      if (parts.length === 0) return true;
+      score.techniques = [...(score.techniques ?? []), ...parts];
+      return true;
+    }
+    case "difficulty": {
+      const n = Number.parseInt(trimmed, 10);
+      if (Number.isFinite(n) && n >= 1 && n <= 5) {
+        score.difficulty = n;
+      } else {
+        diagnostics.push(
+          error(lineNumber, "Difficulty must be an integer 1..5."),
+        );
+      }
+      return true;
+    }
+    case "slug":
+      if (isValidSlug(trimmed)) {
+        score.slug = trimmed;
+      } else {
+        diagnostics.push(
+          error(
+            lineNumber,
+            "Slug must be lowercase a-z, 0-9, dashes; no leading/trailing dash.",
+          ),
+        );
+      }
+      return true;
+    case "changelog":
+      score.changelog = trimmed;
+      return true;
+    default:
+      return false;
+  }
+}
+
+function splitMultiValue(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 function parseMeter(
