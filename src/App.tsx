@@ -68,6 +68,7 @@ import { HotkeyContextProvider } from "./components/HotkeyContextProvider";
 import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
+import { CommunityBrowse } from "./components/CommunityBrowse";
 import { ThemeToggle, LocaleToggle } from "./components/ThemeLocaleToggles";
 import { SavedIndicator } from "./components/SavedIndicator";
 import { StaffView } from "./notation/staff/renderer";
@@ -190,6 +191,7 @@ function AppInner() {
   const [showLabels, setShowLabels] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
   );
@@ -1026,6 +1028,15 @@ function AppInner() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCommunityOpen(true)}
+            title={t("header.community")}
+            aria-label={t("header.community")}
+            className="motion-press flex h-7 items-center justify-center rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
+          >
+            {t("header.community")}
+          </button>
           <a
             href="https://github.com/W-Mai/Drumit"
             target="_blank"
@@ -1067,6 +1078,11 @@ function AppInner() {
           </button>
         </div>
       </header>
+      <CommunityBrowse
+        open={communityOpen}
+        onClose={() => setCommunityOpen(false)}
+        onImport={handleImportDoc}
+      />
       <AboutModal
         open={aboutOpen}
         onClose={() => setAboutOpen(false)}
