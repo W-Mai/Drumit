@@ -9,16 +9,13 @@ interface Stored {
 }
 
 const DEFAULT_SOURCES: SourceConfig[] = [
-  // Placeholder: a starter community repo. Users can remove it or add their
-  // own. owner/repo are intentionally generic so a real public repo can be
-  // wired up later without breaking persisted data on existing devices.
   {
     id: "github:drumit-community/scores",
     kind: "github",
     owner: "drumit-community",
     repo: "scores",
     branch: "main",
-    displayName: "Drumit Community (placeholder)",
+    displayName: "Drumit Community",
   },
 ];
 
