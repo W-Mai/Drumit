@@ -28,6 +28,23 @@ export type SourceConfig =
       repo: string;
       branch?: string;
       displayName: string;
+    }
+  | {
+      id: string;
+      kind: "gitee";
+      owner: string;
+      repo: string;
+      branch?: string;
+      displayName: string;
+    }
+  | {
+      id: string;
+      kind: "gitea";
+      host: string;
+      owner: string;
+      repo: string;
+      branch?: string;
+      displayName: string;
     };
 
 export interface LoadedScore {

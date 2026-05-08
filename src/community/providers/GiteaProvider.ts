@@ -6,31 +6,29 @@ import type {
 } from "../GitProvider";
 import { parseIndexJson } from "./shared";
 
-const RAW_BASE = "https://raw.githubusercontent.com";
-
-export class GitHubProvider implements GitProvider {
+export class GiteaProvider implements GitProvider {
   readonly id: string;
   readonly displayName: string;
+  private readonly host: string;
   private readonly owner: string;
   private readonly repo: string;
   private readonly branch: string;
   private readonly fetchImpl: typeof fetch;
 
-  constructor(config: SourceConfig & { kind: "github" }, fetchImpl?: typeof fetch) {
+  constructor(config: SourceConfig & { kind: "gitea" }, fetchImpl?: typeof fetch) {
     this.id = config.id;
     this.displayName = config.displayName;
+    const raw = config.host.replace(/\/+$/, "");
+    this.host = raw.startsWith("http") ? raw : `https://${raw}`;
     this.owner = config.owner;
     this.repo = config.repo;
     this.branch = config.branch ?? "main";
-    // Allow tests to inject a stub; otherwise default to global fetch and
-    // bind to globalThis so methods don't lose `this` when fetched off the
-    // global.
     this.fetchImpl = fetchImpl ?? ((...args) => fetch(...args));
   }
 
   private rawUrl(path: string): string {
     const trimmed = path.replace(/^\/+/, "");
-    return `${RAW_BASE}/${this.owner}/${this.repo}/${this.branch}/${trimmed}`;
+    return `${this.host}/${this.owner}/${this.repo}/raw/branch/${this.branch}/${trimmed}`;
   }
 
   async loadIndex(): Promise<ScoreIndex> {
@@ -39,12 +37,9 @@ export class GitHubProvider implements GitProvider {
   }
 
   async loadScore(path: string): Promise<LoadedScore> {
-    const source = await this.getText(path);
-    return { source };
+    return { source: await this.getText(path) };
   }
 
-  // One automatic retry covers transient hiccups (DNS warmup, brief 5xx)
-  // without amplifying real outages into long pauses.
   private async getText(path: string): Promise<string> {
     const url = this.rawUrl(path);
     let lastErr: unknown = null;
@@ -52,9 +47,7 @@ export class GitHubProvider implements GitProvider {
       try {
         const res = await this.fetchImpl(url);
         if (!res.ok) {
-          throw new Error(
-            `GET ${url} failed: ${res.status} ${res.statusText}`,
-          );
+          throw new Error(`GET ${url} failed: ${res.status} ${res.statusText}`);
         }
         return await res.text();
       } catch (err) {

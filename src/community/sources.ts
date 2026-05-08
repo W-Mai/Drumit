@@ -63,3 +63,15 @@ export function removeSource(id: string): SourceConfig[] {
 export function makeGithubSourceId(owner: string, repo: string): string {
   return `github:${owner}/${repo}`;
 }
+
+export function makeGiteeSourceId(owner: string, repo: string): string {
+  return `gitee:${owner}/${repo}`;
+}
+
+export function makeGiteaSourceId(
+  host: string,
+  owner: string,
+  repo: string,
+): string {
+  return `gitea:${host}/${owner}/${repo}`;
+}

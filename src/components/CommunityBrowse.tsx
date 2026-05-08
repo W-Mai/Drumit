@@ -6,6 +6,8 @@ import {
   addSource,
   listSources,
   makeGithubSourceId,
+  makeGiteeSourceId,
+  makeGiteaSourceId,
   makeProvider,
   removeSource,
   type GitProvider,
@@ -430,7 +432,12 @@ function AddSourceDialog({
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [name, setName] = useState("");
-  const valid = owner.trim() !== "" && repo.trim() !== "";
+  const [kind, setKind] = useState<"github" | "gitee" | "gitea">("github");
+  const [host, setHost] = useState("");
+  const valid =
+    owner.trim() !== "" &&
+    repo.trim() !== "" &&
+    (kind !== "gitea" || host.trim() !== "");
   return (
     <motion.div
       role="dialog"
@@ -454,19 +461,47 @@ function AddSourceDialog({
           if (!valid) return;
           const o = owner.trim();
           const r = repo.trim();
-          onAdd({
-            id: makeGithubSourceId(o, r),
-            kind: "github",
-            owner: o,
-            repo: r,
-            branch: branch.trim() || undefined,
-            displayName: name.trim() || `${o}/${r}`,
-          });
+          const b = branch.trim() || undefined;
+          const dn = name.trim() || `${o}/${r}`;
+          if (kind === "gitee") {
+            onAdd({ id: makeGiteeSourceId(o, r), kind: "gitee", owner: o, repo: r, branch: b, displayName: dn });
+          } else if (kind === "gitea") {
+            const h = host.trim().replace(/^https?:\/\//, "");
+            onAdd({ id: makeGiteaSourceId(h, o, r), kind: "gitea", host: h, owner: o, repo: r, branch: b, displayName: dn });
+          } else {
+            onAdd({ id: makeGithubSourceId(o, r), kind: "github", owner: o, repo: r, branch: b, displayName: dn });
+          }
         }}
       >
         <h3 className="font-serif text-base font-semibold">
           {t("community.source.add_title")}
         </h3>
+        <label className="block">
+          <span className="mb-1 block text-[12px] font-semibold text-stone-700">
+            {t("community.source.add_kind")}
+          </span>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as typeof kind)}
+            className="w-full rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-sm"
+          >
+            <option value="github">GitHub</option>
+            <option value="gitee">Gitee</option>
+            <option value="gitea">Gitea / Forgejo / Codeberg</option>
+          </select>
+        </label>
+        {kind === "gitea" ? (
+          <input
+            type="text"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            placeholder={t("community.source.add_host")}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            className="w-full rounded-md border border-stone-200 px-2.5 py-1.5 text-sm"
+          />
+        ) : null}
         <input
           type="text"
           value={owner}
