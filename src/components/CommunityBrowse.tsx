@@ -195,15 +195,8 @@ export function CommunityBrowse({ open, onClose, onImport }: Props) {
               ) : null}
             </div>
 
-            <div className="flex min-h-0 flex-1">
-              {/* Below sm: list and detail are mutually exclusive — picking
-                  a score swaps the list for its detail with a back button.
-                  At sm and above the two share the modal as before. */}
-              <div
-                className={`min-h-0 flex-1 overflow-y-auto px-6 py-4 sm:border-r sm:border-stone-200 ${
-                  selected ? "hidden sm:block" : "block"
-                }`}
-              >
+            <div className="relative flex min-h-0 flex-1">
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 sm:border-r sm:border-stone-200">
                 <ScoreList
                   load={load}
                   onSelect={(s) => setSelected(s)}
@@ -222,32 +215,27 @@ export function CommunityBrowse({ open, onClose, onImport }: Props) {
                   }}
                 />
               </div>
-              <aside
-                className={`min-h-0 overflow-y-auto px-6 py-4 sm:block sm:w-[320px] ${
-                  selected ? "flex-1 sm:flex-none" : "hidden"
-                }`}
-              >
+              <aside className="hidden min-h-0 overflow-y-auto px-6 py-4 sm:block sm:w-[320px]">
                 {selected ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setSelected(null)}
-                      className="motion-press mb-3 -ml-1 inline-flex items-center rounded-md px-1 py-1 text-[12px] font-semibold text-stone-600 hover:bg-stone-100 hover:text-stone-900 sm:hidden"
-                    >
-                      {t("community.back_to_list")}
-                    </button>
-                    <ScoreDetail
-                      entry={selected}
-                      onOpen={() => handleOpenScore(selected)}
-                      busy={openingPath === selected.path}
-                    />
-                  </>
+                  <ScoreDetail
+                    entry={selected}
+                    onOpen={() => handleOpenScore(selected)}
+                    busy={openingPath === selected.path}
+                  />
                 ) : (
-                  <p className="hidden text-sm text-stone-500 sm:block">
+                  <p className="text-sm text-stone-500">
                     {t("community.score.no_selection")}
                   </p>
                 )}
               </aside>
+              <MobileDetailSheet
+                entry={selected}
+                onClose={() => setSelected(null)}
+                onOpen={() =>
+                  selected ? handleOpenScore(selected) : undefined
+                }
+                busy={selected ? openingPath === selected.path : false}
+              />
             </div>
           </motion.div>
         </motion.div>
@@ -526,5 +514,69 @@ function AddSourceDialog({
         </div>
       </motion.form>
     </motion.div>
+  );
+}
+
+function MobileDetailSheet({
+  entry,
+  onClose,
+  onOpen,
+  busy,
+}: {
+  entry: ScoreIndexEntry | null;
+  onClose: () => void;
+  onOpen: () => void;
+  busy: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <AnimatePresence>
+      {entry ? (
+        <motion.div
+          className="absolute inset-0 z-10 flex flex-col justify-end sm:hidden"
+          initial={{ pointerEvents: "none" }}
+          animate={{ pointerEvents: "auto" }}
+          exit={{ pointerEvents: "none" }}
+        >
+          <motion.div
+            className="absolute inset-0 bg-black/30"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          />
+          <motion.div
+            // drag handle gives users a draggable lip; releasing past
+            // ~80px or with downward velocity dismisses, mirroring iOS.
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 80 || info.velocity.y > 500) onClose();
+            }}
+            className="
+              relative max-h-[75dvh] overflow-y-auto rounded-t-2xl bg-white
+              px-6 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl
+            "
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+          >
+            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-stone-300" />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("common.close")}
+              className="motion-press absolute top-3 right-3 flex size-7 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900"
+            >
+              <span className="text-base leading-none">×</span>
+            </button>
+            <ScoreDetail entry={entry} onOpen={onOpen} busy={busy} />
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }

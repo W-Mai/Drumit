@@ -132,7 +132,7 @@ describe("CommunityBrowse", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a back-to-list button after a score is selected", async () => {
+  it("opens a mobile bottom sheet for the selected score", async () => {
     mockFetchOnce({
       generatedAt: "x",
       scores: [
@@ -145,20 +145,18 @@ describe("CommunityBrowse", () => {
     await waitFor(() => {
       expect(dialog()?.textContent).toMatch(/Demo Track/);
     });
-    const buttons = Array.from(
+    // No sheet before selection.
+    expect(dialog()!.querySelector(".sm\\:hidden.absolute")).toBeNull();
+    const row = Array.from(
       dialog()!.querySelectorAll<HTMLButtonElement>("button"),
-    );
-    const row = buttons.find((b) => b.textContent?.includes("Demo Track"));
+    ).find((b) => b.textContent?.includes("Demo Track"));
     fireEvent.click(row!);
+    // Selection: a sheet with sm:hidden mounts and contains the detail.
     await waitFor(() => {
-      expect(dialog()?.textContent).toMatch(/Back to list/);
+      const sheet = dialog()!.querySelector(".sm\\:hidden");
+      expect(sheet).not.toBeNull();
+      expect(sheet!.textContent).toMatch(/Open in editor/);
     });
-    const back = Array.from(
-      dialog()!.querySelectorAll<HTMLButtonElement>("button"),
-    ).find((b) => b.textContent?.includes("Back to list"));
-    fireEvent.click(back!);
-    // After clicking back the open-in-editor cta disappears (no detail).
-    expect(dialog()?.textContent).not.toMatch(/Open in editor/);
   });
 
   it("shows an error and a retry button when index fetch fails", async () => {
