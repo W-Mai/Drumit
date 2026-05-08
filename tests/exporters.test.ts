@@ -35,6 +35,44 @@ describe("renderScoreToSvg", () => {
     expect(occurrences.length).toBeGreaterThan(0);
     expect(inlined.length).toBeGreaterThanOrEqual(occurrences.length);
   });
+
+  it("never emits two style attributes on the same element", async () => {
+    const { score: metaScore } = parseDrumtab(
+      `title: T\ncomposer: A\nlicense: MIT\nmeter: 4/4\n[A]\n| hh: x x x x |\n`,
+    );
+    const svg = await renderScoreToSvg(metaScore);
+    // Match each <text ...> opening tag and ensure it carries at most one
+    // style="…" attribute (HTML/XML treats a duplicate as undefined).
+    const tags = svg.match(/<text\b[^>]*>/g) ?? [];
+    for (const tag of tags) {
+      const styleCount = (tag.match(/\sstyle="/g) ?? []).length;
+      expect(styleCount).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("renders the license tag in upper case for a meta-rich score", async () => {
+    const { score: metaScore } = parseDrumtab(
+      `title: T\ncomposer: A\nlicense: cc-by-4.0\nmeter: 4/4\n[A]\n| hh: x x x x |\n`,
+    );
+    const svg = await renderScoreToSvg(metaScore);
+    expect(svg).toContain("CC-BY-4.0");
+    expect(svg).not.toMatch(/>cc-by-4\.0</);
+  });
+
+  it("INLINE_CSS covers every fill-stone-* class actually used", async () => {
+    const svg = await renderScoreToSvg(score);
+    const usedFillStone = new Set<string>();
+    const re = /class="([^"]*)"/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(svg))) {
+      for (const cls of m[1].split(/\s+/)) {
+        if (/^fill-stone-\d+$/.test(cls)) usedFillStone.add(cls);
+      }
+    }
+    for (const cls of usedFillStone) {
+      expect(svg).toContain(`.${cls} { fill:`);
+    }
+  });
 });
 
 describe("postProcessSvg", () => {

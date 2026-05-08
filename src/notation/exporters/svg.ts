@@ -12,6 +12,7 @@ export const INLINE_CSS = `
   .fill-stone-50 { fill: #fafaf9; }
   .fill-stone-400 { fill: #a8a29e; }
   .fill-stone-500 { fill: #78716c; }
+  .fill-stone-600 { fill: #57534e; }
   .fill-stone-700 { fill: #44403c; }
   .fill-stone-900 { fill: #1c1917; }
   .fill-amber-100 { fill: #fef3c7; }
@@ -267,6 +268,7 @@ const CLASS_TO_FILL: Record<string, string> = {
   "fill-stone-300": "var(--color-stone-300)",
   "fill-stone-400": "var(--color-stone-400)",
   "fill-stone-500": "var(--color-stone-500)",
+  "fill-stone-600": "var(--color-stone-600)",
   "fill-stone-700": "var(--color-stone-700)",
   "fill-stone-900": "var(--color-stone-900)",
   "fill-amber-100": "var(--color-amber-100)",

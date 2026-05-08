@@ -363,10 +363,9 @@ function ChartHeader({
           x={layout.contentRight}
           y={38}
           textAnchor="end"
-          className="fill-stone-400 text-[10px] font-semibold uppercase"
-          style={{ letterSpacing: "0.04em" }}
+          className="fill-stone-400 text-[10px] font-semibold tracking-wider"
         >
-          {layout.license}
+          {layout.license.toUpperCase()}
         </text>
       ) : null}
     </g>
