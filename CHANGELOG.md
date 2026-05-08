@@ -11,6 +11,40 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.08]
+
+> Polish pass on top of v2026.05.07's community release: meta is now
+> visible everywhere it should be, mobile finally has a real detail
+> view, and SVG / PNG exports stop dropping the license line.
+
+### Added
+
+- **ScoreInfoStrip above the playback area.** Title, subtitle (composer
+  · album · arranger), difficulty stars, style + technique chips, and
+  license — all surfaced on every doc, on every viewport. Tap to edit.
+- **SVG / PDF / PNG exports now carry the meta header.** A subtitle row
+  joins the existing title/meter/tempo line whenever the score has
+  composer / album / arranger filled in; license rides the right side
+  of the meter row. Bare scores keep their original height.
+- **Mobile bottom sheet for community score detail.** Picking a score
+  on phone-sized viewports floats the detail up as a draggable sheet
+  (drag down / tap backdrop / × to dismiss) instead of hiding under the
+  list. Desktop layout is unchanged.
+
+### Fixed
+
+- **SVG export rendered the license tag in default-black.** Cause: a
+  React-side inline `style` collided with the post-processor's
+  className-derived `style`, producing two `style="…"` attributes that
+  XML parsers silently merged into one. License row now uses
+  `tracking-wider` plus a string `.toUpperCase()`, so a single style
+  attribute survives the round trip.
+- **`fill-stone-600` was missing from `INLINE_CSS`.** Any element using
+  that class — including the staff renderer's italic instructions —
+  exported as black. Added the mapping plus a regression test that
+  scans the rendered SVG and asserts every `fill-stone-N` class found
+  has a matching CSS rule.
+
 ## [2026.05.07]
 
 > **Major release — Drumit goes social.** Drumit can now browse drum
