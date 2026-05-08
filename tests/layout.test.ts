@@ -842,3 +842,36 @@ describe("intra-beat group layout", () => {
     expect(Math.abs(gaps[0] - gaps[1])).toBeLessThan(0.5);
   });
 });
+
+
+describe("score header — meta drives band height", () => {
+  it("uses the base header band when no v2026.05 meta is present", () => {
+    const layout = layoutScoreOf(
+      `title: Bare\nmeter: 4/4\n[A]\n| hh: x x x x |`,
+    );
+    expect(layout.headerHeight).toBe(54);
+  });
+
+  it("grows the header band when composer is present", () => {
+    const layout = layoutScoreOf(
+      `title: Demo\ncomposer: Alice\nmeter: 4/4\n[A]\n| hh: x x x x |`,
+    );
+    expect(layout.headerHeight).toBeGreaterThan(54);
+  });
+
+  it("does not grow the header band for license alone (it shares the meter row)", () => {
+    const layout = layoutScoreOf(
+      `title: Demo\nlicense: MIT\nmeter: 4/4\n[A]\n| hh: x x x x |`,
+    );
+    expect(layout.headerHeight).toBe(54);
+  });
+
+  it("propagates composer / license / album onto the layout", () => {
+    const layout = layoutScoreOf(
+      `title: Demo\ncomposer: A, B\nalbum: Best\nlicense: MIT\nmeter: 4/4\n[A]\n| hh: x x x x |`,
+    );
+    expect(layout.composer).toEqual(["A", "B"]);
+    expect(layout.album).toBe("Best");
+    expect(layout.license).toBe("MIT");
+  });
+});

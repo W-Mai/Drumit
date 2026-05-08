@@ -98,6 +98,12 @@ export interface LaidOutLayout {
   artist?: string;
   tempo?: string;
   meter: string;
+  composer?: string[];
+  arranger?: string;
+  album?: string;
+  license?: string;
+  /** Resolved height of the header band; the chart starts below this. */
+  headerHeight: number;
   /** Left / right x-coordinates of the content area — titles, dividers
    *  and the first/last bar all snap to these so the header sits flush
    *  with the music grid. */
@@ -136,6 +142,22 @@ export const SECTION_HEADER_HEIGHT = 22;
 // meter signature tokens. Includes breathing room below the divider
 // before the first section tab.
 export const HEADER_BAND_HEIGHT = 54;
+
+/**
+ * Header grows when the score carries v2026.05 distribution meta.
+ * Subtitle row (composer / album / arranger) and license row each add
+ * ~14 px so a bare score still uses the original 54 px.
+ */
+function computeHeaderBand(score: Score): number {
+  const hasSubtitle = !!(
+    (score.composer && score.composer.length > 0) ||
+    score.album ||
+    score.arranger
+  );
+  // license sits in the same row as meter/tempo (right side), so it
+  // costs no extra height; only the subtitle adds vertical space.
+  return HEADER_BAND_HEIGHT + (hasSubtitle ? 14 : 0);
+}
 // Extra room below the last row for beam lines + articulations.
 export const BAR_CONTENT_BOTTOM = 14;
 
@@ -195,7 +217,8 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
   const rows: LaidOutBar[][] = [];
   const sectionHeaders: Array<{ label: string; x: number; y: number }> = [];
   const sectionPlaceholders: LaidOutLayout["sectionPlaceholders"] = [];
-  let y = HEADER_BAND_HEIGHT;
+  const headerBandHeight = computeHeaderBand(score);
+  let y = headerBandHeight;
   let barIndex = 1;
   const PLACEHOLDER_HEIGHT = 40;
 
@@ -240,6 +263,11 @@ export function layoutScore(score: Score, options: LayoutOptions): LaidOutLayout
     artist: score.artist,
     tempo: score.tempo ? `♩ = ${score.tempo.bpm}` : undefined,
     meter: `${score.meter.beats}/${score.meter.beatUnit}`,
+    composer: score.composer,
+    arranger: score.arranger,
+    album: score.album,
+    license: score.license,
+    headerHeight: headerBandHeight,
     contentLeft: leftMargin,
     contentRight: leftMargin + availableWidth,
     sectionHeaders,

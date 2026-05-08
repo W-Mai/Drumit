@@ -122,4 +122,6 @@ export interface StaffLayout {
   title?: string;
   tempo?: string;
   meter: string;
+  /** Vertical space reserved above the first staff for title + meta. */
+  headerHeight: number;
 }

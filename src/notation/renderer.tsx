@@ -178,41 +178,18 @@ export function DrumChart({
 
       {/* Header band: title + metadata, divider underneath. Aligned
           with contentLeft / contentRight so the header flushes with
-          the first/last bar of every row. */}
-      <g>
-        <text
-          x={layout.contentLeft}
-          y={22}
-          className="fill-stone-900 text-[16px] font-bold"
-        >
-          {layout.title}
-        </text>
-        {layout.artist ? (
-          <text
-            x={layout.contentLeft}
-            y={38}
-            className="fill-stone-500 text-[11px] italic"
-          >
-            {layout.artist}
-          </text>
-        ) : null}
-        <text
-          x={layout.contentRight}
-          y={22}
-          textAnchor="end"
-          className="fill-stone-500 text-[11px] font-semibold tabular-nums"
-        >
-          {[layout.meter, layout.tempo].filter(Boolean).join("   ")}
-        </text>
-        <line
-          x1={layout.contentLeft}
-          x2={layout.contentRight}
-          y1={44}
-          y2={44}
-          className="stroke-stone-300"
-          strokeWidth={1}
-        />
-      </g>
+          the first/last bar of every row. The divider rides at
+          headerHeight - 10 so adding a subtitle row pushes everything
+          down without leaving a gap. */}
+      <ChartHeader layout={layout} />
+      <line
+        x1={layout.contentLeft}
+        x2={layout.contentRight}
+        y1={layout.headerHeight - 10}
+        y2={layout.headerHeight - 10}
+        className="stroke-stone-300"
+        strokeWidth={1}
+      />
 
       {/* Bookmark tab: top corners rounded, bottom corners square so
           the label sits flush against the bar row beneath it. */}
@@ -339,6 +316,60 @@ export function DrumChart({
         }),
       )}
     </svg>
+  );
+}
+
+function ChartHeader({
+  layout,
+}: {
+  layout: import("./layout").LaidOutLayout;
+}) {
+  const composer = (layout.composer ?? []).join(", ");
+  const subtitleParts = [
+    composer || (layout.artist ?? ""),
+    layout.album ?? "",
+    layout.arranger ? `arr. ${layout.arranger}` : "",
+  ].filter(Boolean);
+  const subtitle = subtitleParts.join(" · ");
+  const meterTempo = [layout.meter, layout.tempo].filter(Boolean).join("   ");
+  return (
+    <g>
+      <text
+        x={layout.contentLeft}
+        y={22}
+        className="fill-stone-900 text-[16px] font-bold"
+      >
+        {layout.title}
+      </text>
+      {subtitle ? (
+        <text
+          x={layout.contentLeft}
+          y={38}
+          className="fill-stone-500 text-[11px] italic"
+        >
+          {subtitle}
+        </text>
+      ) : null}
+      <text
+        x={layout.contentRight}
+        y={22}
+        textAnchor="end"
+        className="fill-stone-500 text-[11px] font-semibold tabular-nums"
+      >
+        {meterTempo}
+      </text>
+      {layout.license ? (
+        <text
+          x={layout.contentRight}
+          y={38}
+          textAnchor="end"
+          className="fill-stone-400 text-[10px] font-semibold uppercase"
+          style={{ letterSpacing: "0.04em" }}
+        >
+          {layout.license}
+        </text>
+      ) : null}
+    </g>
   );
 }
 

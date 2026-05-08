@@ -69,6 +69,7 @@ import { HoverClickPopover } from "./components/HoverClickPopover";
 import { ExportMenu } from "./components/ExportMenu";
 import { AboutModal } from "./components/AboutModal";
 import { MetaForm, type ScoreMetaPatch } from "./components/MetaForm";
+import { ScoreInfoStrip } from "./components/ScoreInfoStrip";
 import { CommunityBrowse } from "./components/CommunityBrowse";
 import { ThemeToggle, LocaleToggle } from "./components/ThemeLocaleToggles";
 import { SavedIndicator } from "./components/SavedIndicator";
@@ -1203,6 +1204,7 @@ function AppInner() {
             : "pb-[calc(3rem+max(0.5rem,env(safe-area-inset-bottom)))]",
         )}
       >
+        <ScoreInfoStrip score={score} onEdit={() => setMetaOpen(true)} />
         <PlaybackBar
           ref={playbackRef}
           score={score}

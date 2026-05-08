@@ -15,7 +15,24 @@ import type {
   VoicePosition,
 } from "./types";
 
-const HEADER_HEIGHT = 42;
+const HEADER_BASE = 42;
+
+/**
+ * Header grows when the score carries the v2026.05 meta fields. Each row
+ * is ~14 px; we fold composer/album into a subtitle row and license into
+ * the same row (right-aligned). Style chips are not drawn in the staff
+ * header (the editor strip already shows them) — they'd clash with the
+ * tuplet brackets on the first system.
+ */
+function computeHeaderHeight(score: Score): number {
+  const hasSubtitle = !!(
+    (score.composer && score.composer.length > 0) ||
+    score.album ||
+    score.arranger ||
+    score.license
+  );
+  return HEADER_BASE + (hasSubtitle ? 18 : 0);
+}
 /** Space between the title row and the first staff. Must clear the
  *  tallest over-staff decoration on the top system:
  *    - tuplet brackets over hi-hat (step −5) extend ~45 px above the
@@ -56,7 +73,8 @@ export function layoutStaff(
   const barWidth = availableForBars / barsPerSystem;
 
   const systems: StaffSystem[] = [];
-  let y = HEADER_HEIGHT + STAFF_TOP_PAD;
+  const headerHeight = computeHeaderHeight(score);
+  let y = headerHeight + STAFF_TOP_PAD;
   for (let i = 0; i < barsFlat.length; i += barsPerSystem) {
     const slice = barsFlat.slice(i, i + barsPerSystem);
     let x = sideMargin + CLEF_PLUS_METER_WIDTH;
@@ -86,6 +104,7 @@ export function layoutStaff(
     title: score.title,
     tempo: score.tempo ? `♩ = ${score.tempo.bpm}` : undefined,
     meter: `${score.meter.beats}/${score.meter.beatUnit}`,
+    headerHeight,
   };
 }
 

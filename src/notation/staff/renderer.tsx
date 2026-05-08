@@ -120,26 +120,7 @@ export function StaffView({
         className="fill-stone-50"
       />
 
-      <g>
-        <text
-          x={24}
-          y={22}
-          className="fill-stone-900 font-bold"
-          style={{ fontSize: 16 }}
-        >
-          {score.title}
-        </text>
-        <text
-          x={actualWidth - 24}
-          y={22}
-          textAnchor="end"
-          className="fill-stone-500"
-          style={{ fontSize: 12 }}
-        >
-          {layout.meter}
-          {layout.tempo ? `  ${layout.tempo}` : ""}
-        </text>
-      </g>
+      <ScoreHeader score={score} layout={layout} actualWidth={actualWidth} />
 
       {layout.systems.map((system, index) => (
         <g key={index}>
@@ -169,6 +150,64 @@ export function StaffView({
         </g>
       ))}
     </svg>
+  );
+}
+
+function ScoreHeader({
+  score,
+  layout,
+  actualWidth,
+}: {
+  score: import("../types").Score;
+  layout: import("./types").StaffLayout;
+  actualWidth: number;
+}) {
+  const composer = (score.composer ?? []).join(", ");
+  const subtitleParts = [composer, score.album, score.arranger ? `arr. ${score.arranger}` : ""]
+    .filter(Boolean);
+  const subtitle = subtitleParts.join(" · ");
+  return (
+    <g>
+      <text
+        x={24}
+        y={22}
+        className="fill-stone-900 font-bold"
+        style={{ fontSize: 16 }}
+      >
+        {score.title}
+      </text>
+      <text
+        x={actualWidth - 24}
+        y={22}
+        textAnchor="end"
+        className="fill-stone-500"
+        style={{ fontSize: 12 }}
+      >
+        {layout.meter}
+        {layout.tempo ? `  ${layout.tempo}` : ""}
+      </text>
+      {subtitle ? (
+        <text
+          x={24}
+          y={38}
+          className="fill-stone-600"
+          style={{ fontSize: 11 }}
+        >
+          {subtitle}
+        </text>
+      ) : null}
+      {score.license ? (
+        <text
+          x={actualWidth - 24}
+          y={38}
+          textAnchor="end"
+          className="fill-stone-400"
+          style={{ fontSize: 10, letterSpacing: "0.04em" }}
+        >
+          {score.license.toUpperCase()}
+        </text>
+      ) : null}
+    </g>
   );
 }
 
