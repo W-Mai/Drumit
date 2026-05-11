@@ -754,6 +754,7 @@ function UploadDialog({
           currentSource,
           message,
           auth.accessToken,
+          branch,
         );
         const pr = await provider.openPR(
           `🥁 ${parsed.title}`,
@@ -897,13 +898,18 @@ async function getMainBranchSha(
   branch: string,
   token: string,
 ): Promise<string> {
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`,
-    { headers: { Authorization: `token ${token}` } },
-  );
-  if (!res.ok) throw new Error(`Failed to get branch SHA: ${res.status}`);
-  const data = (await res.json()) as { object: { sha: string } };
-  return data.object.sha;
+  for (let i = 0; i < 15; i += 1) {
+    const res = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`,
+      { headers: { Authorization: `token ${token}` } },
+    );
+    if (res.ok) {
+      const data = (await res.json()) as { object: { sha: string } };
+      return data.object.sha;
+    }
+    if (i < 14) await new Promise((r) => setTimeout(r, 2000));
+  }
+  throw new Error(`Branch ${branch} not ready after 30s`);
 }
 
 async function createBranch(

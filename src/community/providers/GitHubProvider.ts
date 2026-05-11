@@ -48,9 +48,11 @@ export class GitHubProvider implements GitProvider {
     source: string,
     message: string,
     token: string,
+    branch?: string,
   ): Promise<{ sha: string }> {
+    const targetBranch = branch ?? this.branch;
     const api = `https://api.github.com/repos/${this.owner}/${this.repo}/contents/${path}`;
-    const existing = await this.fetchImpl(api + `?ref=${this.branch}`, {
+    const existing = await this.fetchImpl(api + `?ref=${targetBranch}`, {
       headers: { Authorization: `token ${token}` },
     });
     let sha: string | undefined;
@@ -61,7 +63,7 @@ export class GitHubProvider implements GitProvider {
     const body: Record<string, string> = {
       message,
       content: btoa(unescape(encodeURIComponent(source))),
-      branch: this.branch,
+      branch: targetBranch,
     };
     if (sha) body.sha = sha;
     const res = await this.fetchImpl(api, {
