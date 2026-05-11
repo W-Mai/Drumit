@@ -725,15 +725,35 @@ function UploadDialog({
     const provider = new GitHubProvider(source);
 
     if (isOwner) {
-      setSteps([{ key: "commit", state: "pending" }]);
+      setSteps([
+        { key: "check", state: "pending" },
+        { key: "commit", state: "pending" },
+      ]);
       setStatus("uploading");
       try {
+        updateStep("check", "running");
+        const remoteContent = await fetchRemoteFileContent(
+          source.owner, source.repo, path, source.branch ?? "main", auth.accessToken,
+        );
+        if (remoteContent !== null && remoteContent.trim() === currentSource.trim()) {
+          updateStep("check", "skipped", t("community.upload.step.no_change"));
+          updateStep("commit", "skipped");
+          setStatus("done");
+          return;
+        }
+        updateStep("check", "done",
+          remoteContent === null
+            ? t("community.upload.step.new_file")
+            : t("community.upload.step.content_changed"),
+        );
         updateStep("commit", "running");
         await provider.upsertScore(path, currentSource, message, auth.accessToken);
         updateStep("commit", "done");
         setStatus("done");
       } catch (err) {
-        updateStep("commit", "error");
+        setSteps((prev) =>
+          prev.map((s) => (s.state === "running" ? { ...s, state: "error" } : s)),
+        );
         setErrorMsg(err instanceof Error ? err.message : String(err));
         setStatus("error");
       }
@@ -741,6 +761,7 @@ function UploadDialog({
       setSteps([
         { key: "fork", state: "pending" },
         { key: "sync", state: "pending" },
+        { key: "check", state: "pending" },
         { key: "branch", state: "pending" },
         { key: "commit", state: "pending" },
         { key: "pr", state: "pending" },
@@ -749,11 +770,39 @@ function UploadDialog({
       try {
         updateStep("fork", "running");
         const fork = await provider.ensureFork(auth.accessToken);
-        updateStep("fork", "done");
+        updateStep(
+          "fork",
+          fork.alreadyExisted ? "skipped" : "done",
+          fork.alreadyExisted ? t("community.upload.step.fork_exists") : undefined,
+        );
 
         updateStep("sync", "running");
         await syncForkWithUpstream(fork.owner, fork.repo, source.branch ?? "main", auth.accessToken);
         updateStep("sync", "done");
+
+        updateStep("check", "running");
+        const remoteContent = await fetchRemoteFileContent(
+          source.kind === "github" ? source.owner : fork.owner,
+          source.kind === "github" ? source.repo : fork.repo,
+          path,
+          source.branch ?? "main",
+          auth.accessToken,
+        );
+        if (remoteContent !== null && remoteContent.trim() === currentSource.trim()) {
+          updateStep("check", "skipped", t("community.upload.step.no_change"));
+          updateStep("branch", "skipped");
+          updateStep("commit", "skipped");
+          updateStep("pr", "skipped");
+          setStatus("done");
+          return;
+        }
+        updateStep(
+          "check",
+          "done",
+          remoteContent === null
+            ? t("community.upload.step.new_file")
+            : t("community.upload.step.content_changed"),
+        );
 
         const forkProvider = new GitHubProvider({
           ...source,
@@ -985,6 +1034,7 @@ async function syncForkWithUpstream(
 const STEP_LABELS: Record<string, { zh: string; en: string }> = {
   fork: { zh: "Fork 仓库", en: "Fork repository" },
   sync: { zh: "同步 Fork 到最新", en: "Sync fork to latest" },
+  check: { zh: "检查远端文件", en: "Check remote file" },
   branch: { zh: "创建分支", en: "Create branch" },
   commit: { zh: "提交文件", en: "Commit file" },
   pr: { zh: "创建 Pull Request", en: "Create Pull Request" },
@@ -1057,4 +1107,19 @@ function parseUploadMeta(source: string): {
   } catch {
     return { title: "Untitled", slug: "untitled", path: "scores/untitled.drumtab" };
   }
+}
+
+async function fetchRemoteFileContent(
+  owner: string,
+  repo: string,
+  path: string,
+  branch: string,
+  token: string,
+): Promise<string | null> {
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `token ${token}` } : {},
+  });
+  if (!res.ok) return null;
+  return res.text();
 }

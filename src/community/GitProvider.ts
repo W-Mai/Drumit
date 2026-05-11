@@ -64,7 +64,7 @@ export interface GitProvider {
     token: string,
     branch?: string,
   ): Promise<{ sha: string }>;
-  ensureFork?(token: string): Promise<{ owner: string; repo: string }>;
+  ensureFork?(token: string): Promise<{ owner: string; repo: string; alreadyExisted: boolean }>;
   openPR?(
     title: string,
     body: string,

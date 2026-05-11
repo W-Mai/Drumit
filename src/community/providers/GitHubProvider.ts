@@ -82,7 +82,28 @@ export class GitHubProvider implements GitProvider {
     return { sha: result.content.sha };
   }
 
-  async ensureFork(token: string): Promise<{ owner: string; repo: string }> {
+  async ensureFork(token: string): Promise<{
+    owner: string;
+    repo: string;
+    alreadyExisted: boolean;
+  }> {
+    const userRes = await this.fetchImpl("https://api.github.com/user", {
+      headers: { Authorization: `token ${token}` },
+    });
+    if (!userRes.ok) throw new Error(`Failed to get user: ${userRes.status}`);
+    const user = (await userRes.json()) as { login: string };
+
+    const existCheck = await this.fetchImpl(
+      `https://api.github.com/repos/${user.login}/${this.repo}`,
+      { headers: { Authorization: `token ${token}` } },
+    );
+    if (existCheck.ok) {
+      const data = (await existCheck.json()) as { fork: boolean };
+      if (data.fork) {
+        return { owner: user.login, repo: this.repo, alreadyExisted: true };
+      }
+    }
+
     const api = `https://api.github.com/repos/${this.owner}/${this.repo}/forks`;
     const res = await this.fetchImpl(api, {
       method: "POST",
@@ -104,7 +125,7 @@ export class GitHubProvider implements GitProvider {
         `https://api.github.com/repos/${forkOwner}/${forkRepo}`,
         { headers: { Authorization: `token ${token}` } },
       );
-      if (check.ok) return { owner: forkOwner, repo: forkRepo };
+      if (check.ok) return { owner: forkOwner, repo: forkRepo, alreadyExisted: false };
     }
     throw new Error("Fork timed out after 60 seconds");
   }
