@@ -408,6 +408,7 @@ const zh: Dict = {
   "community.upload.submit": "发布",
   "community.upload.uploading": "发布中…",
   "community.upload.success": "发布成功！",
+  "community.upload.nothing_changed": "内容无变化，没有需要提交的内容。",
   "community.upload.pr_created": "PR 已创建，等待维护者审核：",
   "community.upload.committed": "已提交到你的仓库，CI 将自动更新 index。",
   "community.upload.error": "发布失败：",
@@ -823,6 +824,8 @@ const en: Dict = {
   "community.upload.submit": "Publish",
   "community.upload.uploading": "Publishing…",
   "community.upload.success": "Published!",
+  "community.upload.nothing_changed":
+    "Content is unchanged — nothing to commit.",
   "community.upload.pr_created": "PR created — waiting for maintainer review:",
   "community.upload.committed":
     "Committed to your repo. CI will update the index automatically.",

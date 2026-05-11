@@ -928,26 +928,34 @@ function UploadDialog({
             ) : null}
             {status === "done" ? (
               <div className="mt-3 space-y-2 text-center">
-                <p className="text-sm font-semibold text-green-700">
-                  {t("community.upload.success")}
-                </p>
-                {resultUrl ? (
+                {steps.some((s) => s.key === "commit" && s.state === "done") ? (
                   <>
-                    <p className="text-[12px] text-stone-600">
-                      {t("community.upload.pr_created")}
+                    <p className="text-sm font-semibold text-green-700">
+                      {t("community.upload.success")}
                     </p>
-                    <a
-                      href={resultUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[12px] text-blue-600 underline break-all"
-                    >
-                      {resultUrl}
-                    </a>
+                    {resultUrl ? (
+                      <>
+                        <p className="text-[12px] text-stone-600">
+                          {t("community.upload.pr_created")}
+                        </p>
+                        <a
+                          href={resultUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[12px] text-blue-600 underline break-all"
+                        >
+                          {resultUrl}
+                        </a>
+                      </>
+                    ) : (
+                      <p className="text-[12px] text-stone-600">
+                        {t("community.upload.committed")}
+                      </p>
+                    )}
                   </>
                 ) : (
-                  <p className="text-[12px] text-stone-600">
-                    {t("community.upload.committed")}
+                  <p className="text-sm text-stone-500">
+                    {t("community.upload.nothing_changed")}
                   </p>
                 )}
               </div>
