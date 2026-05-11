@@ -683,6 +683,16 @@ function UploadDialog({
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
 
+  type StepState = "pending" | "running" | "done" | "skipped" | "error";
+  interface Step { key: string; state: StepState; detail?: string }
+  const [steps, setSteps] = useState<Step[]>([]);
+
+  function updateStep(key: string, state: StepState, detail?: string) {
+    setSteps((prev) =>
+      prev.map((s) => (s.key === key ? { ...s, state, detail: detail ?? s.detail } : s)),
+    );
+  }
+
   const isOwner =
     source.kind !== "gitea" &&
     "owner" in source &&
@@ -706,69 +716,80 @@ function UploadDialog({
 
   async function handleUpload() {
     if (!currentSource.trim() || !message.trim()) return;
-    setStatus("uploading");
-    try {
-      const { path } = parsed;
 
-      if (source.kind !== "github") {
-        throw new Error("Upload currently only supports GitHub sources");
-      }
+    if (source.kind !== "github") {
+      setErrorMsg("Upload currently only supports GitHub sources");
+      setStatus("error");
+      return;
+    }
 
-      const { GitHubProvider } = await import(
-        "../community/providers/GitHubProvider"
-      );
-      const provider = new GitHubProvider(source);
+    const { path } = parsed;
+    const { GitHubProvider } = await import(
+      "../community/providers/GitHubProvider"
+    );
+    const provider = new GitHubProvider(source);
 
-      if (isOwner) {
-        await provider.upsertScore(
-          path,
-          currentSource,
-          message,
-          auth.accessToken,
-        );
+    if (isOwner) {
+      setSteps([{ key: "commit", state: "pending" }]);
+      setStatus("uploading");
+      try {
+        updateStep("commit", "running");
+        await provider.upsertScore(path, currentSource, message, auth.accessToken);
+        updateStep("commit", "done");
         setStatus("done");
-      } else {
+      } catch (err) {
+        updateStep("commit", "error");
+        setErrorMsg(err instanceof Error ? err.message : String(err));
+        setStatus("error");
+      }
+    } else {
+      setSteps([
+        { key: "fork", state: "pending" },
+        { key: "branch", state: "pending" },
+        { key: "commit", state: "pending" },
+        { key: "pr", state: "pending" },
+      ]);
+      setStatus("uploading");
+      try {
+        updateStep("fork", "running");
         const fork = await provider.ensureFork(auth.accessToken);
+        const forkAlreadyExisted = !!fork.owner;
+        updateStep("fork", forkAlreadyExisted ? "done" : "done");
+
         const forkProvider = new GitHubProvider({
           ...source,
           id: `github:${fork.owner}/${fork.repo}`,
           owner: fork.owner,
           repo: fork.repo,
         });
+
+        updateStep("branch", "running");
         const branch = `drumit/${parsed.slug}-${Date.now()}`;
         const mainSha = await getMainBranchSha(
-          fork.owner,
-          fork.repo,
-          source.branch ?? "main",
-          auth.accessToken,
+          fork.owner, fork.repo, source.branch ?? "main", auth.accessToken,
         );
-        await createBranch(
-          fork.owner,
-          fork.repo,
-          branch,
-          mainSha,
-          auth.accessToken,
-        );
-        await forkProvider.upsertScore(
-          path,
-          currentSource,
-          message,
-          auth.accessToken,
-          branch,
-        );
+        await createBranch(fork.owner, fork.repo, branch, mainSha, auth.accessToken);
+        updateStep("branch", "done", branch);
+
+        updateStep("commit", "running");
+        await forkProvider.upsertScore(path, currentSource, message, auth.accessToken, branch);
+        updateStep("commit", "done", path);
+
+        updateStep("pr", "running");
         const pr = await provider.openPR(
-          `🥁 ${parsed.title}`,
-          message,
-          `${fork.owner}:${branch}`,
-          source.branch ?? "main",
-          auth.accessToken,
+          `🥁 ${parsed.title}`, message,
+          `${fork.owner}:${branch}`, source.branch ?? "main", auth.accessToken,
         );
+        updateStep("pr", "done");
         setResultUrl(pr.url);
         setStatus("done");
+      } catch (err) {
+        setSteps((prev) =>
+          prev.map((s) => (s.state === "running" ? { ...s, state: "error" } : s)),
+        );
+        setErrorMsg(err instanceof Error ? err.message : String(err));
+        setStatus("error");
       }
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
-      setStatus("error");
     }
   }
 
@@ -795,7 +816,7 @@ function UploadDialog({
           {t("community.upload.title")}
         </h3>
 
-        {status === "idle" || status === "error" ? (
+        {status === "idle" ? (
           <>
             <section className="space-y-1 rounded-lg border border-stone-200 bg-stone-50 p-3 text-[12px]">
               <div>
@@ -838,11 +859,6 @@ function UploadDialog({
                 className="w-full rounded-md border border-stone-200 px-2.5 py-1.5 text-sm"
               />
             </label>
-            {status === "error" ? (
-              <p className="text-[12px] text-red-600">
-                {t("community.upload.error")}{errorMsg}
-              </p>
-            ) : null}
             <div className="flex justify-end gap-2 pt-1">
               <Button onClick={onClose}>{t("meta.cancel")}</Button>
               <Button
@@ -854,38 +870,46 @@ function UploadDialog({
               </Button>
             </div>
           </>
-        ) : status === "uploading" ? (
-          <p className="py-4 text-center text-sm text-stone-600">
-            {t("community.upload.uploading")}
-          </p>
         ) : (
-          <div className="space-y-2 py-4 text-center">
-            <p className="text-sm font-semibold text-green-700">
-              {t("community.upload.success")}
-            </p>
-            {resultUrl ? (
-              <>
-                <p className="text-[12px] text-stone-600">
-                  {t("community.upload.pr_created")}
-                </p>
-                <a
-                  href={resultUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[12px] text-blue-600 underline break-all"
-                >
-                  {resultUrl}
-                </a>
-              </>
-            ) : (
-              <p className="text-[12px] text-stone-600">
-                {t("community.upload.committed")}
+          <>
+            <StepList steps={steps} />
+            {status === "error" ? (
+              <p className="mt-2 text-[12px] text-red-600">
+                {t("community.upload.error")}{errorMsg}
               </p>
-            )}
-            <div className="pt-2">
-              <Button onClick={onClose}>{t("common.close")}</Button>
+            ) : null}
+            {status === "done" ? (
+              <div className="mt-3 space-y-2 text-center">
+                <p className="text-sm font-semibold text-green-700">
+                  {t("community.upload.success")}
+                </p>
+                {resultUrl ? (
+                  <>
+                    <p className="text-[12px] text-stone-600">
+                      {t("community.upload.pr_created")}
+                    </p>
+                    <a
+                      href={resultUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[12px] text-blue-600 underline break-all"
+                    >
+                      {resultUrl}
+                    </a>
+                  </>
+                ) : (
+                  <p className="text-[12px] text-stone-600">
+                    {t("community.upload.committed")}
+                  </p>
+                )}
+              </div>
+            ) : null}
+            <div className="flex justify-end pt-2">
+              <Button onClick={onClose}>
+                {status === "done" ? t("common.close") : t("meta.cancel")}
+              </Button>
             </div>
-          </div>
+          </>
         )}
       </motion.div>
     </motion.div>
@@ -931,4 +955,56 @@ async function createBranch(
     },
   );
   if (!res.ok) throw new Error(`Failed to create branch: ${res.status}`);
+}
+
+const STEP_LABELS: Record<string, { zh: string; en: string }> = {
+  fork: { zh: "Fork 仓库", en: "Fork repository" },
+  branch: { zh: "创建分支", en: "Create branch" },
+  commit: { zh: "提交文件", en: "Commit file" },
+  pr: { zh: "创建 Pull Request", en: "Create Pull Request" },
+};
+
+const STEP_ICON: Record<string, string> = {
+  pending: "○",
+  running: "◎",
+  done: "✓",
+  skipped: "⊘",
+  error: "✗",
+};
+
+const STEP_COLOR: Record<string, string> = {
+  pending: "text-stone-300",
+  running: "text-amber-500",
+  done: "text-green-600",
+  skipped: "text-stone-400",
+  error: "text-red-600",
+};
+
+function StepList({ steps }: { steps: Array<{ key: string; state: string; detail?: string }> }) {
+  const { t } = useI18n();
+  if (steps.length === 0) return null;
+  return (
+    <ul className="space-y-1.5 py-2">
+      {steps.map((step) => (
+        <li key={step.key} className="flex items-start gap-2 text-[12px]">
+          <span className={`mt-px font-mono font-bold ${STEP_COLOR[step.state] ?? "text-stone-400"}`}>
+            {STEP_ICON[step.state] ?? "○"}
+          </span>
+          <div className="min-w-0">
+            <span className={step.state === "pending" ? "text-stone-400" : "text-stone-700"}>
+              {t(`community.upload.step.${step.key}` as never) ||
+                STEP_LABELS[step.key]?.en ||
+                step.key}
+            </span>
+            {step.detail ? (
+              <span className="ml-1 text-stone-400 break-all">{step.detail}</span>
+            ) : null}
+            {step.state === "running" ? (
+              <span className="ml-1 animate-pulse text-amber-500">…</span>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
