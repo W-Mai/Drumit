@@ -17,6 +17,7 @@ import {
 } from "../community";
 import { Button } from "./ui";
 import { type AuthState, buildAuthorizeUrl } from "../community/auth";
+import { parseDrumtab } from "../notation/parser";
 
 interface Props {
   open: boolean;
@@ -687,11 +688,8 @@ function UploadDialog({
     "owner" in source &&
     source.owner === auth.username;
 
-  async function handleUpload() {
-    if (!currentSource.trim() || !message.trim()) return;
-    setStatus("uploading");
+  const parsed = useMemo(() => {
     try {
-      const { parseDrumtab } = await import("../notation/parser");
       const { score } = parseDrumtab(currentSource);
       const slug =
         score.slug ||
@@ -700,7 +698,17 @@ function UploadDialog({
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-|-$/g, "") ||
         "untitled";
-      const path = `scores/${slug}.drumtab`;
+      return { title: score.title || "Untitled", slug, path: `scores/${slug}.drumtab` };
+    } catch {
+      return { title: "Untitled", slug: "untitled", path: "scores/untitled.drumtab" };
+    }
+  }, [currentSource]);
+
+  async function handleUpload() {
+    if (!currentSource.trim() || !message.trim()) return;
+    setStatus("uploading");
+    try {
+      const { path } = parsed;
 
       if (source.kind !== "github") {
         throw new Error("Upload currently only supports GitHub sources");
@@ -727,7 +735,7 @@ function UploadDialog({
           owner: fork.owner,
           repo: fork.repo,
         });
-        const branch = `drumit/${slug}-${Date.now()}`;
+        const branch = `drumit/${parsed.slug}-${Date.now()}`;
         const mainSha = await getMainBranchSha(
           fork.owner,
           fork.repo,
@@ -748,7 +756,7 @@ function UploadDialog({
           auth.accessToken,
         );
         const pr = await provider.openPR(
-          `🥁 ${score.title || slug}`,
+          `🥁 ${parsed.title}`,
           message,
           `${fork.owner}:${branch}`,
           source.branch ?? "main",
@@ -788,15 +796,35 @@ function UploadDialog({
 
         {status === "idle" || status === "error" ? (
           <>
-            <p className="text-[12px] text-stone-500">
-              {isOwner
-                ? t("community.upload.target_personal")
-                : t("community.upload.target_community")}
-              {" → "}
-              <span className="font-semibold text-stone-700">
-                {source.displayName}
-              </span>
-            </p>
+            <section className="space-y-1 rounded-lg border border-stone-200 bg-stone-50 p-3 text-[12px]">
+              <div>
+                <span className="font-semibold text-stone-600">
+                  {t("community.upload.what_label")}
+                </span>
+                <p className="text-stone-700">
+                  <span className="font-semibold">{parsed.title}</span>
+                  <span className="ml-1 text-stone-400">({parsed.path})</span>
+                </p>
+                <p className="text-stone-400">{t("community.upload.what_desc")}</p>
+              </div>
+              <div className="border-t border-stone-200 pt-1">
+                <span className="font-semibold text-stone-600">
+                  {t("community.upload.where_label")}
+                </span>
+                <p className="text-stone-700">
+                  {isOwner
+                    ? t("community.upload.target_personal")
+                    : t("community.upload.target_community")}
+                  {" → "}
+                  <span className="font-semibold">{source.displayName}</span>
+                </p>
+                <p className="mt-0.5 text-stone-400">
+                  {isOwner
+                    ? t("community.upload.flow_personal")
+                    : t("community.upload.flow_community")}
+                </p>
+              </div>
+            </section>
             <label className="block">
               <span className="mb-1 block text-[12px] font-semibold text-stone-700">
                 {t("community.upload.message_label")}
@@ -835,15 +863,24 @@ function UploadDialog({
               {t("community.upload.success")}
             </p>
             {resultUrl ? (
-              <a
-                href={resultUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[12px] text-blue-600 underline"
-              >
-                {t("community.upload.pr_created")}{resultUrl}
-              </a>
-            ) : null}
+              <>
+                <p className="text-[12px] text-stone-600">
+                  {t("community.upload.pr_created")}
+                </p>
+                <a
+                  href={resultUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[12px] text-blue-600 underline break-all"
+                >
+                  {resultUrl}
+                </a>
+              </>
+            ) : (
+              <p className="text-[12px] text-stone-600">
+                {t("community.upload.committed")}
+              </p>
+            )}
             <div className="pt-2">
               <Button onClick={onClose}>{t("common.close")}</Button>
             </div>
