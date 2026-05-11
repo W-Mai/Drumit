@@ -1116,9 +1116,12 @@ async function fetchRemoteFileContent(
   branch: string,
   token: string,
 ): Promise<string | null> {
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
   const res = await fetch(url, {
-    headers: token ? { Authorization: `token ${token}` } : {},
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: "application/vnd.github.raw+json",
+    },
   });
   if (!res.ok) return null;
   return res.text();
