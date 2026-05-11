@@ -11,6 +11,39 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.09]
+
+> **v2 — Drumit goes read-write.** Sign in with GitHub and upload scores
+> directly from the browser.
+
+### Added
+
+- **Sign in with GitHub.** The Community modal now shows a "Sign in with
+  GitHub" button. OAuth uses the standard Authorization Code flow with a
+  minimal Cloudflare Worker proxy (`workers/oauth-proxy/`) for the token
+  exchange (GitHub's OAuth endpoint lacks CORS headers). Once
+  authenticated, the user's avatar and username appear in the toolbar.
+- **Upload scores.** Authenticated users can upload the current document
+  to any GitHub-hosted source:
+  - **Personal repo** — direct commit via `PUT /contents`
+  - **Community repo** — fork → branch → commit → PR
+  The Upload dialog lets the user pick the target and write a commit
+  message. Progress and errors are shown inline.
+- **Gitee and Gitea providers.** The Community "Add source" dialog now
+  offers GitHub / Gitee / Gitea (including Forgejo and Codeberg). Gitea
+  sources accept a custom host URL.
+
+### Changed
+
+- `GitProvider` interface gains optional `upsertScore`, `ensureFork`,
+  and `openPR` methods; `GitHubProvider` implements all three.
+- `SourceConfig` is now a three-variant discriminated union
+  (`github | gitee | gitea`).
+- `vite.config.ts` uses `loadEnv` to inject `DRUMIT_GITHUB_CLIENT_ID`
+  and `DRUMIT_OAUTH_PROXY_URL` at build time.
+- CI (`pages.yml`) passes the two vars from GitHub Actions Variables
+  into the build step.
+
 ## [2026.05.08]
 
 > Polish pass on top of v2026.05.07's community release: meta is now
