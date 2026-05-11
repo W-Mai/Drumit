@@ -44,6 +44,7 @@ export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, curr
   const [selected, setSelected] = useState<ScoreIndexEntry | null>(null);
   const [adding, setAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [openingPath, setOpeningPath] = useState<string | null>(null);
 
   const activeSource = useMemo(
@@ -85,7 +86,7 @@ export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, curr
     return () => {
       cancelled = true;
     };
-  }, [open, activeSource]);
+  }, [open, activeSource, refreshKey]);
 
   function handleAdd(config: SourceConfig) {
     const next = addSource(config);
@@ -201,6 +202,13 @@ export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, curr
                   {t("community.source.remove")}
                 </Button>
               ) : null}
+              <Button
+                onClick={() => setRefreshKey((k) => k + 1)}
+                disabled={load.kind === "loading"}
+                title={t("community.source.refresh")}
+              >
+                {t("community.source.refresh")}
+              </Button>
               <div className="ml-auto flex items-center gap-2">
                 {auth ? (
                   <>
@@ -295,7 +303,10 @@ export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, curr
           auth={auth}
           source={activeSource}
           currentSource={currentSource ?? ""}
-          onClose={() => setUploading(false)}
+          onClose={(published) => {
+            setUploading(false);
+            if (published) setRefreshKey((k) => k + 1);
+          }}
         />
       ) : null}
     </AnimatePresence>,
@@ -462,9 +473,6 @@ function ScoreDetail({
         <Button variant="primary" onClick={onOpen} disabled={busy}>
           {busy ? t("community.loading") : t("community.score.open")}
         </Button>
-        <p className="mt-2 text-[11px] text-stone-400">
-          {t("community.score.upload_v2_hint")}
-        </p>
       </div>
     </div>
   );
@@ -675,10 +683,12 @@ function UploadDialog({
   auth: AuthState;
   source: SourceConfig;
   currentSource: string;
-  onClose: () => void;
+  onClose: (published: boolean) => void;
 }) {
   const { t } = useI18n();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(
+    () => `🥁 Add ${parsed.title}`,
+  );
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -698,21 +708,20 @@ function UploadDialog({
     "owner" in source &&
     source.owner === auth.username;
 
-  const parsed = useMemo(() => {
-    try {
-      const { score } = parseDrumtab(currentSource);
-      const slug =
-        score.slug ||
-        score.title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") ||
-        "untitled";
-      return { title: score.title || "Untitled", slug, path: `scores/${slug}.drumtab` };
-    } catch {
-      return { title: "Untitled", slug: "untitled", path: "scores/untitled.drumtab" };
-    }
-  }, [currentSource]);
+  let parsedTitle = "Untitled";
+  let parsedSlug = "untitled";
+  try {
+    const { score: s } = parseDrumtab(currentSource);
+    parsedSlug =
+      s.slug ||
+      s.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") ||
+      "untitled";
+    parsedTitle = s.title || "Untitled";
+  } catch { /* keep defaults */ }
+  const parsed = { title: parsedTitle, slug: parsedSlug, path: `scores/${parsedSlug}.drumtab` };
 
   async function handleUpload() {
     if (!currentSource.trim() || !message.trim()) return;
@@ -745,6 +754,7 @@ function UploadDialog({
     } else {
       setSteps([
         { key: "fork", state: "pending" },
+        { key: "sync", state: "pending" },
         { key: "branch", state: "pending" },
         { key: "commit", state: "pending" },
         { key: "pr", state: "pending" },
@@ -753,8 +763,11 @@ function UploadDialog({
       try {
         updateStep("fork", "running");
         const fork = await provider.ensureFork(auth.accessToken);
-        const forkAlreadyExisted = !!fork.owner;
-        updateStep("fork", forkAlreadyExisted ? "done" : "done");
+        updateStep("fork", "done");
+
+        updateStep("sync", "running");
+        await syncForkWithUpstream(fork.owner, fork.repo, source.branch ?? "main", auth.accessToken);
+        updateStep("sync", "done");
 
         const forkProvider = new GitHubProvider({
           ...source,
@@ -797,9 +810,9 @@ function UploadDialog({
     <motion.div
       role="dialog"
       aria-modal="true"
-      className="bg-overlay-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4"
-      onClick={onClose}
-      initial={{ opacity: 0 }}
+       className="bg-overlay-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4"
+       onClick={() => onClose(status === "done")}
+       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
@@ -860,7 +873,7 @@ function UploadDialog({
               />
             </label>
             <div className="flex justify-end gap-2 pt-1">
-              <Button onClick={onClose}>{t("meta.cancel")}</Button>
+              <Button onClick={() => onClose(false)}>{t("meta.cancel")}</Button>
               <Button
                 variant="primary"
                 onClick={handleUpload}
@@ -905,7 +918,7 @@ function UploadDialog({
               </div>
             ) : null}
             <div className="flex justify-end pt-2">
-              <Button onClick={onClose}>
+              <Button onClick={() => onClose(status === "done")}>
                 {status === "done" ? t("common.close") : t("meta.cancel")}
               </Button>
             </div>
@@ -957,8 +970,32 @@ async function createBranch(
   if (!res.ok) throw new Error(`Failed to create branch: ${res.status}`);
 }
 
+async function syncForkWithUpstream(
+  owner: string,
+  repo: string,
+  branch: string,
+  token: string,
+): Promise<void> {
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/merge-upstream`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ branch }),
+    },
+  );
+  // 409 = already up to date (not an error)
+  if (!res.ok && res.status !== 409) {
+    throw new Error(`Failed to sync fork: ${res.status}`);
+  }
+}
+
 const STEP_LABELS: Record<string, { zh: string; en: string }> = {
   fork: { zh: "Fork 仓库", en: "Fork repository" },
+  sync: { zh: "同步 Fork 到最新", en: "Sync fork to latest" },
   branch: { zh: "创建分支", en: "Create branch" },
   commit: { zh: "提交文件", en: "Commit file" },
   pr: { zh: "创建 Pull Request", en: "Create Pull Request" },
