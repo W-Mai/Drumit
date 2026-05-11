@@ -677,11 +677,15 @@ function UploadDialog({
   onClose: () => void;
 }) {
   const { t } = useI18n();
-  const [target, setTarget] = useState<"personal" | "community">("community");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const isOwner =
+    source.kind !== "gitea" &&
+    "owner" in source &&
+    source.owner === auth.username;
 
   async function handleUpload() {
     if (!currentSource.trim() || !message.trim()) return;
@@ -689,18 +693,31 @@ function UploadDialog({
     try {
       const { parseDrumtab } = await import("../notation/parser");
       const { score } = parseDrumtab(currentSource);
-      const slug = score.slug || score.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled";
+      const slug =
+        score.slug ||
+        score.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") ||
+        "untitled";
       const path = `scores/${slug}.drumtab`;
 
       if (source.kind !== "github") {
         throw new Error("Upload currently only supports GitHub sources");
       }
 
-      const { GitHubProvider } = await import("../community/providers/GitHubProvider");
+      const { GitHubProvider } = await import(
+        "../community/providers/GitHubProvider"
+      );
       const provider = new GitHubProvider(source);
 
-      if (target === "personal") {
-        await provider.upsertScore(path, currentSource, message, auth.accessToken);
+      if (isOwner) {
+        await provider.upsertScore(
+          path,
+          currentSource,
+          message,
+          auth.accessToken,
+        );
         setStatus("done");
       } else {
         const fork = await provider.ensureFork(auth.accessToken);
@@ -711,9 +728,25 @@ function UploadDialog({
           repo: fork.repo,
         });
         const branch = `drumit/${slug}-${Date.now()}`;
-        const mainSha = await getMainBranchSha(fork.owner, fork.repo, source.branch ?? "main", auth.accessToken);
-        await createBranch(fork.owner, fork.repo, branch, mainSha, auth.accessToken);
-        await forkProvider.upsertScore(path, currentSource, message, auth.accessToken);
+        const mainSha = await getMainBranchSha(
+          fork.owner,
+          fork.repo,
+          source.branch ?? "main",
+          auth.accessToken,
+        );
+        await createBranch(
+          fork.owner,
+          fork.repo,
+          branch,
+          mainSha,
+          auth.accessToken,
+        );
+        await forkProvider.upsertScore(
+          path,
+          currentSource,
+          message,
+          auth.accessToken,
+        );
         const pr = await provider.openPR(
           `🥁 ${score.title || slug}`,
           message,
@@ -755,28 +788,15 @@ function UploadDialog({
 
         {status === "idle" || status === "error" ? (
           <>
-            <div className="flex gap-2">
-              <label className="flex items-center gap-1 text-[12px]">
-                <input
-                  type="radio"
-                  name="target"
-                  value="community"
-                  checked={target === "community"}
-                  onChange={() => setTarget("community")}
-                />
-                {t("community.upload.target_community")}
-              </label>
-              <label className="flex items-center gap-1 text-[12px]">
-                <input
-                  type="radio"
-                  name="target"
-                  value="personal"
-                  checked={target === "personal"}
-                  onChange={() => setTarget("personal")}
-                />
-                {t("community.upload.target_personal")}
-              </label>
-            </div>
+            <p className="text-[12px] text-stone-500">
+              {isOwner
+                ? t("community.upload.target_personal")
+                : t("community.upload.target_community")}
+              {" → "}
+              <span className="font-semibold text-stone-700">
+                {source.displayName}
+              </span>
+            </p>
             <label className="block">
               <span className="mb-1 block text-[12px] font-semibold text-stone-700">
                 {t("community.upload.message_label")}
