@@ -686,6 +686,12 @@ function UploadDialog({
   onClose: (published: boolean) => void;
 }) {
   const { t } = useI18n();
+  const parsed = parseUploadMeta(currentSource);
+  const isOwner =
+    source.kind !== "gitea" &&
+    "owner" in source &&
+    source.owner === auth.username;
+
   const [message, setMessage] = useState(
     () => `🥁 Add ${parsed.title}`,
   );
@@ -702,26 +708,6 @@ function UploadDialog({
       prev.map((s) => (s.key === key ? { ...s, state, detail: detail ?? s.detail } : s)),
     );
   }
-
-  const isOwner =
-    source.kind !== "gitea" &&
-    "owner" in source &&
-    source.owner === auth.username;
-
-  let parsedTitle = "Untitled";
-  let parsedSlug = "untitled";
-  try {
-    const { score: s } = parseDrumtab(currentSource);
-    parsedSlug =
-      s.slug ||
-      s.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") ||
-      "untitled";
-    parsedTitle = s.title || "Untitled";
-  } catch { /* keep defaults */ }
-  const parsed = { title: parsedTitle, slug: parsedSlug, path: `scores/${parsedSlug}.drumtab` };
 
   async function handleUpload() {
     if (!currentSource.trim() || !message.trim()) return;
@@ -777,7 +763,7 @@ function UploadDialog({
         });
 
         updateStep("branch", "running");
-        const branch = `drumit/${parsed.slug}-${Date.now()}`;
+        const branch = `drumit/${parsed.slug}`;
         const mainSha = await getMainBranchSha(
           fork.owner, fork.repo, source.branch ?? "main", auth.accessToken,
         );
@@ -967,7 +953,10 @@ async function createBranch(
       body: JSON.stringify({ ref: `refs/heads/${branch}`, sha }),
     },
   );
-  if (!res.ok) throw new Error(`Failed to create branch: ${res.status}`);
+  // 422 = branch already exists (idempotent for re-uploads to same slug)
+  if (!res.ok && res.status !== 422) {
+    throw new Error(`Failed to create branch: ${res.status}`);
+  }
 }
 
 async function syncForkWithUpstream(
@@ -1036,7 +1025,7 @@ function StepList({ steps }: { steps: Array<{ key: string; state: string; detail
             {step.detail ? (
               <span className="ml-1 text-stone-400 break-all">{step.detail}</span>
             ) : null}
-            {step.state === "running" ? (
+             {step.state === "running" ? (
               <span className="ml-1 animate-pulse text-amber-500">…</span>
             ) : null}
           </div>
@@ -1044,4 +1033,28 @@ function StepList({ steps }: { steps: Array<{ key: string; state: string; detail
       ))}
     </ul>
   );
+}
+
+function parseUploadMeta(source: string): {
+  title: string;
+  slug: string;
+  path: string;
+} {
+  try {
+    const { score } = parseDrumtab(source);
+    const slug =
+      score.slug ||
+      score.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") ||
+      "untitled";
+    return {
+      title: score.title || "Untitled",
+      slug,
+      path: `scores/${slug}.drumtab`,
+    };
+  } catch {
+    return { title: "Untitled", slug: "untitled", path: "scores/untitled.drumtab" };
+  }
 }

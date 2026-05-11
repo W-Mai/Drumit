@@ -126,6 +126,17 @@ export class GitHubProvider implements GitProvider {
       body: JSON.stringify({ title, body, head, base }),
     });
     if (!res.ok) {
+      if (res.status === 422) {
+        // PR already exists for this head → find it
+        const existing = await this.fetchImpl(
+          `${api}?head=${encodeURIComponent(head)}&state=open`,
+          { headers: { Authorization: `token ${token}` } },
+        );
+        if (existing.ok) {
+          const prs = (await existing.json()) as Array<{ html_url: string }>;
+          if (prs.length > 0) return { url: prs[0].html_url };
+        }
+      }
       const err = await res.text().catch(() => "");
       throw new Error(`openPR failed: ${res.status} ${err}`);
     }
