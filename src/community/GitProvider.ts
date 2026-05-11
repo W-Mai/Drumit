@@ -57,7 +57,18 @@ export interface GitProvider {
   readonly displayName: string;
   loadIndex(): Promise<ScoreIndex>;
   loadScore(path: string): Promise<LoadedScore>;
-  // v2 reservations:
-  // upsertScore?(path: string, source: string, message: string): Promise<void>;
-  // openPR?(...): Promise<{ url: string }>;
+  upsertScore?(
+    path: string,
+    source: string,
+    message: string,
+    token: string,
+  ): Promise<{ sha: string }>;
+  ensureFork?(token: string): Promise<{ owner: string; repo: string }>;
+  openPR?(
+    title: string,
+    body: string,
+    head: string,
+    base: string,
+    token: string,
+  ): Promise<{ url: string }>;
 }

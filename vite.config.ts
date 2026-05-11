@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { execSync } from "node:child_process";
@@ -37,11 +37,20 @@ const buildInfo = {
 // Use a project-scoped base path for production builds so the GitHub Pages
 // deployment at <user>.github.io/Drumit/ serves assets with the correct
 // prefix. Dev keeps / for localhost simplicity.
-export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/Drumit/" : "/",
-  plugins: [react(), tailwindcss()],
-  server: { port: 5173 },
-  define: {
-    __BUILD_INFO__: JSON.stringify(buildInfo),
-  },
-}));
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), "DRUMIT_");
+  return {
+    base: command === "build" ? "/Drumit/" : "/",
+    plugins: [react(), tailwindcss()],
+    server: { port: 5173 },
+    define: {
+      __BUILD_INFO__: JSON.stringify(buildInfo),
+      __DRUMIT_GITHUB_CLIENT_ID__: JSON.stringify(
+        env.DRUMIT_GITHUB_CLIENT_ID || process.env.DRUMIT_GITHUB_CLIENT_ID || "",
+      ),
+      __DRUMIT_OAUTH_PROXY_URL__: JSON.stringify(
+        env.DRUMIT_OAUTH_PROXY_URL || process.env.DRUMIT_OAUTH_PROXY_URL || "",
+      ),
+    },
+  };
+});

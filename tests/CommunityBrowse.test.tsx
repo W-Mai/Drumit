@@ -49,7 +49,7 @@ function mockFetchSequence(handlers: ((url: string) => Response)[]) {
 describe("CommunityBrowse", () => {
   it("renders nothing when closed", () => {
     render(
-      <CommunityBrowse open={false} onClose={() => {}} onImport={() => {}} />,
+      <CommunityBrowse open={false} onClose={() => {}} onImport={() => {}} auth={null} onSignOut={() => {}} />,
     );
     expect(dialog()).toBeNull();
   });
@@ -69,7 +69,7 @@ describe("CommunityBrowse", () => {
       ],
     });
     render(
-      <CommunityBrowse open onClose={() => {}} onImport={() => {}} />,
+      <CommunityBrowse open onClose={() => {}} onImport={() => {}} auth={null} onSignOut={() => {}} />,
     );
     await waitFor(() => {
       expect(dialog()?.textContent).toMatch(/Demo Track/);
@@ -101,7 +101,7 @@ describe("CommunityBrowse", () => {
     const onImport = vi.fn();
     const onClose = vi.fn();
     render(
-      <CommunityBrowse open onClose={onClose} onImport={onImport} />,
+      <CommunityBrowse open onClose={onClose} onImport={onImport} auth={null} onSignOut={() => {}} />,
     );
     await waitFor(() => {
       expect(dialog()?.textContent).toMatch(/Demo Track/);
@@ -140,7 +140,7 @@ describe("CommunityBrowse", () => {
       ],
     });
     render(
-      <CommunityBrowse open onClose={() => {}} onImport={() => {}} />,
+      <CommunityBrowse open onClose={() => {}} onImport={() => {}} auth={null} onSignOut={() => {}} />,
     );
     await waitFor(() => {
       expect(dialog()?.textContent).toMatch(/Demo Track/);
@@ -166,7 +166,7 @@ describe("CommunityBrowse", () => {
       }) as unknown as typeof fetch,
     );
     render(
-      <CommunityBrowse open onClose={() => {}} onImport={() => {}} />,
+      <CommunityBrowse open onClose={() => {}} onImport={() => {}} auth={null} onSignOut={() => {}} />,
     );
     await waitFor(() => {
       expect(dialog()?.textContent).toMatch(/Failed to load: boom/);

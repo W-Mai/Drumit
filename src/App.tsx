@@ -71,6 +71,15 @@ import { AboutModal } from "./components/AboutModal";
 import { MetaForm, type ScoreMetaPatch } from "./components/MetaForm";
 import { ScoreInfoStrip } from "./components/ScoreInfoStrip";
 import { CommunityBrowse } from "./components/CommunityBrowse";
+import {
+  type AuthState,
+  clearAuth,
+  exchangeCodeForToken,
+  extractOAuthCode,
+  fetchGitHubUser,
+  loadAuth,
+  saveAuth,
+} from "./community/auth";
 import { ThemeToggle, LocaleToggle } from "./components/ThemeLocaleToggles";
 import { SavedIndicator } from "./components/SavedIndicator";
 import { StaffView } from "./notation/staff/renderer";
@@ -195,6 +204,31 @@ function AppInner() {
   const [docsOpen, setDocsOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
+  const [auth, setAuth] = useState<AuthState | null>(() => loadAuth());
+
+  useEffect(() => {
+    const code = extractOAuthCode();
+    if (!code) return;
+    void (async () => {
+      try {
+        const { access_token, scope } = await exchangeCodeForToken(code);
+        const user = await fetchGitHubUser(access_token);
+        const state: AuthState = {
+          version: 1,
+          provider: "github",
+          accessToken: access_token,
+          username: user.login,
+          avatarUrl: user.avatar_url,
+          scopes: scope.split(",").filter(Boolean),
+          createdAt: Date.now(),
+        };
+        saveAuth(state);
+        setAuth(state);
+      } catch (err) {
+        console.error("OAuth callback failed:", err);
+      }
+    })();
+  }, []);
   const [editorCollapsed, setEditorCollapsed] = useState(
     () => loadInitialWorkspace().editorCollapsed,
   );
@@ -1130,6 +1164,9 @@ function AppInner() {
         open={communityOpen}
         onClose={() => setCommunityOpen(false)}
         onImport={handleImportDoc}
+        auth={auth}
+        onSignOut={() => { clearAuth(); setAuth(null); }}
+        currentSource={activeDoc.source}
       />
       <AboutModal
         open={aboutOpen}

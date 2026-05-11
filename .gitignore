@@ -1,6 +1,8 @@
 .DS_Store
 .local/
 .kiro/
+.env
+.env.local
 node_modules/
 dist/
 coverage/

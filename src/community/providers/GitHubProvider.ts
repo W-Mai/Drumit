@@ -43,8 +43,94 @@ export class GitHubProvider implements GitProvider {
     return { source };
   }
 
-  // One automatic retry covers transient hiccups (DNS warmup, brief 5xx)
-  // without amplifying real outages into long pauses.
+  async upsertScore(
+    path: string,
+    source: string,
+    message: string,
+    token: string,
+  ): Promise<{ sha: string }> {
+    const api = `https://api.github.com/repos/${this.owner}/${this.repo}/contents/${path}`;
+    const existing = await this.fetchImpl(api + `?ref=${this.branch}`, {
+      headers: { Authorization: `token ${token}` },
+    });
+    let sha: string | undefined;
+    if (existing.ok) {
+      const data = (await existing.json()) as { sha: string };
+      sha = data.sha;
+    }
+    const body: Record<string, string> = {
+      message,
+      content: btoa(unescape(encodeURIComponent(source))),
+      branch: this.branch,
+    };
+    if (sha) body.sha = sha;
+    const res = await this.fetchImpl(api, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => "");
+      throw new Error(`upsertScore failed: ${res.status} ${err}`);
+    }
+    const result = (await res.json()) as { content: { sha: string } };
+    return { sha: result.content.sha };
+  }
+
+  async ensureFork(token: string): Promise<{ owner: string; repo: string }> {
+    const api = `https://api.github.com/repos/${this.owner}/${this.repo}/forks`;
+    const res = await this.fetchImpl(api, {
+      method: "POST",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok && res.status !== 202) {
+      throw new Error(`ensureFork failed: ${res.status}`);
+    }
+    const data = (await res.json()) as { owner: { login: string }; name: string };
+    const forkOwner = data.owner.login;
+    const forkRepo = data.name;
+    for (let i = 0; i < 30; i += 1) {
+      await delay(2000);
+      const check = await this.fetchImpl(
+        `https://api.github.com/repos/${forkOwner}/${forkRepo}`,
+        { headers: { Authorization: `token ${token}` } },
+      );
+      if (check.ok) return { owner: forkOwner, repo: forkRepo };
+    }
+    throw new Error("Fork timed out after 60 seconds");
+  }
+
+  async openPR(
+    title: string,
+    body: string,
+    head: string,
+    base: string,
+    token: string,
+  ): Promise<{ url: string }> {
+    const api = `https://api.github.com/repos/${this.owner}/${this.repo}/pulls`;
+    const res = await this.fetchImpl(api, {
+      method: "POST",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title, body, head, base }),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => "");
+      throw new Error(`openPR failed: ${res.status} ${err}`);
+    }
+    const data = (await res.json()) as { html_url: string };
+    return { url: data.html_url };
+  }
+
   private async getText(path: string): Promise<string> {
     const url = this.rawUrl(path);
     let lastErr: unknown = null;

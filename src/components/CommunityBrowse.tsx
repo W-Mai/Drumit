@@ -16,11 +16,15 @@ import {
   type SourceConfig,
 } from "../community";
 import { Button } from "./ui";
+import { type AuthState, buildAuthorizeUrl } from "../community/auth";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onImport: (source: string) => void;
+  auth: AuthState | null;
+  onSignOut: () => void;
+  currentSource?: string;
 }
 
 type LoadState =
@@ -29,7 +33,7 @@ type LoadState =
   | { kind: "ok"; index: ScoreIndex }
   | { kind: "error"; message: string };
 
-export function CommunityBrowse({ open, onClose, onImport }: Props) {
+export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, currentSource }: Props) {
   const { t } = useI18n();
   const [sources, setSources] = useState<SourceConfig[]>(() => listSources());
   const [activeId, setActiveId] = useState<string | null>(
@@ -38,6 +42,7 @@ export function CommunityBrowse({ open, onClose, onImport }: Props) {
   const [load, setLoad] = useState<LoadState>({ kind: "idle" });
   const [selected, setSelected] = useState<ScoreIndexEntry | null>(null);
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [openingPath, setOpeningPath] = useState<string | null>(null);
 
   const activeSource = useMemo(
@@ -195,6 +200,42 @@ export function CommunityBrowse({ open, onClose, onImport }: Props) {
                   {t("community.source.remove")}
                 </Button>
               ) : null}
+              <div className="ml-auto flex items-center gap-2">
+                {auth ? (
+                  <>
+                    <Button
+                      variant="primary"
+                      onClick={() => setUploading(true)}
+                      disabled={!currentSource}
+                    >
+                      {t("community.upload.submit")}
+                    </Button>
+                    {auth.avatarUrl ? (
+                      <img
+                        src={auth.avatarUrl}
+                        alt=""
+                        className="size-5 rounded-full"
+                      />
+                    ) : null}
+                    <span className="hidden text-[12px] font-semibold text-stone-700 sm:inline">
+                      {auth.username}
+                    </span>
+                    <Button onClick={onSignOut}>
+                      Sign out
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      window.location.href = buildAuthorizeUrl(
+                        window.location.origin + window.location.pathname,
+                      );
+                    }}
+                  >
+                    Sign in with GitHub
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="relative flex min-h-0 flex-1">
@@ -246,6 +287,14 @@ export function CommunityBrowse({ open, onClose, onImport }: Props) {
         <AddSourceDialog
           onCancel={() => setAdding(false)}
           onAdd={handleAdd}
+        />
+      ) : null}
+      {uploading && auth && activeSource ? (
+        <UploadDialog
+          auth={auth}
+          source={activeSource}
+          currentSource={currentSource ?? ""}
+          onClose={() => setUploading(false)}
         />
       ) : null}
     </AnimatePresence>,
@@ -614,4 +663,209 @@ function MobileDetailSheet({
       ) : null}
     </AnimatePresence>
   );
+}
+
+function UploadDialog({
+  auth,
+  source,
+  currentSource,
+  onClose,
+}: {
+  auth: AuthState;
+  source: SourceConfig;
+  currentSource: string;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const [target, setTarget] = useState<"personal" | "community">("community");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleUpload() {
+    if (!currentSource.trim() || !message.trim()) return;
+    setStatus("uploading");
+    try {
+      const { parseDrumtab } = await import("../notation/parser");
+      const { score } = parseDrumtab(currentSource);
+      const slug = score.slug || score.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled";
+      const path = `scores/${slug}.drumtab`;
+
+      if (source.kind !== "github") {
+        throw new Error("Upload currently only supports GitHub sources");
+      }
+
+      const { GitHubProvider } = await import("../community/providers/GitHubProvider");
+      const provider = new GitHubProvider(source);
+
+      if (target === "personal") {
+        await provider.upsertScore(path, currentSource, message, auth.accessToken);
+        setStatus("done");
+      } else {
+        const fork = await provider.ensureFork(auth.accessToken);
+        const forkProvider = new GitHubProvider({
+          ...source,
+          id: `github:${fork.owner}/${fork.repo}`,
+          owner: fork.owner,
+          repo: fork.repo,
+        });
+        const branch = `drumit/${slug}-${Date.now()}`;
+        const mainSha = await getMainBranchSha(fork.owner, fork.repo, source.branch ?? "main", auth.accessToken);
+        await createBranch(fork.owner, fork.repo, branch, mainSha, auth.accessToken);
+        await forkProvider.upsertScore(path, currentSource, message, auth.accessToken);
+        const pr = await provider.openPR(
+          `🥁 ${score.title || slug}`,
+          message,
+          `${fork.owner}:${branch}`,
+          source.branch ?? "main",
+          auth.accessToken,
+        );
+        setResultUrl(pr.url);
+        setStatus("done");
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setStatus("error");
+    }
+  }
+
+  return (
+    <motion.div
+      role="dialog"
+      aria-modal="true"
+      className="bg-overlay-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      <motion.div
+        className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+      >
+        <h3 className="font-serif text-base font-semibold">
+          {t("community.upload.title")}
+        </h3>
+
+        {status === "idle" || status === "error" ? (
+          <>
+            <div className="flex gap-2">
+              <label className="flex items-center gap-1 text-[12px]">
+                <input
+                  type="radio"
+                  name="target"
+                  value="community"
+                  checked={target === "community"}
+                  onChange={() => setTarget("community")}
+                />
+                {t("community.upload.target_community")}
+              </label>
+              <label className="flex items-center gap-1 text-[12px]">
+                <input
+                  type="radio"
+                  name="target"
+                  value="personal"
+                  checked={target === "personal"}
+                  onChange={() => setTarget("personal")}
+                />
+                {t("community.upload.target_personal")}
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-[12px] font-semibold text-stone-700">
+                {t("community.upload.message_label")}
+              </span>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={t("community.upload.message_placeholder")}
+                className="w-full rounded-md border border-stone-200 px-2.5 py-1.5 text-sm"
+              />
+            </label>
+            {status === "error" ? (
+              <p className="text-[12px] text-red-600">
+                {t("community.upload.error")}{errorMsg}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button onClick={onClose}>{t("meta.cancel")}</Button>
+              <Button
+                variant="primary"
+                onClick={handleUpload}
+                disabled={!message.trim()}
+              >
+                {t("community.upload.submit")}
+              </Button>
+            </div>
+          </>
+        ) : status === "uploading" ? (
+          <p className="py-4 text-center text-sm text-stone-600">
+            {t("community.upload.uploading")}
+          </p>
+        ) : (
+          <div className="space-y-2 py-4 text-center">
+            <p className="text-sm font-semibold text-green-700">
+              {t("community.upload.success")}
+            </p>
+            {resultUrl ? (
+              <a
+                href={resultUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[12px] text-blue-600 underline"
+              >
+                {t("community.upload.pr_created")}{resultUrl}
+              </a>
+            ) : null}
+            <div className="pt-2">
+              <Button onClick={onClose}>{t("common.close")}</Button>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+async function getMainBranchSha(
+  owner: string,
+  repo: string,
+  branch: string,
+  token: string,
+): Promise<string> {
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`,
+    { headers: { Authorization: `token ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Failed to get branch SHA: ${res.status}`);
+  const data = (await res.json()) as { object: { sha: string } };
+  return data.object.sha;
+}
+
+async function createBranch(
+  owner: string,
+  repo: string,
+  branch: string,
+  sha: string,
+  token: string,
+): Promise<void> {
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/refs`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ref: `refs/heads/${branch}`, sha }),
+    },
+  );
+  if (!res.ok) throw new Error(`Failed to create branch: ${res.status}`);
 }
