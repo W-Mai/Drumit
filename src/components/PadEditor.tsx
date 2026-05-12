@@ -1063,18 +1063,20 @@ export function PadEditor({
             barResolution={barResolution}
             presentInstruments={presentInstruments}
             availableInstruments={ALL_INSTRUMENTS.filter(
-              (i) => !presentInstruments.includes(i),
+              (inst) => !presentInstruments.includes(inst),
             )}
             cursor={clampedCursor}
-            onAddInstrument={(i) =>
+            onAddInstrument={(inst) =>
               setExtraInstruments((prev) =>
-                prev.includes(i) ? prev : [...prev, i],
+                prev.includes(inst) ? prev : [...prev, inst],
               )
             }
             onSetDivision={onSetDivision}
             onSetGroupDivision={onSetGroupDivision}
             onSplitBeat={onSplitBeat}
             onToggleSlot={onToggleSlot}
+            onSetSlotRest={onSetSlotRest}
+            onSetSlotNull={onSetSlotNull}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
@@ -1102,6 +1104,8 @@ export function PadEditor({
             onSetGroupDivision={onSetGroupDivision}
             onSplitBeat={onSplitBeat}
             onToggleSlot={onToggleSlot}
+            onSetSlotRest={onSetSlotRest}
+            onSetSlotNull={onSetSlotNull}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
@@ -1435,6 +1439,8 @@ function StepGrid({
   onSetGroupDivision,
   onSplitBeat,
   onToggleSlot,
+  onSetSlotRest,
+  onSetSlotNull,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -1451,6 +1457,8 @@ function StepGrid({
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
   onToggleSlot: Props["onToggleSlot"];
+  onSetSlotRest: Props["onSetSlotRest"];
+  onSetSlotNull: Props["onSetSlotNull"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
@@ -1501,6 +1509,8 @@ function StepGrid({
             onSetGroupDivision={onSetGroupDivision}
             onSplitBeat={onSplitBeat}
             onToggleSlot={onToggleSlot}
+            onSetSlotRest={onSetSlotRest}
+            onSetSlotNull={onSetSlotNull}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
@@ -1540,6 +1550,8 @@ function InstrumentRow({
   onSetGroupDivision,
   onSplitBeat,
   onToggleSlot,
+  onSetSlotRest,
+  onSetSlotNull,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -1556,6 +1568,8 @@ function InstrumentRow({
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
   onToggleSlot: Props["onToggleSlot"];
+  onSetSlotRest: Props["onSetSlotRest"];
+  onSetSlotNull: Props["onSetSlotNull"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
@@ -1617,6 +1631,8 @@ function InstrumentRow({
             onSetGroupDivision={onSetGroupDivision}
             onSplitBeat={onSplitBeat}
             onToggleSlot={onToggleSlot}
+            onSetSlotRest={onSetSlotRest}
+            onSetSlotNull={onSetSlotNull}
             onToggleArticulation={onToggleArticulation}
             onSetSticking={onSetSticking}
             onCycleDots={onCycleDots}
@@ -1646,6 +1662,8 @@ function LanePager({
   onSetGroupDivision,
   onSplitBeat,
   onToggleSlot,
+  onSetSlotRest,
+  onSetSlotNull,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -1663,6 +1681,8 @@ function LanePager({
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
   onToggleSlot: Props["onToggleSlot"];
+  onSetSlotRest: Props["onSetSlotRest"];
+  onSetSlotNull: Props["onSetSlotNull"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
@@ -1803,9 +1823,11 @@ function LanePager({
               onSetDivision={onSetDivision}
               onSetGroupDivision={onSetGroupDivision}
               onSplitBeat={onSplitBeat}
-              onToggleSlot={onToggleSlot}
-              onToggleArticulation={onToggleArticulation}
-              onSetSticking={onSetSticking}
+            onToggleSlot={onToggleSlot}
+            onSetSlotRest={onSetSlotRest}
+            onSetSlotNull={onSetSlotNull}
+            onToggleArticulation={onToggleArticulation}
+            onSetSticking={onSetSticking}
               onCycleDots={onCycleDots}
               onFocusSlot={onFocusSlot}
               barResolution={barResolution}
@@ -1839,6 +1861,8 @@ function LaneBeatCell({
   onSetGroupDivision,
   onSplitBeat,
   onToggleSlot,
+  onSetSlotRest,
+  onSetSlotNull,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -1856,6 +1880,8 @@ function LaneBeatCell({
   onSetGroupDivision: Props["onSetGroupDivision"];
   onSplitBeat: Props["onSplitBeat"];
   onToggleSlot: Props["onToggleSlot"];
+  onSetSlotRest: Props["onSetSlotRest"];
+  onSetSlotNull: Props["onSetSlotNull"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
@@ -1901,6 +1927,8 @@ function LaneBeatCell({
               cursorState={cursorState}
               onSetDivision={onSetDivision}
               onToggleSlot={onToggleSlot}
+              onSetSlotRest={onSetSlotRest}
+              onSetSlotNull={onSetSlotNull}
               onToggleArticulation={onToggleArticulation}
               onSetSticking={onSetSticking}
               onCycleDots={onCycleDots}
@@ -1936,6 +1964,8 @@ function StepCell({
   cursorState,
   onSetDivision,
   onToggleSlot,
+  onSetSlotRest,
+  onSetSlotNull,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -1948,6 +1978,8 @@ function StepCell({
   columnIndex: number;
   onSetDivision: Props["onSetDivision"];
   onToggleSlot: Props["onToggleSlot"];
+  onSetSlotRest: Props["onSetSlotRest"];
+  onSetSlotNull: Props["onSetSlotNull"];
   onToggleArticulation: Props["onToggleArticulation"];
   onSetSticking: Props["onSetSticking"];
   onCycleDots: Props["onCycleDots"];
@@ -2083,6 +2115,16 @@ function StepCell({
             handleClick();
             setMenuOpen(false);
           }}
+          onSetRest={() => {
+            const address = slotAddressFromColumn(column);
+            onSetSlotRest(plan.beatIndex, instrument, address.slotIndex, address.groupIndex);
+            setMenuOpen(false);
+          }}
+          onSetNull={() => {
+            const address = slotAddressFromColumn(column);
+            onSetSlotNull(plan.beatIndex, instrument, address.slotIndex, address.groupIndex);
+            setMenuOpen(false);
+          }}
           onToggleArticulation={(art) => {
             if (!hit) handleClick();
             const address = slotAddressFromColumn(column);
@@ -2121,6 +2163,8 @@ function StepCell({
 function StepContextMenuContent({
   hit,
   onToggle,
+  onSetRest,
+  onSetNull,
   onToggleArticulation,
   onSetSticking,
   onCycleDots,
@@ -2129,6 +2173,8 @@ function StepContextMenuContent({
 }: {
   hit: Hit | null;
   onToggle: () => void;
+  onSetRest: () => void;
+  onSetNull: () => void;
   onToggleArticulation: (art: Articulation) => void;
   onSetSticking: (s: "R" | "L" | null) => void;
   onCycleDots: () => void;
@@ -2136,15 +2182,33 @@ function StepContextMenuContent({
   currentDots: number;
 }) {
   const { t } = useI18n();
+  const isRest = hit?.head === "rest";
+  const isHit = hit !== null && hit.head !== "rest";
   return (
     <div className="min-w-[200px] text-left">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="mb-2 block w-full rounded-md border border-stone-200 px-2 py-1 text-[11px] font-bold text-stone-700 hover:bg-stone-900 hover:text-white"
-      >
-        {hit ? t("editor.remove_hit") : t("editor.add_hit")}
-      </button>
+      <div className="mb-2 flex gap-1">
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`flex-1 rounded-md border px-2 py-1 text-[11px] font-bold transition-colors ${isHit ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 text-stone-700 hover:bg-stone-100"}`}
+        >
+          o {t("editor.hit")}
+        </button>
+        <button
+          type="button"
+          onClick={onSetRest}
+          className={`flex-1 rounded-md border px-2 py-1 text-[11px] font-bold transition-colors ${isRest ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 text-stone-700 hover:bg-stone-100"}`}
+        >
+          0 {t("editor.rest")}
+        </button>
+        <button
+          type="button"
+          onClick={onSetNull}
+          className={`flex-1 rounded-md border px-2 py-1 text-[11px] font-bold transition-colors ${!hit ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 text-stone-700 hover:bg-stone-100"}`}
+        >
+          – {t("editor.empty")}
+        </button>
+      </div>
       <div className="mb-1 text-[10px] font-extrabold tracking-wide text-stone-500 uppercase">
         {t("editor.articulations")}
       </div>
