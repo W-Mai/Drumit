@@ -1225,6 +1225,7 @@ interface PREntry {
   state: string;
   merged_at: string | null;
   created_at: string;
+  user: { login: string };
 }
 
 function MySubmissions({
@@ -1259,14 +1260,14 @@ function MySubmissions({
         const openPrs = openRes.ok ? ((await openRes.json()) as PREntry[]) : [];
         const closedPrs = closedRes.ok ? ((await closedRes.json()) as PREntry[]) : [];
         const all = [...openPrs, ...closedPrs]
-          .filter((pr) => pr.title.startsWith("🥁"))
+          .filter((pr) => pr.title.startsWith("🥁") && pr.user.login === auth.username)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         if (!cancelled) setPrs(all);
       } catch { /* ignore */ }
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [source, auth.accessToken]);
+  }, [source, auth.accessToken, auth.username]);
 
   async function handleClose(prNumber: number) {
     if (source.kind !== "github") return;
