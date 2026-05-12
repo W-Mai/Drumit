@@ -697,6 +697,9 @@ function UploadDialog({
   );
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultPrNumber, setResultPrNumber] = useState<number | null>(null);
+  const [prClosed, setPrClosed] = useState(false);
+  const [closingPr, setClosingPr] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   type StepState = "pending" | "running" | "done" | "skipped" | "error";
@@ -824,12 +827,26 @@ function UploadDialog({
         updateStep("commit", "done", path);
 
         updateStep("pr", "running");
-        const pr = await provider.openPR(
-          `🥁 ${parsed.title}`, message,
-          `${fork.owner}:${branch}`, source.branch ?? "main", auth.accessToken,
+        const existingPr = await findOpenPR(
+          source.owner, source.repo,
+          `${fork.owner}:${branch}`, auth.accessToken,
         );
-        updateStep("pr", "done");
-        setResultUrl(pr.url);
+        if (existingPr) {
+          updateStep("pr", "done",
+            t("community.upload.step.pr_updated").replace("{number}", String(existingPr.number)),
+          );
+          setResultUrl(existingPr.html_url);
+          setResultPrNumber(existingPr.number);
+        } else {
+          const pr = await provider.openPR(
+            `🥁 ${parsed.title}`, message,
+            `${fork.owner}:${branch}`, source.branch ?? "main", auth.accessToken,
+          );
+          updateStep("pr", "done");
+          setResultUrl(pr.url);
+          const prNum = parseInt(pr.url.split("/").pop() ?? "0", 10);
+          if (prNum) setResultPrNumber(prNum);
+        }
         setStatus("done");
       } catch (err) {
         setSteps((prev) =>
@@ -946,6 +963,27 @@ function UploadDialog({
                         >
                           {resultUrl}
                         </a>
+                        {resultPrNumber && !prClosed ? (
+                          <button
+                            type="button"
+                            disabled={closingPr}
+                            onClick={async () => {
+                              if (source.kind !== "github") return;
+                              setClosingPr(true);
+                              try {
+                                await closePR(source.owner, source.repo, resultPrNumber, auth.accessToken);
+                                setPrClosed(true);
+                              } catch { /* ignore */ }
+                              setClosingPr(false);
+                            }}
+                            className="mt-1 text-[11px] text-red-600 underline hover:text-red-800"
+                          >
+                            {closingPr ? t("community.upload.closing_pr") : t("community.upload.close_pr")}
+                          </button>
+                        ) : null}
+                        {prClosed ? (
+                          <p className="mt-1 text-[11px] text-stone-500">{t("community.upload.pr_closed")}</p>
+                        ) : null}
                       </>
                     ) : (
                       <p className="text-[12px] text-stone-600">
@@ -1133,4 +1171,38 @@ async function fetchRemoteFileContent(
   });
   if (!res.ok) return null;
   return res.text();
+}
+
+async function findOpenPR(
+  owner: string,
+  repo: string,
+  head: string,
+  token: string,
+): Promise<{ number: number; html_url: string } | null> {
+  const url = `https://api.github.com/repos/${owner}/${repo}/pulls?head=${encodeURIComponent(head)}&state=open`;
+  const res = await fetch(url, {
+    headers: { Authorization: `token ${token}` },
+  });
+  if (!res.ok) return null;
+  const prs = (await res.json()) as Array<{ number: number; html_url: string }>;
+  return prs.length > 0 ? prs[0] : null;
+}
+
+async function closePR(
+  owner: string,
+  repo: string,
+  prNumber: number,
+  token: string,
+): Promise<void> {
+  await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ state: "closed" }),
+    },
+  );
 }
