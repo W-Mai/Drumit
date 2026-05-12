@@ -1231,6 +1231,11 @@ function AppInner() {
         onDelete={handleDeleteDoc}
         onExport={handleExportDoc}
         onExportMidi={handleExportDocMidi}
+        onScoreInfo={(id) => {
+          setActiveId(id);
+          setDocsOpen(false);
+          setMetaOpen(true);
+        }}
         onImport={(src) => {
           handleImportDoc(src);
           setDocsOpen(false);
@@ -1342,6 +1347,29 @@ function AppInner() {
               viewLabel={viewMode === "staff" ? "staff" : undefined}
             />
           </PanelHeader>
+          {clampedSelectedBar !== null ? (
+            <div className="flex items-center gap-1 border-b border-stone-200 px-3 py-1 sm:hidden">
+              <Button
+                onClick={handleCopyBars}
+                title={t("preview.copy_bar")}
+              >
+                {t("preview.copy_bar")}
+              </Button>
+              <Button
+                onClick={handlePasteBars}
+                title={t("preview.paste_bar")}
+              >
+                {t("preview.paste_bar")}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteBars}
+                title={t("preview.delete_bar")}
+              >
+                {t("preview.delete_bar")}
+              </Button>
+            </div>
+          ) : null}
           <div
             ref={setChartContainer}
             data-drumit-scope="preview"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { serializeBar } from "../notation/serialize";
 import { cn } from "../lib/utils";
 import {
@@ -1994,6 +1994,22 @@ function StepCell({
     setMenuOpen(true);
   };
 
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressClickFlag = useRef(false);
+  const startLongPress = () => {
+    suppressClickFlag.current = false;
+    longPressTimer.current = setTimeout(() => {
+      suppressClickFlag.current = true;
+      setMenuOpen(true);
+    }, 450);
+  };
+  const clearLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   const isGroupStart =
     column.kind === "group-slot" && column.slotIndex === 0;
   const isBeatStart =
@@ -2006,8 +2022,15 @@ function StepCell({
       <button
         ref={setCellAnchor}
         type="button"
-        onClick={handleClick}
+        onClick={() => {
+          if (suppressClickFlag.current) { suppressClickFlag.current = false; return; }
+          handleClick();
+        }}
         onContextMenu={handleContextMenu}
+        onPointerDown={startLongPress}
+        onPointerUp={clearLongPress}
+        onPointerLeave={clearLongPress}
+        onPointerCancel={clearLongPress}
         title={hit ? describeHit(hit) : "Click to toggle · Right-click for more"}
         className={cn(
           "relative flex h-full items-center justify-center text-[13px] transition select-none",

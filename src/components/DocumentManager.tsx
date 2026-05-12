@@ -31,6 +31,7 @@ interface Props {
   onExport: (id: string) => void;
   onExportMidi: (id: string) => void;
   onImport: (source: string) => void;
+  onScoreInfo?: (id: string) => void;
   samples?: SampleEntry[];
   onLoadSample?: (sampleId: string) => void;
 }
@@ -57,6 +58,7 @@ export function DocumentManager({
   onDelete,
   onExport,
   onExportMidi,
+  onScoreInfo,
   onImport,
   samples,
   onLoadSample,
@@ -178,6 +180,7 @@ export function DocumentManager({
                   onDelete={onDelete}
                   onExport={onExport}
                   onExportMidi={onExportMidi}
+                  onScoreInfo={onScoreInfo}
                   open={open}
                 />
               ) : (
@@ -193,6 +196,7 @@ export function DocumentManager({
                   onDelete={onDelete}
                   onExport={onExport}
                   onExportMidi={onExportMidi}
+                  onScoreInfo={onScoreInfo}
                   open={open}
                 />
               )}
@@ -347,6 +351,7 @@ interface ItemHandlers {
   onDelete: (id: string) => void;
   onExport: (id: string) => void;
   onExportMidi: (id: string) => void;
+  onScoreInfo?: (id: string) => void;
   open: boolean;
 }
 
@@ -359,6 +364,7 @@ function GridView({
   onDelete,
   onExport,
   onExportMidi,
+  onScoreInfo,
   open,
 }: ItemHandlers) {
   return (
@@ -374,6 +380,7 @@ function GridView({
           onDelete={() => onDelete(doc.id)}
           onExport={() => onExport(doc.id)}
           onExportMidi={() => onExportMidi(doc.id)}
+          onScoreInfo={onScoreInfo ? () => onScoreInfo(doc.id) : undefined}
           prime={open}
         />
       ))}
@@ -390,6 +397,7 @@ function ListView({
   onDelete,
   onExport,
   onExportMidi,
+  onScoreInfo,
   open,
 }: ItemHandlers) {
   return (
@@ -405,6 +413,7 @@ function ListView({
           onDelete={() => onDelete(doc.id)}
           onExport={() => onExport(doc.id)}
           onExportMidi={() => onExportMidi(doc.id)}
+          onScoreInfo={onScoreInfo ? () => onScoreInfo(doc.id) : undefined}
           prime={open}
         />
       ))}
@@ -462,6 +471,7 @@ function GridCard({
   onDelete,
   onExport,
   onExportMidi,
+  onScoreInfo,
   prime,
 }: {
   doc: DocumentSummary;
@@ -472,6 +482,7 @@ function GridCard({
   onDelete: () => void;
   onExport: () => void;
   onExportMidi: () => void;
+  onScoreInfo?: () => void;
   prime: boolean;
 }) {
   const { t } = useI18n();
@@ -520,6 +531,7 @@ function GridCard({
         onDelete={onDelete}
         onExport={onExport}
         onExportMidi={onExportMidi}
+        onScoreInfo={onScoreInfo}
         floating
       />
     </div>
@@ -535,6 +547,7 @@ function ListRow({
   onDelete,
   onExport,
   onExportMidi,
+  onScoreInfo,
   prime,
 }: {
   doc: DocumentSummary;
@@ -545,6 +558,7 @@ function ListRow({
   onDelete: () => void;
   onExport: () => void;
   onExportMidi: () => void;
+  onScoreInfo?: () => void;
   prime: boolean;
 }) {
   const { t } = useI18n();
@@ -593,6 +607,7 @@ function ListRow({
         onDelete={onDelete}
         onExport={onExport}
         onExportMidi={onExportMidi}
+        onScoreInfo={onScoreInfo}
       />
     </li>
   );
@@ -630,6 +645,7 @@ function ItemActions({
   onDelete,
   onExport,
   onExportMidi,
+  onScoreInfo,
   floating,
 }: {
   displayName: string;
@@ -638,6 +654,7 @@ function ItemActions({
   onDelete: () => void;
   onExport: () => void;
   onExportMidi: () => void;
+  onScoreInfo?: () => void;
   floating?: boolean;
 }) {
   const dialog = useDialog();
@@ -692,6 +709,16 @@ function ItemActions({
         placement="bottom"
       >
         <div className="flex min-w-[180px] flex-col gap-0.5 p-1 text-[12px]">
+          {onScoreInfo ? (
+            <MenuItem
+              onClick={() => {
+                onScoreInfo();
+                setOpen(false);
+              }}
+            >
+              🏷 {t("doclist.score_info")}
+            </MenuItem>
+          ) : null}
           <MenuItem onClick={() => void promptRename().then(() => setOpen(false))}>
             ✎ {t("doclist.rename")}
           </MenuItem>
