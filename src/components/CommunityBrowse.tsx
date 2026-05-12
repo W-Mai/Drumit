@@ -44,6 +44,7 @@ export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, curr
   const [selected, setSelected] = useState<ScoreIndexEntry | null>(null);
   const [adding, setAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showSubmissions, setShowSubmissions] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openingPath, setOpeningPath] = useState<string | null>(null);
 
@@ -219,6 +220,9 @@ export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, curr
                     >
                       {t("community.upload.submit")}
                     </Button>
+                    <Button onClick={() => setShowSubmissions(true)}>
+                      {t("community.my_submissions")}
+                    </Button>
                     {auth.avatarUrl ? (
                       <img
                         src={auth.avatarUrl}
@@ -296,6 +300,13 @@ export function CommunityBrowse({ open, onClose, onImport, auth, onSignOut, curr
         <AddSourceDialog
           onCancel={() => setAdding(false)}
           onAdd={handleAdd}
+        />
+      ) : null}
+      {showSubmissions && auth && activeSource ? (
+        <MySubmissions
+          auth={auth}
+          source={activeSource}
+          onClose={() => setShowSubmissions(false)}
         />
       ) : null}
       {uploading && auth && activeSource ? (
@@ -1204,5 +1215,197 @@ async function closePR(
       },
       body: JSON.stringify({ state: "closed" }),
     },
+  );
+}
+
+interface PREntry {
+  number: number;
+  title: string;
+  html_url: string;
+  state: string;
+  merged_at: string | null;
+  created_at: string;
+}
+
+function MySubmissions({
+  auth,
+  source,
+  onClose,
+}: {
+  auth: AuthState;
+  source: SourceConfig;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const [prs, setPrs] = useState<PREntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [closingId, setClosingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (source.kind !== "github") { if (!cancelled) setLoading(false); return; }
+      try {
+        const [openRes, closedRes] = await Promise.all([
+          fetch(
+            `https://api.github.com/repos/${source.owner}/${source.repo}/pulls?state=open&per_page=50`,
+            { headers: { Authorization: `token ${auth.accessToken}` } },
+          ),
+          fetch(
+            `https://api.github.com/repos/${source.owner}/${source.repo}/pulls?state=closed&per_page=50`,
+            { headers: { Authorization: `token ${auth.accessToken}` } },
+          ),
+        ]);
+        const openPrs = openRes.ok ? ((await openRes.json()) as PREntry[]) : [];
+        const closedPrs = closedRes.ok ? ((await closedRes.json()) as PREntry[]) : [];
+        const all = [...openPrs, ...closedPrs]
+          .filter((pr) => pr.title.startsWith("🥁"))
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        if (!cancelled) setPrs(all);
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [source, auth.accessToken]);
+
+  async function handleClose(prNumber: number) {
+    if (source.kind !== "github") return;
+    setClosingId(prNumber);
+    await closePR(source.owner, source.repo, prNumber, auth.accessToken);
+    setPrs((prev) => prev.map((p) => (p.number === prNumber ? { ...p, state: "closed" } : p)));
+    setClosingId(null);
+  }
+
+  const open = prs.filter((p) => p.state === "open");
+  const merged = prs.filter((p) => p.state === "closed" && p.merged_at);
+  const closed = prs.filter((p) => p.state === "closed" && !p.merged_at);
+
+  return (
+    <motion.div
+      role="dialog"
+      aria-modal="true"
+      className="bg-overlay-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      <motion.div
+        className="max-h-[80dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+      >
+        <h3 className="mb-3 font-serif text-base font-semibold">
+          {t("community.submissions.title")}
+        </h3>
+        {loading ? (
+          <p className="py-4 text-center text-sm text-stone-500">
+            {t("community.submissions.loading")}
+          </p>
+        ) : prs.length === 0 ? (
+          <p className="py-4 text-center text-sm text-stone-500">
+            {t("community.submissions.empty")}
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {open.length > 0 ? (
+              <PRSection
+                label={t("community.submissions.open")}
+                prs={open}
+                color="text-amber-700 bg-amber-50"
+                onClose={handleClose}
+                closingId={closingId}
+              />
+            ) : null}
+            {merged.length > 0 ? (
+              <PRSection
+                label={t("community.submissions.merged")}
+                prs={merged}
+                color="text-green-700 bg-green-50"
+              />
+            ) : null}
+            {closed.length > 0 ? (
+              <PRSection
+                label={t("community.submissions.closed")}
+                prs={closed}
+                color="text-stone-500 bg-stone-50"
+              />
+            ) : null}
+          </div>
+        )}
+        <div className="mt-4 flex justify-end">
+          <Button onClick={onClose}>{t("common.close")}</Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function PRSection({
+  label,
+  prs,
+  color,
+  onClose: onClosePR,
+  closingId,
+}: {
+  label: string;
+  prs: PREntry[];
+  color: string;
+  onClose?: (n: number) => void;
+  closingId?: number | null;
+}) {
+  const { t } = useI18n();
+  return (
+    <div>
+      <h4 className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${color}`}>
+        {label} ({prs.length})
+      </h4>
+      <ul className="space-y-1">
+        {prs.map((pr) => (
+          <li
+            key={pr.number}
+            className="flex items-center justify-between gap-2 rounded-md border border-stone-200 px-3 py-2 text-[12px]"
+          >
+            <div className="min-w-0">
+              <a
+                href={pr.html_url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-stone-900 underline decoration-stone-300 hover:decoration-stone-700"
+              >
+                #{pr.number} {pr.title}
+              </a>
+              <p className="text-[10px] text-stone-400">
+                {new Date(pr.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <a
+                href={pr.html_url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded border border-stone-200 px-2 py-0.5 text-[10px] font-semibold text-stone-600 hover:bg-stone-50"
+              >
+                {t("community.submissions.view")}
+              </a>
+              {onClosePR && pr.state === "open" ? (
+                <button
+                  type="button"
+                  disabled={closingId === pr.number}
+                  onClick={() => onClosePR(pr.number)}
+                  className="rounded border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                >
+                  {closingId === pr.number ? "…" : t("community.submissions.close_pr")}
+                </button>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
