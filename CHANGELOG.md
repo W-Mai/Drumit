@@ -11,6 +11,20 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.12]
+
+### Added
+
+- **My Submissions panel.** Authenticated users can view all their
+  drumit-related PRs against the current source, grouped into Open /
+  Merged / Closed sections. Each open PR has a Close button to withdraw.
+- **Existing PR detection.** The upload flow checks for an open PR from
+  the same branch before creating one. If found, the commit updates the
+  existing PR's diff instead of creating a duplicate; the step shows
+  "Updated PR #N".
+- **Close PR from success screen.** After publishing, a "Close PR
+  (withdraw)" link lets the user undo without leaving drumit.
+
 ## [2026.05.09.2]
 
 ### Added
