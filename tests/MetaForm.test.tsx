@@ -62,7 +62,8 @@ describe("MetaForm", () => {
       <MetaForm open score={score} onClose={() => {}} onSave={() => {}} />,
     );
     const all = inputs();
-    expect(all[0].value).toBe("demo-track");
+    expect(all[0].value).toBe("Demo");
+    expect(all[1].value).toBe("demo-track");
     expect(all.find((i) => i.value === "Alice, Bob")).toBeTruthy();
     expect(all.find((i) => i.value === "rock, funk")).toBeTruthy();
     expect(all.find((i) => i.type === "number")?.value).toBe("3");
@@ -80,14 +81,16 @@ describe("MetaForm", () => {
       />,
     );
     const all = inputs();
-    fireEvent.change(all[0], { target: { value: "my-track" } });
-    fireEvent.change(all[1], { target: { value: " A , B , " } });
+    fireEvent.change(all[0], { target: { value: "My Track" } });
+    fireEvent.change(all[1], { target: { value: "my-track" } });
+    fireEvent.change(all[2], { target: { value: " A , B , " } });
     const difficulty = all.find((i) => i.type === "number")!;
     fireEvent.change(difficulty, { target: { value: "4" } });
     fireEvent.submit(findSubmit().closest("form")!);
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
     const patch = onSave.mock.calls[0][0];
+    expect(patch.title).toBe("My Track");
     expect(patch.slug).toBe("my-track");
     expect(patch.composer).toEqual(["A", "B"]);
     expect(patch.difficulty).toBe(4);
@@ -103,7 +106,7 @@ describe("MetaForm", () => {
         onSave={onSave}
       />,
     );
-    const slug = inputs()[0];
+    const slug = inputs()[1];
     fireEvent.change(slug, { target: { value: "Not Valid!" } });
     const submit = findSubmit();
     expect(submit.disabled).toBe(true);

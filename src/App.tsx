@@ -779,7 +779,7 @@ function AppInner() {
     const id = newId();
     const doc: DocumentRecord = {
       id,
-      name: sample.label,
+      name: "",
       source: serializeScore(result.score),
       savedAt: Date.now(),
     };
@@ -859,10 +859,14 @@ function AppInner() {
   function handleDuplicateDoc(id: string) {
     const src = documents.find((d) => d.id === id);
     if (!src) return;
+    const dupSource = src.source.replace(
+      /^(title:\s*)(.+)$/m,
+      (_m, prefix, title) => `${prefix}${title.trim()} ${t("editor.copy_suffix")}`,
+    );
     const newDoc: DocumentRecord = {
       id: newId(),
-      name: src.name ? `${src.name} ${t("editor.copy_suffix")}` : "",
-      source: src.source,
+      name: "",
+      source: dupSource,
       savedAt: Date.now(),
     };
     const srcIdx = documents.findIndex((d) => d.id === id);
@@ -884,7 +888,14 @@ function AppInner() {
 
   function handleRenameDoc(id: string, name: string) {
     setDocuments((docs) =>
-      docs.map((d) => (d.id === id ? { ...d, name } : d)),
+      docs.map((d) => {
+        if (d.id !== id) return d;
+        const updated = d.source.replace(
+          /^(title:\s*).+$/m,
+          `$1${name}`,
+        );
+        return { ...d, name: "", source: updated, savedAt: Date.now() };
+      }),
     );
   }
 
@@ -1032,6 +1043,7 @@ function AppInner() {
   function handleMetaSave(patch: ScoreMetaPatch) {
     const next: Score = {
       ...score,
+      title: patch.title,
       slug: patch.slug,
       composer: patch.composer,
       arranger: patch.arranger,

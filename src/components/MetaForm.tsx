@@ -7,6 +7,7 @@ import type { Score } from "../notation/types";
 import { Button } from "./ui";
 
 export interface ScoreMetaPatch {
+  title: string;
   slug?: string;
   composer?: string[];
   arranger?: string;
@@ -28,6 +29,7 @@ interface Props {
 }
 
 interface FormState {
+  title: string;
   slug: string;
   composer: string;
   arranger: string;
@@ -43,6 +45,7 @@ interface FormState {
 
 function fromScore(score: Score): FormState {
   return {
+    title: score.title,
     slug: score.slug ?? "",
     composer: (score.composer ?? []).join(", "),
     arranger: score.arranger ?? "",
@@ -72,6 +75,7 @@ function toPatch(state: FormState): ScoreMetaPatch {
   const diff = state.difficulty.trim();
   const diffN = diff === "" ? undefined : Number.parseInt(diff, 10);
   return {
+    title: state.title.trim() || "Untitled",
     slug: state.slug.trim() || undefined,
     composer: composer.length > 0 ? composer : undefined,
     arranger: state.arranger.trim() || undefined,
@@ -178,6 +182,17 @@ export function MetaForm({ open, score, onClose, onSave }: Props) {
               }}
             >
               <Section title={t("meta.section.identity")}>
+                <Row label={t("meta.field.title")}>
+                  <input
+                    type="text"
+                    value={state.title}
+                    onChange={(e) =>
+                      setState({ ...state, title: e.target.value })
+                    }
+                    placeholder={t("meta.field.title_placeholder")}
+                    className={inputCls}
+                  />
+                </Row>
                 <Row label={t("meta.field.slug")}>
                   <input
                     type="text"

@@ -351,6 +351,8 @@ const zh: Dict = {
   "meta.section.identity": "身份",
   "meta.section.classification": "分类",
   "meta.section.history": "版本",
+  "meta.field.title": "标题",
+  "meta.field.title_placeholder": "谱子的名字",
   "meta.field.slug": "Slug",
   "meta.field.slug_placeholder": "url-safe，留空则自动从标题生成",
   "meta.field.slug_invalid":
@@ -763,6 +765,8 @@ const en: Dict = {
   "meta.section.identity": "Identity",
   "meta.section.classification": "Classification",
   "meta.section.history": "History",
+  "meta.field.title": "Title",
+  "meta.field.title_placeholder": "Name of the score",
   "meta.field.slug": "Slug",
   "meta.field.slug_placeholder":
     "url-safe id; auto-generated from title when empty",
