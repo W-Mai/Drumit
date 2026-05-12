@@ -13,14 +13,22 @@ English · [中文](./README.md)
 
 ## Why
 
-I'm not a pro drummer. Five-line staves make my eyes glaze over — too
-many lines to count, too many glyphs to decode. But I still want to
-learn charts and practice.
+The first wall in learning drums isn't speed — it's the chart.
 
-Drumit's approach: cymbals on one row, drums on another; expand to
-extra rows only when voices actually collide; drop the stems. The
-source file is a plain-text `.drumtab` — diff-able, copy-pasteable,
-PR-able.
+Five lines on a staff, three kinds of noteheads, stems pointing both
+ways — I'd spend ten minutes just *translating* before I could play a
+single bar. The more complex the chart, the longer the translation, and
+"practice" quietly became "reading comprehension."
+
+Then my teacher Dong Bo gave us a hand-drawn chart that looked nothing
+like a staff: cymbals on one row, drums on another, underlines beneath
+the notes for subdivisions — one line for eighths, two for sixteenths.
+Only ornaments got an extra mark; everything else was clean.
+Pick it up and play.
+
+Drumit turns that hand-drawn chart into a tool: the source is a plain
+`.drumtab` file you can diff and PR; the rendered chart feels as
+intuitive as the original sketch; and you can press Play.
 
 ## What it looks like
 
@@ -109,12 +117,12 @@ Bun + Vite + React 19 + TypeScript 6 + Tailwind v4 + Vitest.
 
 ## Acknowledgements
 
-Thanks to **Dong Bo** (董波). The two-row compressed notation Drumit uses
-— cymbals above, drums below, no stems, one beat split into however many
-cells it needs — is exactly what I picked up from him at the Xiaomi
-music club. His charts were simple, direct, and easy to read; pick one
-up and you could play it. This project is basically an attempt to port
-that hand-written feel onto a screen.
+**Dong Bo** (董波) — every instinct I have about what a drum chart
+should look like traces back to his whiteboard sketches. Cymbals up
+top, drums below, underlines for subdivisions, circles and crosses for
+instruments. Something that simple made a staff-notation dropout feel,
+for the first time, that the chart was written *for him*. Everything
+Drumit does is just plugging that whiteboard into electricity.
 
 The bundled drum samples come from
 [Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums)

@@ -71,14 +71,14 @@ const zh: Dict = {
   "about.tagline_line2": "一个鼓谱工具，给不想啃五线谱的人。",
   "about.section.why": "为什么写这个",
   "about.why_body_1":
-    "我不是专业鼓手，五线谱苦手，看到一堆线就晕。但我想扒歌、想练。",
+    "学鼓的第一道坎不是手速，是谱。五线谱五条线、三种符头、两个声部的符干各朝一边——每次都要先「翻译」十分钟，才知道下一拍该打什么。",
   "about.why_body_2_pre":
-    "Drumit 的思路：镲类一行、鼓类一行；声部撞了才多拆几行；符干省掉。源文件叫 ",
-  "about.why_body_2_post": "，纯文本，能 diff、能 copy-paste、能提 PR。",
+    "后来跟董波老师学鼓，他的手写谱完全不一样：镲一行、鼓一行，下面划线标细分，只有装饰音才多画一笔，其余干干净净。Drumit 就是想把那张手写谱变成一个工具：写出来的 ",
+  "about.why_body_2_post": " 是纯文本，画出来的谱面和手写一样直觉，点一下还能听见声音。",
   "about.section.thanks": "鸣谢",
   "about.thanks_teacher_name": "董波老师",
   "about.thanks_body":
-    "。Drumit 采用的这套两行压缩鼓谱记法 —— 镲类在上、鼓类在下、符干全省、一拍切若干格 —— 正是我在小米音乐社团跟董老师学打鼓时记下来的那套东西。他的谱面简单、直接、好读，真正做到了拿起就能打。这个项目本质上就是想把那种手写谱的体验搬到屏幕上。",
+    " —— 我关于「谱应该长什么样」的直觉，都来自他在白板上随手画的那几张谱。镲在上、鼓在下，下面划线分细分，圈和叉标乐器——就这么简单的东西，让一个看不懂五线谱的人第一次觉得鼓谱是给自己看的。Drumit 做的所有事，不过是把那张白板谱接上了电。",
   "about.section.build": "构建信息",
   "about.build.version": "版本",
   "about.build.commit": "提交",
@@ -517,14 +517,14 @@ const en: Dict = {
     "A drum-tab tool for people who don’t want to wrestle with staff notation.",
   "about.section.why": "Why this exists",
   "about.why_body_1":
-    "I'm not a pro drummer. Staff notation makes my eyes glaze over. But I still want to cop licks and practice.",
+    "The first wall in learning drums isn't speed — it's the chart. Five lines, three noteheads, stems pointing both ways: I'd spend ten minutes just \"translating\" before I could play a single bar.",
   "about.why_body_2_pre":
-    "Drumit's idea: cymbals on one row, drums on another; split extra rows only when voices collide; drop the stems. The source file is plain ",
-  "about.why_body_2_post": " text — diff-friendly, copy-paste-friendly, PR-friendly.",
+    "Then my teacher Dong Bo handed me a chart that was nothing like that: cymbals on one row, drums on another, underlines for subdivisions — only ornaments got an extra mark, everything else clean. Drumit turns that hand-drawn chart into a tool: the source is a plain ",
+  "about.why_body_2_post": " file you can diff and PR; the rendered chart feels as intuitive as the original sketch; and you can press Play.",
   "about.section.thanks": "Thanks",
   "about.thanks_teacher_name": "Dong Bo",
   "about.thanks_body":
-    ". The two-row compressed drum-tab notation used by Drumit — cymbals above, drums below, no stems, one beat split into grids — is exactly what I scribbled down while studying with Mr. Dong at the Xiaomi music club. His charts are simple, direct, and playable at sight. This project is basically an attempt to port that handwritten-tab feel to the screen.",
+    " — every instinct I have about what a drum chart should look like traces back to his whiteboard sketches. Cymbals up top, drums below, underlines for subdivisions, circles and crosses for instruments. Something that simple made a staff-notation dropout feel, for the first time, that the chart was written for him. Everything Drumit does is just plugging that whiteboard into electricity.",
   "about.section.build": "Build info",
   "about.build.version": "Version",
   "about.build.commit": "Commit",
