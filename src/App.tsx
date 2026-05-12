@@ -53,7 +53,7 @@ import {
 } from "./components/PlaybackBar";
 import type { PlaybackState } from "./playback/controller";
 import { useHotkeys } from "./lib/useHotkeys";
-import { useMediaQuery } from "./lib/useMediaQuery";
+import { useMediaQuery, useIsTouchDevice } from "./lib/useMediaQuery";
 import {
   clearWorkspace,
   loadWorkspace,
@@ -235,6 +235,7 @@ function AppInner() {
   // Below lg the editor floats over the preview as a card (80% of the
   // short axis), so it never eats into the preview's visible score.
   const isOverlayEditor = !useMediaQuery("(min-width: 1024px)");
+  const isTouch = useIsTouchDevice();
   // Within overlay mode, pick which edge the card slides in from.
   const isLandscape = useMediaQuery(
     "(min-aspect-ratio: 1/1) and (max-height: 600px)",
@@ -1347,8 +1348,8 @@ function AppInner() {
               viewLabel={viewMode === "staff" ? "staff" : undefined}
             />
           </PanelHeader>
-          {clampedSelectedBar !== null ? (
-            <div className="flex items-center gap-1 border-b border-stone-200 px-3 py-1 sm:hidden">
+          {clampedSelectedBar !== null && isTouch ? (
+            <div className="flex items-center gap-1 border-b border-stone-200 px-3 py-1">
               <Button
                 onClick={handleCopyBars}
                 title={t("preview.copy_bar")}
