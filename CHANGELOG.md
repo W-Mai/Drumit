@@ -11,6 +11,46 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.09.1]
+
+### Added
+
+- **Upload progress steps.** The upload dialog shows each step in real
+  time with status indicators: Fork → Sync → Check → Branch → Commit →
+  PR. Skipped steps show the reason ("Fork already exists", "Content
+  unchanged").
+- **Content change detection.** Before committing, the upload checks
+  whether the remote file is identical to the local source. If so, all
+  remaining steps are skipped with "内容无变化 / Content unchanged".
+- **Auto-sync fork.** Before creating a branch, the fork's default
+  branch is synced to the upstream via `POST /merge-upstream`.
+- **Refresh button.** The source picker toolbar has a Refresh button;
+  publishing also auto-refreshes the list on dialog close.
+- **Title field in MetaForm.** Score.title is now editable from the
+  score-info modal — the first field in the form. Changing it updates
+  the editor, document list, exports, and community upload in one go.
+
+### Changed
+
+- **Score.title is now the single source of truth for naming.** The
+  document list rename dialog rewrites the `title:` header in source
+  (instead of only changing the workspace label). `DocumentRecord.name`
+  is kept for compatibility but always set to `""` — all display paths
+  fall through to the parsed title.
+
+### Fixed
+
+- Upload committed to the default branch instead of the feature branch
+  — the fork+PR flow now passes the branch name through `upsertScore`.
+- Re-uploading the same slug created duplicate PRs — branch names are
+  now stable (`drumit/{slug}`), and `openPR` returns an existing PR's
+  URL on 422.
+- `Cannot access 'b' before initialization` crash caused by React
+  Compiler hoisting a variable past its initialisation.
+- CORS failure on content check — switched from `raw.githubusercontent`
+  (no CORS with Authorization) to `api.github.com/contents` with the
+  raw media type.
+
 ## [2026.05.09]
 
 > **v2 — Drumit goes read-write.** Sign in with GitHub and upload scores
