@@ -11,6 +11,26 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [2026.05.09.2]
+
+### Added
+
+- **Score info in document manager.** The "..." menu on each document
+  card/row gains a "🏷 Score info" entry that switches to the document
+  and opens MetaForm directly.
+- **Long-press context menu on grid cells.** Touch devices (phone,
+  tablet) can now long-press (450 ms) any editor cell to open the
+  articulation / sticking / dots menu — equivalent to desktop
+  right-click.
+- **Hit / Rest / Empty segment buttons.** The cell context menu replaces
+  the old toggle with three explicit buttons — Hit (o), Rest (0), and
+  Empty (–) — so touch users can input explicit rests without a
+  physical keyboard.
+- **Bar action toolbar on all touch devices.** Copy / Paste / Delete
+  buttons appear below the preview panel header when a bar is selected
+  on any `pointer: coarse` device (iPhone, iPad, Android), not just
+  narrow viewports.
+
 ## [2026.05.09.1]
 
 ### Added
