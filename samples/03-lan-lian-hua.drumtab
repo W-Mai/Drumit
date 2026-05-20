@@ -1,25 +1,25 @@
-title: 乐队练习曲《蓝莲花》
+title: 蓝莲花
+composer: 许巍
+transcriber: 董波 / Benign X
 tempo: 90
 meter: 4/4
+license: CC-BY-4.0
+difficulty: 3
+style: pop, rock
+slug: lan-lian-hua
 
-# -------- [A] ----------
-# Row 1: crash hits marking each beat
 [A]
-| cr: o / o / o / o |
-
-# Row 2: main pattern, hi-hat on top, kick+snare below
-| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
-| % |
+| cr: 0 / 0 / 0 / 0 |
+| hh: -o / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: o- / - / - / - |
+| hh: oo / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: -- / - / - / - |
 | %. |
 | %, |
 | %- |
 | %, |
 | %. |
-| %- |
 
-# -------- [B] ----------
 [B]
-| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
+| hh: oo / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: -- / - / - / - |
 | % |
 | %. |
 | %, |
@@ -28,51 +28,60 @@ meter: 4/4
 | %. |
 | %- |
 
-# -------- [C] ----------
 [C]
-| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
-| % |
-| %. |
+| hh: oo / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: -- / - / - / - |
+| hh: -o / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: o- / - / - / - |
+| hh: oo / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: -- / - / - / - |
 | %, |
 | %- |
 | %. |
 | %, |
 | meter: 2/4 | cr: o / -  bd: o / -  sn: - / - |
+|  |
 
-# -------- [Solo] ----------
 [Solo]
-| cr: o / o / o / o |
-| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / o |
+|: cr: - / - / - / -  t1: - / - / fo- / -  t2: - / - / -fo / --  ft: - / - / - / -o |
+| hh: -o / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: o- / - / - / - |
+| hh: oo / oo / oo / oo  bd: o- / - / -o / -  sn: - / x- / - / x-  cr: -- / - / - / - |
 | %- |
 | %- |
 | %, |
-| hh: xx / xx / xx / xx  bd: o / - / o / -  sn: - / o / - / xxx |  x2
-| cr: o / - / - / -  bd: o / - / - / - |
+| %, |
+| hh: -o / oo / oo / o , o-  bd: o- / - / -o / --  sn: - / x- / - / x , -x  cr: o- / - / - / - | [1]
+| hh: -o / oo / oo / --  bd: o- / - / -o / -  sn: - / x- / - / xx.  cr: o- / - / - / - | [2]
+| cr: o / - / - / -  bd: o / - / - / - :|
 
-# -------- [B'] ----------
 [B']
-| hh: xxxx / xxxx / xx / xxx  bd: o / - / o / -  sn: - / o / xox / - |
+|: hh: o , oo / o , o- / o- , o / o , oo  bd: o- / - / -o / -  sn: - / x , -x / -x , - / x , --  cr: -- / - / - / - |
 | % |
 | %. |
 | %- |
-| hh: xx / xx / xx / xxxx  bd: o / - / o / -  sn: - / xox / xox / xxx |
+| %- |
+| %- |
+| %- |
+| hh: oo / o , o- / o- , - / - , --  bd: o- / - / -- / -  sn: - / x , -x / -x. / xx.  cr: -- / - / - / - :|
 
-# -------- [C'] ----------
 [C']
-| hh: xxxx / xxxx / xx / xxx  bd: o / - / o / -  sn: - / o / - / o |
+| hh: o , oo / o , o- / o- , o / o , o-  bd: o- / - / -o / -  sn: - / x , -x / -x , - / x , -x  cr: -- / - / - / - |
+| hh: - , oo / o , o- / o- , o / o , o-  bd: o- / - / -o / -  sn: - / x , -x / -x , - / x , -x  cr: o- / - / - / - |
+| hh: o , oo / o , o- / o- , o / o , o-  bd: o- / - / -o / -  sn: - / x , -x / -x , - / x , -x  cr: -- / - / - / - |
 | % |
 | %. |
 | %, |
 | %- |
-| %, |
 | meter: 2/4 | cr: o / -  bd: o / -  sn: - / - |
+| meter: 2/4 | cr: - / -  bd: - / -  sn: - / - |
 
-# -------- [Solo'] ----------
 [Solo']
-| cr: o / o / o.xx / xx. |
-| hh: xx / xx / xx / xxxx  bd: o / - / o / -  sn: - / xox / xox / xxx |  x2
+|: cr: - / - / - - - / - - -  sn: - / - / 0.xx / xx. | [1]
+| cr: - / - / - - - / - - -  sn: - / - / 0 , xx , xx / 0x. | [2]
+| hh: o , oo / o , o- / o- , o / o , o-  bd: o- / - / -o / -  sn: - / x , -x / -x , - / x , -x  cr: -- / - / - / - |
 | %- |
 | %- |
 | %, |
 | %, |
-| cr: o / - / - / - |
+| %, |
+| %, | [1]
+| hh: o , oo / o , o- / o- , o / o , o-  bd: o- / - / -- / -  sn: - / x , -x / 0xxx / xx. | [2]
+| cr: o / - / - / - :|
+
